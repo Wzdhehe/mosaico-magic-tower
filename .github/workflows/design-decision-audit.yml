@@ -1,0 +1,17 @@
+name: Tower design decision audit
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  design:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decision and geometry invariants
+        run: |
+          python3 tools/audit_tower_decisions.py --check
+          python3 -m unittest discover -s tests -p test_tower_decisions.py
+      - name: Deterministic C replay
+        run: python3 tests/run_tests.py --label design-audit
