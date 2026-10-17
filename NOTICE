@@ -1,0 +1,21 @@
+# Third-party notices
+
+This repository is primarily MIT-licensed original work. A few files are
+adapted from Espressif ESP-Mosaico / Raylib Lite Engine examples and templates
+that are licensed under the Apache License, Version 2.0. Those files keep
+their original SPDX headers:
+
+- `main/raylib_screen_mirror.[ch]` — adapted from
+  `submodule/esp-mosaico-bsp/examples/raylib_shooter/main/raylib_screen_mirror.c`
+- `main/make_canvas_png.py`, `main/scene.json.in`, and project CMake scaffolding —
+  adapted from the official ESP-Mosaico game template
+- Build configuration and partition defaults — derived from the official
+  ESP-Mosaico example layout
+
+The game renders its own pixel art, UI glyph atlas, and chiptune music at
+runtime. It does not include sprites, music, or map data from the commercial
+or fan versions of Magic Tower.
+
+ESP-Mosaico, Raylib Lite Engine, ESP-IDF, LVGL, and their components remain
+under their respective upstream licenses. See `dependencies.lock` for the
+component versions used by the build.

@@ -1,0 +1,24 @@
+# ESP-IDF / project build output
+/build/
+/build-host/
+/managed_components/
+/.codex-runs/
+/artifacts/
+/sdkconfig
+/sdkconfig.old
+
+# Local saves and crash dumps
+/magic_tower.save
+*.save
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
