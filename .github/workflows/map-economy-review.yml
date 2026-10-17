@@ -1,0 +1,19 @@
+name: Map economy research checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  economy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Model-driven shop breakpoint study
+        run: |
+          python3 tools/audit_shop_breakpoints.py --check
+          python3 -m unittest discover -s tests -p test_shop_breakpoints.py
+      - name: Existing decision audit and C replay
+        run: |
+          python3 tools/audit_tower_decisions.py --check
+          python3 tests/run_tests.py --label economy-study
