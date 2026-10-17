@@ -11,7 +11,7 @@ describes the shipped game rather than a copy of it.  The checks follow
 import argparse
 import re
 import sys
-from collections import Counter, deque
+from collections import Counter, defaultdict, deque
 from pathlib import Path
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -86,9 +86,31 @@ def mirror_symmetric(grid):
                for y in range(H) for x in range(W))
 
 
+def floor_shape(grid):
+    """Wall/empty shape only, ignoring what sits on the tiles."""
+    return "\n".join("".join("#" if c == WALL else "." for c in row) for row in grid)
+
+
+def shape_symmetry(shape):
+    rows = shape.split("\n")
+    left = all(rows[y][x] == rows[y][W - 1 - x] for y in range(H) for x in range(W))
+    up = all(rows[y][x] == rows[H - 1 - y][x] for y in range(H) for x in range(W))
+    return left, up
+
+
+def load_route():
+    """tests/win_route.json, when present, for idle-enemy detection."""
+    path = PROJECT / "tests" / "win_route.json"
+    if not path.exists():
+        return None
+    import json
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def analyse(maps, verbose=True):
     results = []      # (name, ok, detail)
     stair_pairs_all = []   # (up, down) per floor, including one-sided floors
+    shapes = defaultdict(list)   # wall/empty shape -> floors using it
     total_walkable = 0
     total_cells = FLOORS * W * H
     stair_pairs = []
@@ -146,8 +168,16 @@ def analyse(maps, verbose=True):
             say(f"  !! UNREACHABLE from the up stair: "
                 + ", ".join(f"{NAMES[grid[y][x]]}@({x},{y})"
                             for x, y in unreachable))
-        if mirror_symmetric(grid):
-            say("  symmetry : mirror-symmetric on the vertical axis")
+        left, up = shape_symmetry(floor_shape(grid))
+        if left or up:
+            sym = []
+            if left:
+                sym.append("left-right")
+            if up:
+                sym.append("top-bottom")
+            say(f"  shape    : mirror-symmetric ({', '.join(sym)})"
+                "  <- the community calls symmetric floors water floors")
+        shapes[floor_shape(grid)].append(f + 1)
 
     # ---- cross-floor statistics ----
     glob = Counter("".join("".join(g) for g in maps))
@@ -225,6 +255,48 @@ def analyse(maps, verbose=True):
     check("no floor without enemies",
           all(n > 0 for n in per_floor_enemies),
           f"floors with 0: {[i + 1 for i, n in enumerate(per_floor_enemies) if n == 0]}")
+
+    # --- the community's "water floor" rules (see the design skill) ---
+    water = [i + 1 for i, n in enumerate(per_floor_enemies) if n <= 1]
+    check("no water floors (1 enemy or fewer)",
+          not water,
+          f"water floors: {water}")
+
+    sym_floors = []
+    for shape, floors in shapes.items():
+        left, up = shape_symmetry(shape)
+        if left or up:
+            sym_floors += floors
+    check("no mirror-symmetric floors (target <= 20%)",
+          len(sym_floors) <= 2,
+          f"{len(sym_floors)}/{FLOORS} symmetric: {sorted(sym_floors)}")
+
+    reused = {tuple(v) for v in shapes.values() if len(v) > 1}
+    check("floor plans are not reused across floors",
+          not reused,
+          "reused plans: " + ", ".join(str(list(r)) for r in sorted(reused))
+          if reused else "no reuse")
+    say(f"  distinct floor plans : {len(shapes)} for {FLOORS} floors")
+    for shape, floors in sorted(shapes.items(), key=lambda kv: -len(kv[1])):
+        if len(floors) > 1:
+            say(f"    plan used by floors {floors}")
+
+    # --- idle enemies: zero-damage fights are pointless ---
+    route = load_route()
+    if route:
+        enc = route.get("enemy_encounters") or []
+        idle = [(e["floor"] + 1, e["name"], e["x"], e["y"])
+                for e in enc if e.get("damage", 0) == 0]
+        check("no idle enemies (zero-damage fights)", not idle,
+              f"{len(idle)}/{len(enc)} fights deal 0 damage"
+              + (": " + ", ".join(f"{n}@f{f}({x},{y})" for f, n, x, y in idle)
+                 if idle else ""))
+        turns = (route.get("expected") or {}).get("turns")
+        if turns and enc:
+            share = 100.0 * len(enc) / turns
+            say(f"  combat share: {len(enc)} fights / {turns} turns = {share:.1f}%")
+            check("combat is more than 10% of the run", share > 10.0,
+                  f"{share:.1f}% -- below this the tower is a walking simulator")
 
     failed = [r for r in results if not r[1]]
     say(f"\n  {len(results) - len(failed)}/{len(results)} checks passed")
