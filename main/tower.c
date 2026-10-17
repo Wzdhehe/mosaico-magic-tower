@@ -75,14 +75,14 @@ static const char initial_map[TOWER_FLOORS][TOWER_HEIGHT][TOWER_WIDTH + 1] = {
      "#####D#####",
      "###########"},
     {"###########",
-     "##...U...##",
-     "##.##..#.##",
-     "#..##.g#..#",
-     "#..#.w..#.#",
-     "##.#.##.d.#",
-     "##.a.##.#.#",
-     "##.#....#.#",
-     "##.p...n#P#",
+     "###..U..###",
+     "###.###.###",
+     "###.###.###",
+     "###.###.###",
+     "##dm###ga##",
+     "###.###.###",
+     "##.......##",
+     "##p..n..P##",
      "#####D#####",
      "###########"},
     {"###########",
@@ -108,14 +108,14 @@ static const char initial_map[TOWER_FLOORS][TOWER_HEIGHT][TOWER_WIDTH + 1] = {
      "#####D#####",
      "###########"},
     {"###########",
-     "##...U..###",
-     "##.###..###",
-     "##.a.#..a.#",
-     "####.#.##.#",
-     "#P...#...n#",
-     "#.#..g#####",
-     "#w###.##d.#",
-     "#.d......p#",
+     "#####U#####",
+     "###a.d..###",
+     "###.###.###",
+     "###.###.###",
+     "##dg###wa##",
+     "###.###.###",
+     "###.....###",
+     "###P.n.p###",
      "#####D#####",
      "###########"},
     {"###########",
@@ -359,13 +359,24 @@ tower_status_t tower_cancel(tower_handle_t h)
     return set_status(h, TOWER_STATUS_CANCELLED);
 }
 
+uint32_t tower_shop_price(const tower_snapshot_t *state)
+{
+    uint64_t bought, price;
+    if (!state) return TOWER_SHOP_COST;
+    bought = (uint64_t)state->shop_attack + state->shop_defence;
+    price = TOWER_SHOP_COST + (uint64_t)TOWER_SHOP_STEP * bought;
+    return price > UINT32_MAX ? UINT32_MAX : (uint32_t)price;
+}
+
 tower_status_t tower_buy(tower_handle_t h, int kind)
 {
+    uint32_t price;
     if (!h) return TOWER_STATUS_NEED_GOLD;
     if (h->state.phase != TOWER_PHASE_PLAY) return h->state.status;
     if (kind != 0 && kind != 1) return set_status(h, TOWER_STATUS_NEED_GOLD);
-    if (h->state.gold < TOWER_SHOP_COST) return set_status(h, TOWER_STATUS_NEED_GOLD);
-    h->state.gold -= TOWER_SHOP_COST;
+    price = tower_shop_price(&h->state);
+    if (h->state.gold < price) return set_status(h, TOWER_STATUS_NEED_GOLD);
+    h->state.gold -= price;
     if (kind == 0) {
         h->state.attack += TOWER_SHOP_GAIN;
         ++h->state.shop_attack;
@@ -478,7 +489,11 @@ static bool valid_state(tower_handle_t h)
     for (f = TOWER_TILE_SLIME; f <= TOWER_TILE_DEMON; ++f)
         gold += enemy_gold((tower_tile_t)f) * consumed[f];
     {
-        uint64_t spent = (uint64_t)(s->shop_attack + s->shop_defence) * TOWER_SHOP_COST;
+        uint64_t bought = (uint64_t)s->shop_attack + s->shop_defence;
+        uint64_t spent;
+        if (bought > 1000000u) return false;
+        spent = bought * TOWER_SHOP_COST +
+                (bought * (bought - 1u) / 2u) * TOWER_SHOP_STEP;
         if (earned_less(gold, spent) || s->gold != gold - (uint32_t)spent) {
             return false;
         }

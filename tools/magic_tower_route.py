@@ -39,8 +39,9 @@ def load_maps():
 
 
 class Route:
-    def __init__(self, maps):
+    def __init__(self, maps, guard_choices=None):
         self.maps = maps
+        self.guard_choices = guard_choices or {}
         self.floor, self.x, self.y = 0, 5, 9
         self.hp, self.atk, self.dfn = 100, 12, 4
         self.keys = [0, 0, 0]
@@ -207,6 +208,12 @@ class Route:
                     self.walk(up)
                     return 'goal' if self.cleared else 'stuck'
             enemies = self.enemy_goals()
+            desired = self.guard_choices.get(self.floor + 1)
+            if desired:
+                options = {(x, y) for x, y in enemies
+                           if self.maps[self.floor][y][x] == desired}
+                if options and self.bfs(options, allow_enemy=True) is not None:
+                    enemies = options
             path = self.bfs(enemies, allow_enemy=True) if enemies else None
             if path:
                 target = path[-1]
@@ -245,6 +252,32 @@ class Route:
                 'hp': self.hp, 'attack': self.atk, 'defence': self.dfn,
                 'keys': self.keys, 'gold': self.gold, 'turns': self.turns,
                 'cleared': self.cleared}
+
+
+def plan_variant(guard_choices):
+    """Plan a winning replay for a chosen 6F/9F guarded reward."""
+    route = Route(load_maps(), guard_choices=guard_choices)
+    stale = 0
+    while not route.cleared:
+        result = route.collect_floor(verbose=False)
+        if result == 'goal':
+            break
+        if result == 'up':
+            stale = 0
+            continue
+        if route.floor == 0:
+            raise AssertionError('stuck on first floor')
+        while route.floor > 0:
+            if not route.descend():
+                raise AssertionError('cannot descend during strategy replay')
+            if (route.bfs(route.loot_goals()) is not None or
+                    route.bfs(route.enemy_goals(), allow_enemy=True) is not None):
+                break
+        stale += 1
+        if stale > 20:
+            raise AssertionError('strategy replay cycling')
+    assert route.cleared
+    return route
 
 
 def main():

@@ -54,22 +54,22 @@ typedef struct { const char *zh[2], *en[2]; } story_t;
 static const story_t STORY[TOWER_FLOORS]={
     {{"魔王掳走了公主，囚禁在塔顶。","钥匙颜色对应门。别硬闯。"},
      {"The Demon King holds the princess at the summit.","Keys match doors. Do not rush in."}},
-    {{"金币能变成攻击或防御。","并非每场战斗都值得打。"},
-     {"Gold can buy power or protection.","Not every fight is worth the cost."}},
+    {{"购买攻击或防御。","金币不足就离开。"},
+     {"Buying power or defence costs gold.","Each purchase raises the next price."}},
     {{"西侧蓝门后藏着红钥匙。","四层有第二把蓝钥匙。"},
      {"The west vault hides a red key.","Find another blue key on floor four."}},
     {{"先开右侧蓝门继续前进。","左边红门藏着备用资源。"},
      {"The right blue gate is the way onward.","The left red vault holds spare supplies."}},
     {{"旧书库只认红钥匙。","没有就回三层的密室找。"},
      {"The archive seal needs a red key.","Search the sealed room on floor three."}},
-    {{"废墟里有两条不同的路。","先算伤害，别急着动手。"},
-     {"The ruins offer two different routes.","Count the damage before you fight."}},
+    {{"法师守着防御宝石。","石魔守着攻击宝石。"},
+     {"The mage guards defence.","The golem guards attack. Choose a path."}},
     {{"东侧怨灵守着红钥匙。","八层的封印也在等它。"},
      {"A wraith guards the eastern red key.","Floor eight has a matching seal."}},
     {{"牢房上方的红门封住出口。","资源不足就返回下层。"},
      {"A red lock seals the upper exit.","Go below if you need more supplies."}},
-    {{"左右守卫拦住了通道。","选一条损失更小的路。"},
-     {"Two guards bar different routes.","Choose the cheaper fight."}},
+    {{"石魔守防御，怨灵守攻击。","先选择，再看伤害。"},
+     {"Golem guards defence; wraith guards attack.","Each choice changes the final battle."}},
     {{"魔王就挡在最后的门前。","算清伤害，再决定是否开战。"},
      {"The Demon King blocks the final way.","Check the damage before you commit."}},
 };
@@ -619,12 +619,12 @@ static void shop_modal(const game_snapshot_t *s)
     ui_center(tx(s,&T_SHOP),156,2,BRASS);
     snprintf(text,sizeof(text),"%s %lu",tx(s,&T_GOLD),(unsigned long)s->tower.gold);
     ui_center(text,198,1,WHITE_INK);
-    snprintf(text,sizeof(text),"%s  %u%s",tx(s,&T_SHOP_ATK),TOWER_SHOP_COST,
-             s->lang==GAME_LANG_EN?"G":"金");
+    snprintf(text,sizeof(text),"%s  %lu%s",tx(s,&T_SHOP_ATK),
+             (unsigned long)tower_shop_price(&s->tower),s->lang==GAME_LANG_EN?"G":"金");
     button(s,NULL,130,222,220,36,true);
     ui_draw(text,130+(220-ui_width(text,1))/2,222+(36-16)/2,1,INK);
-    snprintf(text,sizeof(text),"%s  %u%s",tx(s,&T_SHOP_DEF),TOWER_SHOP_COST,
-             s->lang==GAME_LANG_EN?"G":"金");
+    snprintf(text,sizeof(text),"%s  %lu%s",tx(s,&T_SHOP_DEF),
+             (unsigned long)tower_shop_price(&s->tower),s->lang==GAME_LANG_EN?"G":"金");
     button(s,NULL,130,264,220,36,true);
     ui_draw(text,130+(220-ui_width(text,1))/2,264+(36-16)/2,1,INK);
     if(s->tower.status==TOWER_STATUS_ITEM) ui_center(tx(s,&T_BOUGHT),302,1,MINT);

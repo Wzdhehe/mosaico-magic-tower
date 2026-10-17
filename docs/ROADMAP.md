@@ -1,24 +1,21 @@
 # Roadmap
 
-## Current PR: handcrafted map design pass
+## Next: map design pass
 
-- Rework floors 3–10 without increasing the 11×11 viewport or drawing load
-- Preserve initial tutorial/merchant screens and their existing UI coverage
-- Force floor 4 blue gate -> floor 3 red vault -> floor 5 red seal detour
-- Place floor 7 red key behind a wraith for floor 8's seal
-- Offer a floor 9 choice between two mandatory guardians
-- Write hints into existing short, bilingual NPC dialogues
-- Add structural gate/connectedness checks, re-record the full playable route
-- Bump save format because the old stored map no longer matches the level geometry
+The current ten floors are compact and functional, but the layouts are too
+regular. The next iteration reworks them using the room-and-corridor language
+of the original 21-floor Magic Tower:
 
-## Next: review, balancing, performance
-
-- Playtest alternative routes on real hardware, record boss HP left and key spend
-- Measure hardware temperature, frame time and battery use before changing FPS
-- Consider a lower-power render mode with correct animation/input timings
-- Larger maps with a fixed-size camera viewport and on-screen pan arrows (separate feature)
+- asymmetric stair placement, guard rooms, treasure alcoves, and dead ends
+- one-tile corridors mixed with small rooms instead of a central cross
+- tighter key economy and more optional doors/treasure
+- keep the existing floor 3 → 4 → 5 key detour and the ten-floor scope
+- regenerate `tests/win_route.json`/`win_route.h` after every map change
 
 ## Later
 
-- Extra story branches and score/challenge goals only if real playtests justify them
-- Per-floor atmosphere tweaks, optional minimap and additional boss arrangements
+- distinguish the last floors with unique tiles/ambience and more boss phases
+- optional minimap of visited floors
+- more shop choices and consumable inventory
+- additional chiptune tracks for the boss and ending
+- broader host coverage for the shop and NPC flows

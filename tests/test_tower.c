@@ -56,6 +56,15 @@ int main(void)
     assert(tower_tile(t, 6, 9, 5) == TOWER_TILE_KEY_RED);
     assert(tower_tile(t, 7, 5, 3) == TOWER_TILE_DOOR_RED);
     assert(tower_tile(t, 9, 5, 3) == TOWER_TILE_DEMON);
+    /* A guardian must be fought to collect its reward pocket. */
+    assert(tower_tile(t, 5, 3, 5) == TOWER_TILE_MAGE);
+    assert(tower_tile(t, 5, 2, 5) == TOWER_TILE_DEFENCE);
+    assert(tower_tile(t, 5, 7, 5) == TOWER_TILE_GOLEM);
+    assert(tower_tile(t, 5, 8, 5) == TOWER_TILE_ATTACK);
+    assert(tower_tile(t, 8, 3, 5) == TOWER_TILE_GOLEM);
+    assert(tower_tile(t, 8, 2, 5) == TOWER_TILE_DEFENCE);
+    assert(tower_tile(t, 8, 7, 5) == TOWER_TILE_WRAITH);
+    assert(tower_tile(t, 8, 8, 5) == TOWER_TILE_ATTACK);
     assert(tower_move(t, 0, 1) == TOWER_STATUS_WALL);
     assert(tower_move(t, 1, 1) == TOWER_STATUS_WALL);
     assert(read_state(t).turns == 0);
@@ -116,6 +125,25 @@ int main(void)
     assert(tower_import(t, changed, sizeof changed) == TOWER_ERR_SAVE);
     assert(tower_import(t, saved, sizeof saved - 1) == TOWER_ERR_SAVE);
     assert(tower_hash(t) == hash);
+
+    /* Shop price increases jointly for attack and defence.
+     * The store's spent-gold validator must accept this exact sequence. */
+    assert(tower_import(other, saved, sizeof saved) == TOWER_OK);
+    s = read_state(other);
+    assert(tower_shop_price(&s) == 15);
+    assert(tower_buy(other, 0) == TOWER_STATUS_ITEM);
+    s = read_state(other);
+    assert(s.attack == WIN_EXPECT_ATTACK + TOWER_SHOP_GAIN);
+    assert(s.gold == WIN_EXPECT_GOLD - 15);
+    assert(tower_shop_price(&s) == 25);
+    assert(tower_buy(other, 1) == TOWER_STATUS_ITEM);
+    s = read_state(other);
+    assert(s.defence == WIN_EXPECT_DEFENCE + TOWER_SHOP_GAIN);
+    assert(s.gold == WIN_EXPECT_GOLD - 40);
+    assert(tower_shop_price(&s) == 35);
+    assert(tower_export(other, changed, sizeof changed) == TOWER_OK);
+    assert(tower_import(t, changed, sizeof changed) == TOWER_OK);
+    assert(tower_hash(t) == tower_hash(other));
 
     tower_delete(other);
     tower_delete(t);

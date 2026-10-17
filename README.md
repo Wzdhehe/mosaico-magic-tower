@@ -97,6 +97,7 @@ The gameplay model is portable C and can be tested without hardware.
 python tests/test_level_design.py
 python tools/magic_tower_route.py
 python tests/run_tests.py --label local
+python -m unittest discover -s tests -p test_guarded_forks.py
 python tests/test_integration.py   # requires the host Raylib Lite engine
 ```
 
@@ -126,3 +127,11 @@ The layout update bumps the NVS save wire version from v3 to v4 so older
 position/map snapshots are rejected instead of being loaded into changed
 geometry. Start a new journey after updating. The gameplay renderer and
 30 FPS device configuration remain unchanged in this design-only PR.
+
+### Guarded-fork strategies and merchant prices
+
+Floors 6 and 9 now have distinct attack/defence reward pockets behind
+individual guardians. Both routes can lead upstairs, but taking the other
+reward still requires defeating its defender. Both merchant attributes use
+a shared rising price (15, 25, 35, ... gold). See
+[design brief](docs/GUARDED_FORK_DESIGN.md).
