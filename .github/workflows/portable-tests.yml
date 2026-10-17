@@ -1,0 +1,17 @@
+name: Portable model and timing checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  portable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python and GCC versions
+        run: python3 --version && gcc --version
+      - name: Portable game timing regression
+        run: python3 tests/run_game_timing.py
+      - name: Portable deterministic tower replay
+        run: python3 tests/run_tests.py --label ci
