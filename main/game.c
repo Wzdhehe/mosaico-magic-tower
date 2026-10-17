@@ -28,7 +28,7 @@ static void suppress_directions(game_handle_t g)
 static void notice(game_handle_t g, game_notice_t id)
 {
     g->state.notice_id = (uint8_t)id;
-    g->notice_ticks = 90;
+    g->notice_ticks = GAME_NOTICE_TICKS;
 }
 static void clear_gain(game_handle_t g)
 {
@@ -41,7 +41,7 @@ static void set_gain(game_handle_t g, game_gain_t kind, uint32_t value, uint8_t 
     g->state.gain_kind = (uint8_t)kind;
     g->state.gain_value = value;
     g->state.gain_color = color;
-    g->notice_ticks = 120;
+    g->notice_ticks = GAME_GAIN_TICKS;
 }
 static void start(game_handle_t g)
 {

@@ -120,9 +120,16 @@ static const text_t NOTICE_TEXT[]={
 
 static const ui_glyph_t *glyph_for(uint32_t cp)
 {
-    for(unsigned i=0;i<UI_GLYPH_COUNT;++i)
-        if(ui_glyphs[i].codepoint==cp) return &ui_glyphs[i];
-    return NULL;
+    /* gen_ui_font.py writes glyphs sorted by Unicode codepoint.
+     * Binary search avoids a linear scan of the CJK table for each label. */
+    size_t lo=0, hi=UI_GLYPH_COUNT;
+    while(lo<hi) {
+        const size_t mid=lo+(hi-lo)/2;
+        if(ui_glyphs[mid].codepoint<cp) lo=mid+1;
+        else hi=mid;
+    }
+    return lo<UI_GLYPH_COUNT && ui_glyphs[lo].codepoint==cp
+        ? &ui_glyphs[lo] : NULL;
 }
 static int utf8_next(const char **p,uint32_t *cp)
 {
@@ -637,7 +644,7 @@ bool game_render(game_handle_t game)
     if(!s) return false;
     BeginDrawing();
     if(!MosaicoFastFrameAvailable()) { EndDrawing(); return false; }
-    ClearBackground(INK);
+    /* A single full-canvas clear is sufficient. */
     ClearBackground(BG);
     DrawRectangleLines(3,3,GAME_WIDTH-6,GAME_HEIGHT-6,STONE);
     if(s->screen==GAME_TITLE) title(s);

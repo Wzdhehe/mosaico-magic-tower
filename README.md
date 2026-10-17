@@ -95,6 +95,7 @@ The gameplay model is portable C and can be tested without hardware.
 
 ```bash
 python tests/run_tests.py --label local
+python tests/run_game_timing.py   # portable low-FPS + CJK lookup checks
 python tests/test_integration.py   # requires the host Raylib Lite engine
 ```
 
@@ -117,3 +118,12 @@ python tests/test_integration.py   # requires the host Raylib Lite engine
 ## License
 
 Project code is released under the **MIT License**; see [LICENSE](LICENSE). Some files are adapted from Espressif Apache-2.0 templates and retain their SPDX headers — see [NOTICE](NOTICE). The game art is drawn procedurally in `game_view.c`; no third-party sprites, music, or map data are included.
+
+## Performance
+
+The game currently targets **15 FPS** instead of 30 FPS because Magic Tower
+is a turn-based game. Feedback durations remain tied to elapsed time rather
+than the old tick count; CJK font lookup uses binary search, and one extra
+full-screen clear has been removed. See [performance notes](docs/PERFORMANCE.md)
+for the real-device profiling checklist. **No thermal benefit is claimed until
+Mosaico measurements are recorded.**
