@@ -16,7 +16,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def check_glyph_order():
     text=(ROOT/"main"/"ui_font.h").read_text(encoding="utf-8")
-    glyphs=[int(cp,16) for cp in re.findall(r"\\{0x([0-9a-fA-F]+),\\s*\\{",text)]
+    glyphs=[int(cp,16) for cp in re.findall(r"\{0x([0-9a-fA-F]+),\s*\{",text)]
     assert len(glyphs)>=1, "font header has no glyphs"
     assert all(a<b for a,b in zip(glyphs,glyphs[1:])), (
         "glyph_for binary search requires a strictly sorted, unique table")
