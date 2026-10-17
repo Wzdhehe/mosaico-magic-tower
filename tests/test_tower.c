@@ -48,8 +48,14 @@ int main(void)
     assert(s.floor == 0 && !s.cleared && !s.gold);
     assert(tower_tile(t, 0, 5, 1) == TOWER_TILE_UP);
     assert(tower_tile(t, 9, 5, 1) == TOWER_TILE_GOAL);
-    assert(tower_tile(t, 2, 1, 2) == TOWER_TILE_KEY_RED);
+    assert(tower_tile(t, 2, 1, 4) == TOWER_TILE_KEY_RED);
     assert(tower_tile(t, 4, 5, 5) == TOWER_TILE_DOOR_RED);
+    assert(tower_tile(t, 2, 4, 8) == TOWER_TILE_DOOR_BLUE);
+    assert(tower_tile(t, 3, 8, 7) == TOWER_TILE_DOOR_BLUE);
+    assert(tower_tile(t, 3, 3, 3) == TOWER_TILE_DOOR_RED);
+    assert(tower_tile(t, 6, 9, 5) == TOWER_TILE_KEY_RED);
+    assert(tower_tile(t, 7, 5, 3) == TOWER_TILE_DOOR_RED);
+    assert(tower_tile(t, 9, 5, 3) == TOWER_TILE_DEMON);
     assert(tower_move(t, 0, 1) == TOWER_STATUS_WALL);
     assert(tower_move(t, 1, 1) == TOWER_STATUS_WALL);
     assert(read_state(t).turns == 0);

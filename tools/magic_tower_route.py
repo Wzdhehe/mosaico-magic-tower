@@ -221,16 +221,24 @@ class Route:
             return 'stuck'
 
     def descend(self):
-        path = self.bfs({(5, 9)})
-        if not path:
+        # The player spawns ON the down stair after entering a floor.
+        # Move to an adjacent tile and step back onto D to descend.
+        neighbours = {(5 + dx, 9 + dy) for dx, dy in MOVE.values()
+                      if 0 <= 5 + dx < W and 0 <= 9 + dy < H
+                      and self.maps[self.floor][9 + dy][5 + dx] != '#'}
+        path = self.bfs(neighbours)
+        if path is None:
             return False
-        floor_before = self.floor
+        previous_floor = self.floor
         self.walk(path)
-        if self.floor == floor_before:
-            if (self.x, self.y) != (5, 9):
-                return False
-            self.step('down')
-        return self.floor < floor_before
+        if self.floor != previous_floor:
+            return True
+        direction = next((name for name, (dx, dy) in MOVE.items()
+                          if (self.x + dx, self.y + dy) == (5, 9)), None)
+        if direction is None:
+            return False
+        self.step(direction)
+        return self.floor < previous_floor
 
     def summary(self):
         return {'floor': self.floor, 'x': self.x, 'y': self.y,
@@ -261,7 +269,10 @@ def main():
         while route.floor > 0:
             if not route.descend():
                 raise AssertionError(f'cannot descend from F{route.floor + 1}')
-            if route.loot_goals():
+            # Do not stop at loot hidden behind an unavailable key.
+            # A reachable guard may be the only path to the next key.
+            if (route.bfs(route.loot_goals()) is not None or
+                    route.bfs(route.enemy_goals(), allow_enemy=True) is not None):
                 break
         stale += 1
         if stale > 20:
