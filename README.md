@@ -77,7 +77,7 @@ This repository is a **project** for the ESP-Mosaico workspace, not a standalone
 python mosaico.py game build --project projects/magic_tower
 ```
 
-On Windows, `tools/build_firmware.bat` wraps the same command with the ESP-IDF environment. The project targets ESP-IDF 6.x and the component versions pinned in `dependencies.lock`.
+The project targets ESP-IDF 6.x and the component versions pinned in `dependencies.lock`.
 
 ### Install on hardware
 
@@ -87,7 +87,7 @@ Only use the official Iris update path; never flash the factory/Vibe Mode partit
 python mosaico.py iris system-update --project projects/magic_tower
 ```
 
-`tools/install_app_only.bat` runs the same command without touching Vibe Mode.
+The update only writes the application partition; Vibe Mode and the recovery firmware are preserved.
 
 ## Tests
 

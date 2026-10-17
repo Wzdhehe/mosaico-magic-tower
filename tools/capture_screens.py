@@ -8,7 +8,6 @@ import sys
 PROJECT = Path(__file__).resolve().parents[1]
 WORKSPACE = PROJECT.parents[1]
 ARTIFACTS = PROJECT / "artifacts"
-os.environ["PATH"] = "D:/espbulid/mingw64/bin" + os.pathsep + os.environ.get("PATH", "")
 HOST = WORKSPACE / "submodule/raylib-lite-engine/host/run_game.py"
 spec = importlib.util.spec_from_file_location("mosaico_native_host", HOST)
 host = importlib.util.module_from_spec(spec)

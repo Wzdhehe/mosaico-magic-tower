@@ -2,6 +2,7 @@
 import argparse
 import os
 from pathlib import Path
+import shutil
 import subprocess
 
 parser = argparse.ArgumentParser()
@@ -10,14 +11,16 @@ args = parser.parse_args()
 project = Path(__file__).resolve().parents[1]
 artifacts = project / "artifacts"
 artifacts.mkdir(exist_ok=True)
-gcc = Path("D:/espbulid/mingw64/bin/gcc.exe")
+gcc = Path(os.environ.get("CC") or shutil.which("gcc") or "gcc")
 output = artifacts / "test_tower.exe"
 command = [str(gcc), "-std=c11", "-Wall", "-Wextra", "-Werror", "-pedantic", "-g",
            "-I", str(project / "main"), "-I", str(project / "tests"),
            str(project / "tests/test_tower.c"),
            str(project / "main/tower.c"), "-o", str(output)]
+if not gcc.exists():
+    raise SystemExit(f"gcc not found: {gcc}. Set CC or add gcc to PATH.")
 env = os.environ.copy()
-env["PATH"] = str(gcc.parent) + os.pathsep + env.get("PATH", "")
+env["PATH"] = str(gcc.parent) + os.pathsep + env.get("PATH", "") if gcc.parent != Path(".") else env.get("PATH", "")
 build = subprocess.run(command, capture_output=True, text=True, env=env)
 log = "COMPILE: " + " ".join(command) + "\n" + build.stdout + build.stderr
 result = build.returncode
