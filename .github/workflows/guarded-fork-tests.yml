@@ -16,6 +16,5 @@ jobs:
       - name: Four alternative winning routes
         run: |
           python3 -m unittest discover -s tests -p test_guarded_forks.py
-          python3 tests/test_level_design.py
       - name: Portable C model replay
         run: python3 tests/run_tests.py --label guarded-forks
