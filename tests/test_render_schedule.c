@@ -102,6 +102,9 @@ int main(void)
     paint_once(game);
     press(game, GAME_ACTION_UP);
     paint_once(game);
+    press(game, GAME_ACTION_UP); press(game, GAME_ACTION_UP);
+    press(game, GAME_ACTION_UP); press(game, GAME_ACTION_LEFT);
+    paint_once(game);
     assert(game_read(game)->gain_kind == GAME_GAIN_HP);
     const uint32_t dungeon_hash = image_hash();
     idle_acquisitions = acquisitions;

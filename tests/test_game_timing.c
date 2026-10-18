@@ -141,6 +141,9 @@ static void test_sticky_feedback_and_storage(void)
     press(game,GAME_ACTION_UP);
     assert(game_read(game)->tower.y==8 && game_needs_redraw(game));
     assert(game_read(game)->notice_id==GAME_NOTICE_NONE);
+    assert(game_read(game)->gain_kind==GAME_GAIN_NONE);
+    press(game,GAME_ACTION_UP); press(game,GAME_ACTION_UP);
+    press(game,GAME_ACTION_UP); press(game,GAME_ACTION_LEFT);
     assert(game_read(game)->gain_kind==GAME_GAIN_HP);
     settle(game);
     for (int i=0;i<1000;++i) game_update(game);
@@ -309,12 +312,12 @@ static void test_settings_capture_and_held_suppression(void)
     assert(game_read(game)->tower.y==7);
     game_delete(game);
     game=new_started_game();
-    press(game,GAME_ACTION_UP); press(game,GAME_ACTION_LEFT); press(game,GAME_ACTION_LEFT);
+    press(game,GAME_ACTION_LEFT); press(game,GAME_ACTION_LEFT); press(game,GAME_ACTION_LEFT);
     press(game,GAME_ACTION_UP); assert(game_read(game)->tower.phase==TOWER_PHASE_COMBAT);
     tap(game,437,30);
     tap(game,285,298); /* brightness track covers combat confirm */
     game_update(game); tap(game,390,102);
-    assert(game_read(game)->tower.phase==TOWER_PHASE_COMBAT && game_read(game)->tower.y==8);
+    assert(game_read(game)->tower.phase==TOWER_PHASE_COMBAT && game_read(game)->tower.y==9);
     tap(game,437,30); press(game,GAME_ACTION_LEFT);
     assert(!game_read(game)->settings_open && game_read(game)->tower.phase==TOWER_PHASE_COMBAT);
     game_delete(game);
@@ -408,25 +411,25 @@ static void test_held_repeat_and_combat(void)
     assert(game_read(game)->tower.y==7 && game_needs_redraw(game));
     game_delete(game);
     game=new_started_game();
-    press(game,GAME_ACTION_UP); press(game,GAME_ACTION_LEFT); press(game,GAME_ACTION_LEFT);
+    press(game,GAME_ACTION_LEFT); press(game,GAME_ACTION_LEFT); press(game,GAME_ACTION_LEFT);
     game_set_action(game,GAME_ACTION_UP,true);
     assert(game_needs_redraw(game) && game_read(game)->tower.phase==TOWER_PHASE_COMBAT);
     settle(game);
     press(game,GAME_ACTION_START);
-    assert(game_needs_redraw(game) && game_read(game)->tower.y==7);
+    assert(game_needs_redraw(game) && game_read(game)->tower.y==8);
     settle(game);
     const uint32_t turns=game_read(game)->tower.turns;
     for (int i=0;i<100;++i) { game_set_action(game,GAME_ACTION_UP,true); game_update(game); }
     assert(game_is_idle(game) && !game_needs_redraw(game) && game_read(game)->tower.turns==turns);
     game_set_action(game,GAME_ACTION_UP,false); press(game,GAME_ACTION_UP);
-    assert(game_needs_redraw(game) && game_read(game)->tower.y==6);
+    assert(game_needs_redraw(game) && game_read(game)->tower.y==7);
     game_delete(game);
     game=new_started_game();
-    press(game,GAME_ACTION_UP); press(game,GAME_ACTION_LEFT); press(game,GAME_ACTION_LEFT);
+    press(game,GAME_ACTION_LEFT); press(game,GAME_ACTION_LEFT); press(game,GAME_ACTION_LEFT);
     press(game,GAME_ACTION_UP); settle(game);
     tap(game,180,298);
     assert(game_needs_redraw(game) && game_read(game)->tower.phase==TOWER_PHASE_PLAY);
-    assert(game_read(game)->tower.y==8);
+    assert(game_read(game)->tower.y==9);
     game_delete(game);
 }
 static void test_route_music(void)
@@ -459,13 +462,11 @@ static void test_shop_transitions_and_feedback(void)
     for (unsigned i=0;i<WIN_ROUTE_COUNT && game_read(game)->tower.floor==0;++i)
         press(game,WIN_ROUTE[i]);
     assert(game_read(game)->tower.floor==1 && game_read(game)->tower.y==9);
-    /* Collect this floor's yellow key, then take the optional merchant detour. */
+    /* Walk the right-hand aisle to the merchant; save one tile below it. */
+    for (int i=0;i<3;++i) walking_press(game,GAME_ACTION_RIGHT);
     walking_press(game,GAME_ACTION_UP);
-    for (int i=0;i<4;++i) walking_press(game,GAME_ACTION_LEFT);
+    walking_press(game,GAME_ACTION_RIGHT);
     walking_press(game,GAME_ACTION_UP);
-    for (int i=0;i<4;++i) walking_press(game,GAME_ACTION_RIGHT);
-    walking_press(game,GAME_ACTION_UP); walking_press(game,GAME_ACTION_UP);
-    for (int i=0;i<4;++i) walking_press(game,GAME_ACTION_LEFT);
     settle(game); save_ok=true; tap(game,135,462);
     walking_press(game,GAME_ACTION_UP);
     assert(game_needs_redraw(game) && game_read(game)->screen==GAME_SHOP);

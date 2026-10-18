@@ -4,21 +4,21 @@ A ten-floor Magic Tower game for the **ESP-Mosaico** handheld (ESP32-S31, 480×4
 
 The game is a compact, original take on the classic key-and-door dungeon formula: deterministic combat previews, coloured keys, shops, NPC story scenes, an original generated soundtrack, and a crisp pixel UI rendered entirely in code.
 
-Current release: **v1.5** — see [CHANGELOG.md](CHANGELOG.md).
+Current release: **v1.6** — see [CHANGELOG.md](CHANGELOG.md).
 
 ![Title screen](docs/images/title.png)
 
 ## Features
 
-- **Ten floors** with stairs, coloured doors, shops, treasure, and a final boss.
-- **Cross-floor key puzzle**: the red key behind floor 3's blue door is needed on floor 5; its blue key waits on floor 4.
+- **Ten distinct floors**, each with its own hand-authored plan, palette, props and lighting: gatehouse, armory, archive, moss garden, cistern, barracks, crypt, sand tomb, star terrace and throne room.
+- **Cross-floor key puzzle**: the red key behind floor 3's blue door is needed on floor 5; its blue key waits in floor 4's blue vault. Floor 7's east crypt holds the key for floor 8's sand seal.
 - **Deterministic combat** with damage preview, confirm/cancel, and no HP loss when a fight is refused.
 - **NPC dialogue** on every floor, reusing the game's modal UI, in Chinese and English.
 - **Pickup feedback** with exact values (`Healing potion HP +30`, `Attack gem ATK +5`, …).
 - **Three original RPG loops**: a warm title theme, quiet lower-tower exploration and a more urgent upper-tower theme, using the same bounded C synthesizer on device and in previews.
 - **One settings button** at the top right: Chinese/English, volume, brightness and the readable GitHub repository address. Preferences survive restarting and loading journeys.
 - **Ponkan** credited on the welcome screen.
-- **Versioned transactional saves** (2 KiB, FNV checksum + semantic validation) in NVS.
+- **Versioned transactional saves** (2 KiB, v5 wire format, FNV checksum + semantic validation) in NVS. Old v4 journeys are rejected cleanly after the floor redesign.
 - **Operation-driven rendering**: redraw after input, static idle sprites, and a 15 Hz active update cap.
 - **TE-synchronized output** through GSP composition; the user currently reports no visible tearing on the device.
 
@@ -45,18 +45,18 @@ Current release: **v1.5** — see [CHANGELOG.md](CHANGELOG.md).
 
 Screenshots are rendered from the same C renderer used on the device.
 
-| Floor | Theme |
-|---|---|
-| 1 | Gatehouse — first fights and yellow door tutorial |
-| 2 | Merchant hall — shop, first blue gate and knight |
-| 3 | Ghost gallery — blue-locked western vault hides a red key |
-| 4 | Guard barracks — mandatory blue gate, red side vault, key for floor 3 |
-| 5 | Sealed archive — red seal requires going back to floor 3 |
-| 6 | Collapsed stair — two routes and optional expensive fights |
-| 7 | Chapel — eastern wraith protects the red key needed next |
-| 8 | Prison cells — a red seal blocks the route onward |
-| 9 | Throne antechamber — choose which guardian to fight |
-| 10 | Demon throne — a boss that cannot be bypassed |
+| Floor | Scene | Route idea |
+|---|---|---|
+| 1 | Gatehouse | Yellow-door tutorial; slimes and bats teach the combat preview |
+| 2 | Armory | Merchant, first blue gate and the broadest resource floor |
+| 3 | Archive | Blue-locked west vault hides the red key; detour to 4F for its key |
+| 4 | Moss garden | Two blue keys: one opens the garden vault, one unlocks 3F |
+| 5 | Cistern | Red seal and a guarded exit; the 3F red key is required |
+| 6 | Barracks | Mage and golem guard the same yellow key; pick a side |
+| 7 | Crypt | Wraith-guarded red-key pocket also contains the way up |
+| 8 | Sand tomb | Golem/wraith rooms, rune floor and the red seal to the summit |
+| 9 | Star terrace | Wraith blocks the exit; golem/wraith guard separate prizes |
+| 10 | Throne | Single carpeted boss aisle; the Demon King cannot be bypassed |
 
 <p float="left">
   <img src="docs/images/floor1.png" width="30%" />
@@ -71,10 +71,13 @@ Screenshots are rendered from the same C renderer used on the device.
   <img src="docs/images/floor10.png" width="30%" />
 </p>
 
-> **Design:** all ten floors are hand-authored 11×11 rooms and corridors with
-> asymmetric stairs, supply alcoves, optional fights and a cross-floor key
-> detour. Floors 6 and 9 each offer a guarded attack/defence fork. A larger
-> scrolling map with a fixed camera remains a separate future feature.
+> **Design:** all ten floors are hand-authored 11×11 rooms with distinct wall
+> plans, eight different up/down stair arrangements, denser treasure and enemy
+> placement, and a cross-floor key chain. Each scene gets its own palette,
+> wall treatment and floor decoration; stairs land on the matching stair of
+> the destination floor instead of a fixed screen cell. The route uses 678
+> actions and 39 fights, ending at HP 387 with shops available for spare gold.
+> A larger scrolling map with a fixed camera remains a separate future feature.
 
 ## Building
 
@@ -167,7 +170,7 @@ does not provide a web browser. Volume ranges from 0 to 100; brightness from
 10 to 100. Defaults are Chinese, volume 45 and brightness 40. Brightness uses
 the official BSP API. Preferences are saved once when a changed panel closes:
 device NVS `magic_tower/prefs1`, or Host `magic_tower.save.prefs`. They are
-independent of the existing journey record, which remains v4 and 2048 bytes.
+independent of the existing journey record, which remains v5 and 2048 bytes.
 Failed preference writes retain the previous record and display a retry notice.
 
 All three 16-bar scores and synthesis provenance are documented in
@@ -178,19 +181,19 @@ algorithm cost only; speaker quality and power consumption require device checks
 
 ### Map revision and saves
 
-The layout update bumps the NVS save wire version from v3 to v4 so older
-position/map snapshots are rejected instead of being loaded into changed
-geometry. Start a new journey after updating; a v3 record is rejected rather
+The v1.6 floor redesign bumps the NVS save wire version from v4 to v5 so
+older position/map snapshots are rejected instead of being loaded into changed
+geometry. Start a new journey after updating; a v4 record is rejected rather
 than loaded into the new floors, and until you save again the title screen
 offers no saved journey. There is nothing to repair by hand: **do not erase or
-rewrite NVS** to work around the rejection, because the v3 record is simply
+rewrite NVS** to work around the rejection, because the v4 record is simply
 ignored and a new game begins on floor one.
 
 ### Guarded-fork strategies and merchant prices
 
-Floors 6 and 9 have distinct attack/defence reward pockets behind
-individual guardians. Both routes can lead upstairs, but taking the other
-reward still requires defeating its defender. Both merchant attributes use
+Floor 6 puts one yellow key between a mage and a golem, so at least one
+guardian must be fought; floor 9 puts the exit behind a wraith and leaves a
+golem/wraith reward choice on the open terrace. Both merchant attributes use
 a shared rising price (15, 25, 35, ... gold): every purchase raises the next
 price by 10 gold for both attributes, while each purchase still grants +3. See
 [design brief](docs/GUARDED_FORK_DESIGN.md).

@@ -15,6 +15,29 @@ static const Color RED_INK={225,110,111,255};
 static const Color KEY_BLUE={107,179,232,255};
 static const Color ROBE={156,126,196,255}, GOLEM_STONE={154,148,136,255};
 
+enum {
+    SCENE_GATE, SCENE_ARMORY, SCENE_ARCHIVE, SCENE_GARDEN, SCENE_CISTERN,
+    SCENE_BARRACKS, SCENE_CRYPT, SCENE_SAND, SCENE_ASTRAL, SCENE_THRONE
+};
+typedef struct {
+    Color bg, floor_a, floor_b, wall, wall_hi, wall_lo, accent, carpet;
+    unsigned char style;
+} scene_t;
+/* Each floor gets its own quiet palette; the four-quadrant plans keep the
+ * scene readable behind bright pickups and enemies. */
+static const scene_t SCENES[TOWER_FLOORS]={
+ {{12,17,24,255},{29,38,50,255},{25,33,44,255},{58,68,84,255},{88,99,114,255},{39,47,59,255},{226,188,112,255},{60,40,34,255},SCENE_GATE},
+ {{20,16,13,255},{42,35,27,255},{37,31,24,255},{76,61,45,255},{112,90,64,255},{49,39,30,255},{218,166,102,255},{54,40,27,255},SCENE_ARMORY},
+ {{16,13,24,255},{38,30,51,255},{33,26,45,255},{62,50,80,255},{94,78,118,255},{42,33,56,255},{177,147,224,255},{44,30,50,255},SCENE_ARCHIVE},
+ {{8,20,17,255},{31,50,38,255},{27,44,34,255},{54,72,59,255},{84,106,85,255},{35,49,40,255},{140,220,170,255},{40,58,38,255},SCENE_GARDEN},
+ {{7,17,23,255},{25,45,51,255},{22,39,45,255},{45,72,80,255},{72,106,112,255},{30,48,54,255},{107,190,232,255},{26,46,48,255},SCENE_CISTERN},
+ {{22,14,14,255},{47,32,29,255},{41,28,26,255},{80,52,46,255},{118,78,66,255},{51,33,31,255},{230,120,110,255},{70,35,30,255},SCENE_BARRACKS},
+ {{17,12,22,255},{39,29,45,255},{34,25,40,255},{62,48,68,255},{94,74,98,255},{41,32,47,255},{198,154,216,255},{52,32,50,255},SCENE_CRYPT},
+ {{27,22,13,255},{64,51,33,255},{57,46,30,255},{98,78,48,255},{138,110,68,255},{64,51,34,255},{232,194,116,255},{72,50,32,255},SCENE_SAND},
+ {{8,11,25,255},{26,30,56,255},{22,26,49,255},{44,50,86,255},{73,83,128,255},{29,34,60,255},{132,222,224,255},{34,36,66,255},SCENE_ASTRAL},
+ {{18,9,12,255},{47,27,29,255},{40,23,25,255},{68,39,39,255},{106,60,52,255},{44,26,28,255},{232,192,112,255},{92,28,34,255},SCENE_THRONE},
+};
+
 typedef struct { const char *zh, *en; } text_t;
 static const text_t T_TITLE={"魔塔","MAGIC TOWER"};
 static const text_t T_SUBTITLE={"十层试炼","TEN FLOORS"};
@@ -58,39 +81,45 @@ typedef struct { const char *zh[2], *en[2]; } story_t;
  * Magic Tower premise: the princess is held at the summit, and the tower's
  * coloured keys are the only way through its seals. */
 static const story_t STORY[TOWER_FLOORS]={
-    {{"魔王掳走了公主，囚禁在塔顶。","钥匙颜色对应门。别硬闯。"},
-     {"The Demon King holds the princess at the summit.","Keys match doors. Do not rush in."}},
-    {{"购买攻击或防御。","金币不足就离开。"},
-     {"Buying power or defence costs gold.","Each purchase raises the next price."}},
+    {{"城门已破，公主被囚塔顶。","钥匙颜色对应门，别硬闯。"},
+     {"The gate is broken; the princess waits above.","Keys match doors. Do not rush in."}},
+    {{"军需官只认金币。","攻击与防御越买越贵。"},
+     {"The quartermaster takes gold only.","Each purchase raises the next price."}},
     {{"西侧蓝门后藏着红钥匙。","四层有第二把蓝钥匙。"},
-     {"The west vault hides a red key.","Find another blue key on floor four."}},
-    {{"先开右侧蓝门继续前进。","左边红门藏着备用资源。"},
-     {"The right blue gate is the way onward.","The left red vault holds spare supplies."}},
-    {{"旧书库只认红钥匙。","没有就回三层的密室找。"},
-     {"The archive seal needs a red key.","Search the sealed room on floor three."}},
-    {{"法师守着防御宝石。","石魔守着攻击宝石。"},
-     {"The mage guards defence.","The golem guards attack. Choose a path."}},
-    {{"东侧怨灵守着红钥匙。","八层的封印也在等它。"},
-     {"A wraith guards the eastern red key.","Floor eight has a matching seal."}},
-    {{"牢房上方的红门封住出口。","资源不足就返回下层。"},
-     {"A red lock seals the upper exit.","Go below if you need more supplies."}},
-    {{"石魔守防御，怨灵守攻击。","先选择，再看伤害。"},
-     {"Golem guards defence; wraith guards attack.","Each choice changes the final battle."}},
-    {{"魔王就挡在最后的门前。","算清伤害，再决定是否开战。"},
-     {"The Demon King blocks the final way.","Check the damage before you commit."}},
+     {"The west blue vault hides a red key.","Floor four holds a second blue key."}},
+    {{"苔庭的蓝钥匙在东南角。","蓝门后还有第二把。"},
+     {"The garden's blue key lies southeast.","A second waits behind the blue door."}},
+    {{"水牢封印只认红钥匙。","没有就回三层密室找。"},
+     {"The cistern seal needs the red key.","Search the sealed room on floor three."}},
+    {{"法师与石魔守着同一把黄钥匙。","选一边打，别贪。"},
+     {"Mage and golem guard one yellow key.","Pick a side. Do not fight both."}},
+    {{"东侧怨灵守着红钥匙。","八层沙墓也在等它。"},
+     {"A wraith guards the eastern red key.","The sand tomb on floor eight waits."}},
+    {{"沙墓出口的红门，需用最后一把红钥匙。","资源不足就回下层。"},
+     {"The sand tomb exit needs the last red key.","Go below if supplies run short."}},
+    {{"星台尽头有怨灵挡路。","石魔和怨灵各守一件宝物。"},
+     {"A wraith blocks the star terrace exit.","Golem and wraith each guard a prize."}},
+    {{"魔王就挡在王座前。","算清伤害，再开战。"},
+     {"The Demon King stands before the throne.","Check the damage before you strike."}},
 };
 
 static const text_t NPC_NAME[TOWER_FLOORS]={
     {"守夜人","WATCHMAN"},
-    {"吟游诗人","BARD"},
+    {"军需官","QUARTERMASTER"},
     {"侍女幽魂","GHOST MAID"},
     {"守卫亡魂","FALLEN GUARD"},
-    {"老学者","SCHOLAR"},
+    {"溺亡学者","DROWNED SCHOLAR"},
     {"伤兵","WOUNDED SOLDIER"},
     {"黑祭司","DARK PRIESTESS"},
     {"骑士团长","KNIGHT COMMANDER"},
     {"公主回声","PRINCESS ECHO"},
     {"公主","PRINCESS"},
+};
+static const text_t SCENE_NAME[TOWER_FLOORS]={
+    {"城门","GATEHOUSE"}, {"军械库","ARMORY"}, {"藏书阁","ARCHIVE"},
+    {"苔庭","MOSS GARDEN"}, {"水牢","CISTERN"}, {"兵营","BARRACKS"},
+    {"墓室","CRYPT"}, {"沙墓","SAND TOMB"}, {"星台","STAR TERRACE"},
+    {"王座","THRONE"},
 };
 
 static const char *tx(const game_snapshot_t *s, const text_t *t)
@@ -428,7 +457,7 @@ static void shop_sprite(int x,int y)
     DrawRectangle(x+12,y+14,4,3,BRASS);
     DrawRectangle(x+4,y+20,3,3,STONE); DrawRectangle(x+20,y+20,3,3,STONE);
 }
-static void tile_sprite(tower_tile_t tile,int x,int y,uint32_t tick)
+static void tile_sprite(tower_tile_t tile,int x,int y,uint32_t tick,Color accent)
 {
     if(tile==TOWER_TILE_WALL) {
         DrawRectangle(x+1,y+1,GAME_TILE-2,GAME_TILE-2,STONE);
@@ -481,7 +510,7 @@ static void tile_sprite(tower_tile_t tile,int x,int y,uint32_t tick)
     else if(tile==TOWER_TILE_UP || tile==TOWER_TILE_DOWN) {
         for(int i=0;i<4;++i) {
             int row=tile==TOWER_TILE_UP?i:3-i;
-            DrawRectangle(x+4+i*3,y+5+row*4,19-i*3,3,MUTED);
+            DrawRectangle(x+4+i*3,y+5+row*4,19-i*3,3,accent);
         }
     } else if(tile==TOWER_TILE_GOAL) {
         DrawRectangle(x+8,y+11,11,11,BRASS); DrawRectangle(x+5,y+6,4,8,BRASS);
@@ -489,6 +518,115 @@ static void tile_sprite(tower_tile_t tile,int x,int y,uint32_t tick)
         DrawRectangle(x+9,y+14,10,3,RED_INK);
     }
 }
+
+static void scene_floor(const scene_t *sc,int sx,int sy,int x,int y)
+{
+    Color base=((x+y)&1)?sc->floor_a:sc->floor_b;
+    if(sc->style==SCENE_THRONE && x==5) base=sc->carpet;
+    DrawRectangle(sx,sy,GAME_TILE,GAME_TILE,base);
+    switch(sc->style) {
+    case SCENE_GATE:
+        DrawLine(sx+2,sy+16,sx+15,sy+16,sc->wall_lo);
+        DrawLine(sx+17,sy+16,sx+29,sy+16,sc->wall_lo);
+        break;
+    case SCENE_ARMORY:
+        DrawLine(sx+3,sy+24,sx+28,sy+24,sc->wall_lo);
+        DrawRectangle(sx+6,sy+7,2,2,sc->wall_hi);
+        DrawRectangle(sx+24,sy+7,2,2,sc->wall_hi);
+        break;
+    case SCENE_ARCHIVE:
+        DrawLine(sx+4,sy+3,sx+4,sy+14,sc->wall_lo);
+        DrawLine(sx+27,sy+18,sx+27,sy+29,sc->wall_lo);
+        if(((x*3+y)&7)==0) DrawRectangle(sx+14,sy+25,4,2,sc->accent);
+        break;
+    case SCENE_GARDEN:
+        DrawRectangle(sx+4+((x*3+y*5)%12),sy+23,2,3,sc->accent);
+        DrawRectangle(sx+20-((x+y*3)%10),sy+26,3,2,sc->wall_hi);
+        break;
+    case SCENE_CISTERN:
+        DrawLine(sx+3,sy+24,sx+12+((x+y)%8),sy+24,sc->wall_hi);
+        DrawPixel(sx+22,sy+22,sc->accent);
+        break;
+    case SCENE_BARRACKS:
+        DrawLine(sx+2,sy+12,sx+29,sy+12,sc->wall_lo);
+        DrawRectangle(sx+23,sy+22,4,3,sc->accent);
+        break;
+    case SCENE_CRYPT:
+        DrawLine(sx+5,sy+25,sx+10,sy+20,sc->wall_lo);
+        DrawLine(sx+19,sy+5,sx+25,sy+11,sc->wall_lo);
+        break;
+    case SCENE_SAND:
+        DrawLine(sx+3,sy+22,sx+14,sy+22,sc->wall_hi);
+        DrawLine(sx+16,sy+26,sx+29,sy+26,sc->wall_hi);
+        DrawPixel(sx+8,sy+7,sc->accent);
+        break;
+    case SCENE_ASTRAL:
+        DrawPixel(sx+4+((x*7+y*3)%24),sy+4+((x*5+y*11)%24),sc->accent);
+        DrawPixel(sx+4+((x*11+y*7)%24),sy+4+((x*3+y*5)%24),sc->wall_hi);
+        break;
+    case SCENE_THRONE:
+        if(x==5) {
+            DrawLine(sx+2,sy,sx+2,sy+31,sc->accent);
+            DrawLine(sx+29,sy,sx+29,sy+31,sc->accent);
+        } else if(((x+y)&3)==0) DrawPixel(sx+16,sy+16,sc->accent);
+        break;
+    default: break;
+    }
+}
+static void scene_wall(const scene_t *sc,int sx,int sy,int x,int y)
+{
+    DrawRectangle(sx+1,sy+1,30,30,sc->wall);
+    DrawRectangle(sx+1,sy+1,30,2,sc->wall_hi);
+    DrawLine(sx+1,sy+16,sx+30,sy+16,sc->wall_lo);
+    DrawLine(sx+16,sy+3,sx+16,sy+15,sc->wall_lo);
+    DrawLine(sx+9,sy+17,sx+9,sy+30,sc->wall_lo);
+    switch(sc->style) {
+    case SCENE_GATE:
+        if(((x+y)&1)==0) DrawLine(sx+21,sy+21,sx+25,sy+26,sc->wall_lo);
+        break;
+    case SCENE_ARMORY:
+        DrawRectangle(sx+4,sy+4,2,2,sc->accent);
+        DrawRectangle(sx+26,sy+4,2,2,sc->accent);
+        DrawRectangle(sx+4,sy+26,2,2,sc->accent);
+        DrawRectangle(sx+26,sy+26,2,2,sc->accent);
+        break;
+    case SCENE_ARCHIVE:
+        DrawRectangle(sx+3,sy+4,2,10,sc->wall_hi);
+        DrawRectangle(sx+27,sy+18,2,10,sc->wall_hi);
+        break;
+    case SCENE_GARDEN:
+        DrawRectangle(sx+1,sy+27,30,3,sc->wall_lo);
+        DrawRectangle(sx+4+((x*5+y)%18),sy+4,2,5,sc->accent);
+        break;
+    case SCENE_CISTERN:
+        DrawLine(sx+2,sy+25,sx+29,sy+25,sc->wall_hi);
+        DrawPixel(sx+8+((x+y)%16),sy+6,sc->accent);
+        break;
+    case SCENE_BARRACKS:
+        if(((x*3+y)&3)==0) DrawRectangle(sx+14,sy+2,4,14,sc->accent);
+        else DrawLine(sx+2,sy+23,sx+29,sy+23,sc->wall_lo);
+        break;
+    case SCENE_CRYPT:
+        DrawPixel(sx+10,sy+10,sc->wall_hi);
+        DrawPixel(sx+21,sy+10,sc->wall_hi);
+        break;
+    case SCENE_SAND:
+        DrawLine(sx+3,sy+8,sx+29,sy+8,sc->wall_lo);
+        DrawLine(sx+3,sy+24,sx+24,sy+24,sc->wall_lo);
+        if(((x*7+y)&3)==0) DrawRectangle(sx+15,sy+14,2,3,sc->accent);
+        break;
+    case SCENE_ASTRAL:
+        DrawPixel(sx+5+((x*7+y*3)%22),sy+5+((x*5+y*11)%22),sc->accent);
+        DrawPixel(sx+5+((x*11+y*7)%22),sy+5+((x*3+y*5)%22),sc->wall_hi);
+        break;
+    case SCENE_THRONE:
+        DrawRectangle(sx+1,sy+28,30,2,sc->accent);
+        DrawPixel(sx+6,sy+6,sc->wall_hi);
+        break;
+    default: break;
+    }
+}
+
 static void castle(int cy)
 {
     for(int k=0;k<3;++k) {
@@ -672,12 +810,17 @@ static void story_modal(const game_snapshot_t *s)
 static void dungeon(game_handle_t game,const game_snapshot_t *s)
 {
     char text[96];
+    char label[24];
+    const int floor=(int)s->tower.floor;
+    const scene_t *sc=&SCENES[floor<TOWER_FLOORS?floor:0];
+    DrawRectangle(0,0,GAME_WIDTH,GAME_HEIGHT,sc->bg);
+    DrawRectangleLines(3,3,GAME_WIDTH-6,GAME_HEIGHT-6,sc->wall_hi);
     if(s->tower.floor+1>=TOWER_FLOORS)
-        ui_center(tx(s,&T_SUMMIT),10,1,BRASS);
-    else {
-        snprintf(text,sizeof(text),tx(s,&T_FLOOR),s->tower.floor+1);
-        ui_center(text,10,1,BRASS);
-    }
+        snprintf(label,sizeof(label),"%s",tx(s,&T_SUMMIT));
+    else
+        snprintf(label,sizeof(label),tx(s,&T_FLOOR),s->tower.floor+1);
+    snprintf(text,sizeof(text),"%s · %s",label,tx(s,&SCENE_NAME[floor<TOWER_FLOORS?floor:0]));
+    ui_center_fit(text,10,1,sc->accent,320);
     snprintf(text,sizeof(text),"HP %lu   ATK %lu   DEF %lu",(unsigned long)s->tower.hp,
              (unsigned long)s->tower.attack,(unsigned long)s->tower.defence);
     ascii_center(text,31,20,WHITE_INK);
@@ -703,20 +846,26 @@ static void dungeon(game_handle_t game,const game_snapshot_t *s)
         ui_draw(gold_label,x,58,1,MUTED); x+=ui_width(gold_label,1)+label_gap;
         ui_draw(gold,x,58,1,BRASS);
     }
-    DrawRectangle(GAME_MAP_X-3,GAME_MAP_Y-3,GAME_TILE*TOWER_WIDTH+6,GAME_TILE*TOWER_HEIGHT+6,EDGE);
+    DrawRectangle(GAME_MAP_X-4,GAME_MAP_Y-4,
+                  GAME_TILE*TOWER_WIDTH+8,GAME_TILE*TOWER_HEIGHT+8,sc->wall_hi);
+    DrawRectangleLines(GAME_MAP_X-3,GAME_MAP_Y-3,
+                       GAME_TILE*TOWER_WIDTH+6,GAME_TILE*TOWER_HEIGHT+6,sc->accent);
     for(int y=0;y<TOWER_HEIGHT;++y) for(int x=0;x<TOWER_WIDTH;++x) {
         const int sx=GAME_MAP_X+x*GAME_TILE, sy=GAME_MAP_Y+y*GAME_TILE;
-        DrawRectangle(sx,sy,GAME_TILE,GAME_TILE,((x+y)&1)?PANEL:(Color){30,38,50,255});
-        DrawPixel(sx+4,sy+20,STONE);
-        /* No time-driven animation: an unchanged scene stays pixel-identical. */
-        tile_sprite(game_tile(game,x,y),sx,sy,0);
+        const tower_tile_t tile=game_tile(game,x,y);
+        if(tile==TOWER_TILE_WALL) scene_wall(sc,sx,sy,x,y);
+        else {
+            scene_floor(sc,sx,sy,x,y);
+            /* No time-driven animation: an unchanged scene stays pixel-identical. */
+            tile_sprite(tile,sx,sy,0,sc->accent);
+        }
     }
     if(s->tower.cleared && s->tower.floor+1>=TOWER_FLOORS) {
         beacon(GAME_MAP_X+5*GAME_TILE,GAME_MAP_Y+1*GAME_TILE,0);
         princess(GAME_MAP_X+6*GAME_TILE,GAME_MAP_Y+1*GAME_TILE,0);
     }
     const int hx=GAME_MAP_X+(int)s->tower.x*GAME_TILE, hy=GAME_MAP_Y+(int)s->tower.y*GAME_TILE;
-    DrawRectangleLines(hx,hy,GAME_TILE,GAME_TILE,BRASS);
+    DrawRectangleLines(hx,hy,GAME_TILE,GAME_TILE,sc->accent);
     knight(hx+3,hy+3,true);
     const text_t *msg=NULL;
     char gain_text[64];

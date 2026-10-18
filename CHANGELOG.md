@@ -1,21 +1,46 @@
 # Changelog
 
-## Unreleased — UI layout guard
+## v1.6 — 2026-10-18
 
 ### Added
 
+- Ten new hand-authored 11×11 floor plans with eight different up/down stair
+  arrangements. Stairs now land on the matching stair tile of the destination
+  floor instead of a hard-coded `(5, 9)` / `(5, 1)` cell.
+- Ten scene palettes and wall/floor treatments: gatehouse, armory, archive,
+  moss garden, cistern, barracks, crypt, sand tomb, star terrace and throne.
+  The floor header names its scene in Chinese and English.
+- A single carpeted boss aisle on the summit, so the Demon King cannot be
+  walked around; later floors use tier-appropriate enemies instead of idle
+  zero-damage guards.
 - Chinese NPC dialogue now automatically drops from the 24 px layout to a
   16 px, 17-character layout when the copy needs more than five lines. If it
-  still needs more than seven lines, the dialog truncates and the new layout
-  test fails rather than hiding the problem with an unreadable font.
+  still needs more than seven lines, the dialog truncates and the layout test
+  fails rather than shrinking to an unreadable size.
 - `tests/test_ui_layout.py` checks NPC names, both Chinese layout budgets, the
   English wrapped-line budget and the settings GitHub address width. CI runs
-  the same check.
+  the same check. The regenerated font subset contains 256 sorted glyphs.
+
+### Changed
+
+- The 5F red seal now uses the 3F red key; 7F's east crypt contains the red key
+  for 8F; 4F's blue vault supplies both blue keys; 6F's yellow key sits between
+  a mage and a golem; 9F's exit is guarded by a wraith.
+- The generated winning route is now 678 actions / 623 turns / 39 fights and
+  ends at HP 387, ATK 97, DEF 31, gold 930. The route exercises the cross-floor
+  key detour and the guarded exits.
+- Journey saves are now **v5**. v1.5's v4 snapshots are rejected cleanly
+  because the floor geometry changed; start a new journey after updating.
 
 ### Validation
 
-- Current authored copy fits the 24 px layout; the fallback is reserved for
-  future edits. No visual change to the installed v1.5 content.
+- `tests/test_level_design.py` checks scene-plan uniqueness, asymmetric stair
+  pairs, wall/object density, key/door budget and every mandatory gate.
+- Model, timing, four strategy routes, level design, layout, glyph coverage,
+  and Host integration **15/15** pass. Floor screenshots are regenerated from
+  the real C renderer.
+- Not flashed in this change; v1.5 remains the installed device build until an
+  explicit install is requested.
 
 ## v1.5 — 2026-10-18
 

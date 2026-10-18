@@ -5,7 +5,7 @@
 
 #define MAP_CELLS (TOWER_WIDTH * TOWER_HEIGHT)
 #define MAP_OFFSET 116u
-#define SAVE_VERSION 4u
+#define SAVE_VERSION 5u
 #define MAX_TURNS 1000000000u
 
 struct tower_t {
@@ -14,121 +14,144 @@ struct tower_t {
     uint8_t wire[TOWER_SAVE_BYTES];
 };
 
-/* Hand-authored 11x11 floors: combat costs, optional supply rooms and
- * key-gated loops. F4 grants the blue key for F3's sealed red key; F5
- * demands that red key. F7's wraith guards F8's mandatory red seal.
- * Static layouts use no random generation or per-frame pathfinding. */
+/* Ten hand-authored 11x11 rooms. The tower climbs through a gatehouse,
+ * armory, archive, moss garden, cistern, barracks, crypt, sand tomb, star
+ * terrace and throne room. Every floor has a distinct plan; the stairs land
+ * on the matching stair tile of the destination floor, so their coordinates
+ * are free to differ. F4's blue keys unlock F3's red vault; F3's red key
+ * opens F5; F7's guarded red key opens F8; F6's mage/golem and F9's
+ * golem/wraith guard alternative rewards. */
 static const char initial_map[TOWER_FLOORS][TOWER_HEIGHT][TOWER_WIDTH + 1] = {
-    {"###########",
-     "#####U#####",
-     "#####.#####",
-     "#####sap###",
-     "#######k###",
-     "###b.v.B###",
-     "###adY###P#",
-     "###s#.###.#",
-     "###y.p.r.R#",
-     "###X#.n####",
-     "###########"},
-    {"###########",
-     "#####U#####",
-     "#####k#####",
-     "#####B#####",
-     "#S###v#####",
-     "#b.......P#",
-     "#####Y#####",
-     "#a.....n.d#",
-     "#y.......p#",
-     "#####D#####",
-     "###########"},
-    {"###########",
-     "#####U...##",
-     "##....na###",
-     "#######..##",
-     "#r..#...###",
-     "#.a.#...###",
-     "###.###v.##",
-     "#...#Y.Pd##",
-     "#yp.B...p##",
-     "#####D#####",
-     "###########"},
-    {"###########",
-     "###..U..###",
-     "###a.n..###",
-     "###R###.###",
-     "#...#..b..#",
-     "#.r.#.#.d.#",
-     "#P..###...#",
-     "####..##B##",
-     "#y..Y..b.p#",
-     "#####D#####",
-     "###########"},
-    {"###########",
-     "##...U...##",
-     "##.m....p##",
-     "##..###..##",
-     "##.......##",
-     "#####R#####",
-     "#a...g....#",
-     "#.P#n..#d.#",
-     "#..#...#..#",
-     "#####D#####",
-     "###########"},
-    {"###########",
-     "###..U..###",
-     "###.###.###",
-     "###.###.###",
-     "###.###.###",
-     "##dm###ga##",
-     "###.###.###",
-     "##.......##",
-     "##p..n..P##",
-     "#####D#####",
-     "###########"},
-    {"###########",
-     "###..U..###",
-     "#...#...d.#",
-     "#..m#...#.#",
-     "##a.#...###",
-     "###....n#r#",
-     "#...###..w#",
-     "#.p.#....P#",
-     "###.....y.#",
-     "#####D#####",
-     "###########"},
-    {"###########",
-     "#####U..###",
-     "#a..#....d#",
-     "#....R#####",
+    {
+     "###########",
+     "#U##.#..a.#",
+     "#v##.#..s.#",
+     "#.##.#..v.#",
+     "#Y##.#..s.#",
+     "#...P...p.#",
+     "#..y#.p...#",
+     "#.p.#..v..#",
+     "#.s.#.....#",
+     "#.....n...#",
+     "###########",
+    },
+    {
+     "###########",
+     "#..v#...###",
+     "#.s#.a.####",
+     "#..#p..##U#",
+     "#........Y#",
+     "#..#####..#",
+     "#....S.da.#",
+     "#.y#v..#..#",
+     "#..#.pk#.s#",
+     "#D.p.n....#",
+     "###########",
+    },
+    {
+     "###########",
+     "#.k...#v..#",
+     "#.###.#.#D#",
+     "#.#r#.#.#.#",
+     "#.#B#.#.m.#",
      "#.#.#.###.#",
-     "#.#.#..k..#",
-     "#...###.###",
-     "#.p.#w....#",
-     "#..n....P.#",
-     "#####D#####",
-     "###########"},
-    {"###########",
-     "#####U#####",
-     "###a.d..###",
-     "###.###.###",
-     "###.###.###",
-     "##dg###wa##",
-     "###.###.###",
-     "###.....###",
-     "###P.n.p###",
-     "#####D#####",
-     "###########"},
-    {"###########",
-     "##...G...##",
-     "##.......##",
-     "#####M#####",
-     "###..n..###",
-     "##.a...d.##",
-     "##.###...##",
-     "##P....wp##",
-     "###.....###",
-     "#####D#####",
-     "###########"},
+     "#yP.#k..n.#",
+     "#Y#####.#.#",
+     "#.#a...m#.#",
+     "#U#.....p.#",
+     "###########",
+    },
+    {
+     "###########",
+     "#.s#...m..#",
+     "#..#.##..U#",
+     "#..#a.#d..#",
+     "#.....#...#",
+     "#p##k.#...#",
+     "#.#b....k.#",
+     "#.#..###B##",
+     "#..a...#b##",
+     "#D...Pn.###",
+     "###########",
+    },
+    {
+     "###########",
+     "#..#......#",
+     "#am#p.#.pD#",
+     "#..#..#...#",
+     "#..k..#...#",
+     "#.##.g#.#.#",
+     "#g#p..#.md#",
+     "#R#.###.#.#",
+     "#U#....nwa#",
+     "##........#",
+     "###########",
+    },
+    {
+     "###########",
+     "#.##...####",
+     "#.s#.#.####",
+     "#..#.#.##U#",
+     "#....#...Y#",
+     "#.##.#.##.#",
+     "#.#k.#.a#.#",
+     "#.#d##v.#p#",
+     "#D#.mygP#a#",
+     "#d.p.#n...#",
+     "###########",
+    },
+    {
+     "###########",
+     "#.w#..m...#",
+     "#..#.###.D#",
+     "#....#d#..#",
+     "#.##w#.#..#",
+     "#a#..#..w##",
+     "#.#g##.#..#",
+     "#.P.#..#wm#",
+     "#.###P.#r##",
+     "#.....n#U##",
+     "###########",
+    },
+    {
+     "###########",
+     "#.g#..g..##",
+     "#..#....#U#",
+     "#..#d...#R#",
+     "#.Pp..#.w.#",
+     "#.###w#.#.#",
+     "#.#a.P#.#w#",
+     "#.#.###.#.#",
+     "#D#.g..n.p#",
+     "##........#",
+     "###########",
+    },
+    {
+     "###########",
+     "#.g#.p.g.a#",
+     "#..#g.#...#",
+     "#.....#..D#",
+     "#.##..#.#.#",
+     "#.#g..#.w.#",
+     "#a#..w#.ww#",
+     "#.P.###...#",
+     "#ww...Pd..#",
+     "#U#..n....#",
+     "###########",
+    },
+    {
+     "###########",
+     "#####G.####",
+     "#.wP#.#.wa#",
+     "#...#.#...#",
+     "#.P.#M#.P.#",
+     "#...#.#...#",
+     "#.pP#.#.aP#",
+     "#...w.....#",
+     "#.d.....aP#",
+     "#D...n....#",
+     "###########",
+    }
 };
 
 static tower_tile_t decode_tile(char c)
@@ -192,6 +215,24 @@ static tower_status_t set_status(tower_handle_t h, tower_status_t status)
 {
     h->state.status = status;
     return status;
+}
+
+/* Stairs are linked by tile, not by a fixed screen coordinate. Each floor
+ * may put its up/down stair anywhere, and the player lands on the matching
+ * stair of the destination floor. */
+static bool find_tile(tower_handle_t h, unsigned floor, tower_tile_t want,
+                      unsigned *x, unsigned *y)
+{
+    unsigned cx, cy;
+    if (!h || floor >= TOWER_FLOORS) return false;
+    for (cy = 0; cy < TOWER_HEIGHT; ++cy)
+        for (cx = 0; cx < TOWER_WIDTH; ++cx)
+            if (tower_tile(h, floor, (int)cx, (int)cy) == want) {
+                if (x) *x = cx;
+                if (y) *y = cy;
+                return true;
+            }
+    return false;
 }
 
 tower_result_t tower_create(const tower_config_t *config, tower_handle_t *ret_handle)
@@ -326,11 +367,19 @@ tower_status_t tower_move(tower_handle_t h, int dx, int dy)
     if (tile == TOWER_TILE_UP || tile == TOWER_TILE_DOWN) {
         if (tile == TOWER_TILE_UP) {
             if (h->state.floor + 1 < TOWER_FLOORS) {
-                h->state.floor += 1; h->state.x = 5; h->state.y = 9;
+                unsigned nx = 5, ny = 9;
+                if (!find_tile(h, h->state.floor + 1, TOWER_TILE_DOWN, &nx, &ny)) {
+                    nx = 5; ny = 9;
+                }
+                h->state.floor += 1; h->state.x = nx; h->state.y = ny;
                 status = TOWER_STATUS_STAIRS;
             }
         } else if (h->state.floor > 0) {
-            h->state.floor -= 1; h->state.x = 5; h->state.y = 1;
+            unsigned nx = 5, ny = 1;
+            if (!find_tile(h, h->state.floor - 1, TOWER_TILE_UP, &nx, &ny)) {
+                nx = 5; ny = 1;
+            }
+            h->state.floor -= 1; h->state.x = nx; h->state.y = ny;
             status = TOWER_STATUS_STAIRS;
         }
     }

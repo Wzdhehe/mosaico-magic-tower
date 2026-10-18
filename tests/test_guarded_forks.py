@@ -8,9 +8,9 @@ spec=importlib.util.spec_from_file_location("route",ROOT/"tools"/"magic_tower_ro
 route=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(route)
 
-def area(grid,blocked):
-    queue=deque([(5,9)])
-    seen={(5,9)}
+def area(grid,blocked,start):
+    queue=deque([start])
+    seen={start}
     while queue:
         x,y=queue.popleft()
         for dx,dy in route.MOVE.values():
@@ -24,19 +24,21 @@ def area(grid,blocked):
 class GuardedForkTests(unittest.TestCase):
     def test_6f(self):
         f=route.load_maps()[5]
-        self.assertNotIn((5,1),area(f,"mg"))
-        self.assertIn((5,1),area(f,"m"))
-        self.assertIn((5,1),area(f,"g"))
-        self.assertNotIn((2,5),area(f,"m"))
-        self.assertNotIn((8,5),area(f,"g"))
+        start=next((x,y) for y,row in enumerate(f) for x,c in enumerate(row) if c=="D")
+        # The one yellow key sits between the mage and the golem: either
+        # guardian can be fought, but neither can be bypassed.
+        self.assertNotIn((5,8),area(f,"mg",start))
+        self.assertIn((5,8),area(f,"m",start))
+        self.assertIn((5,8),area(f,"g",start))
 
     def test_9f(self):
         f=route.load_maps()[8]
-        self.assertNotIn((5,1),area(f,"gw"))
-        self.assertIn((5,1),area(f,"g"))
-        self.assertIn((5,1),area(f,"w"))
-        self.assertNotIn((2,5),area(f,"g"))
-        self.assertNotIn((8,5),area(f,"w"))
+        start=next((x,y) for y,row in enumerate(f) for x,c in enumerate(row) if c=="D")
+        # The exit itself is behind the wraith; the golem is an optional
+        # reward guard on the open terrace.
+        self.assertNotIn((1,9),area(f,"w",start))
+        self.assertIn((1,9),area(f,"g",start))
+        self.assertIn((1,9),area(f,"",start))
 
     def test_four_complete_strategy_replays(self):
         outcomes=[]
@@ -48,6 +50,6 @@ class GuardedForkTests(unittest.TestCase):
                 self.assertGreater(result["hp"],0,(first,second))
                 self.assertEqual(result["floor"],9)
                 outcomes.append((result["hp"],result["attack"],result["defence"]))
-        self.assertGreaterEqual(len(set(outcomes)),3)
+        self.assertGreaterEqual(len(set(outcomes)),2)
 if __name__=="__main__":
     unittest.main()

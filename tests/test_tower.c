@@ -46,25 +46,34 @@ int main(void)
     s = read_state(t);
     assert(s.x == 5 && s.y == 9 && s.hp == 100 && s.attack == 12 && s.defence == 4);
     assert(s.floor == 0 && !s.cleared && !s.gold);
-    assert(tower_tile(t, 0, 5, 1) == TOWER_TILE_UP);
+    assert(tower_tile(t, 0, 1, 1) == TOWER_TILE_UP);
     assert(tower_tile(t, 9, 5, 1) == TOWER_TILE_GOAL);
-    assert(tower_tile(t, 2, 1, 4) == TOWER_TILE_KEY_RED);
-    assert(tower_tile(t, 4, 5, 5) == TOWER_TILE_DOOR_RED);
-    assert(tower_tile(t, 2, 4, 8) == TOWER_TILE_DOOR_BLUE);
+    /* Floor plans and stair coordinates are deliberately not shared. */
+    assert(tower_tile(t, 1, 9, 3) == TOWER_TILE_UP);
+    assert(tower_tile(t, 1, 1, 9) == TOWER_TILE_DOWN);
+    assert(tower_tile(t, 6, 8, 9) == TOWER_TILE_UP);
+    assert(tower_tile(t, 8, 1, 9) == TOWER_TILE_UP);
+    assert(tower_tile(t, 8, 9, 3) == TOWER_TILE_DOWN);
+    /* The 3F red vault is behind a blue door fed by 4F's second blue key. */
+    assert(tower_tile(t, 2, 3, 3) == TOWER_TILE_KEY_RED);
+    assert(tower_tile(t, 2, 3, 4) == TOWER_TILE_DOOR_BLUE);
+    assert(tower_tile(t, 2, 1, 7) == TOWER_TILE_DOOR_YELLOW);
+    assert(tower_tile(t, 3, 3, 6) == TOWER_TILE_KEY_BLUE);
+    assert(tower_tile(t, 3, 8, 8) == TOWER_TILE_KEY_BLUE);
     assert(tower_tile(t, 3, 8, 7) == TOWER_TILE_DOOR_BLUE);
-    assert(tower_tile(t, 3, 3, 3) == TOWER_TILE_DOOR_RED);
-    assert(tower_tile(t, 6, 9, 5) == TOWER_TILE_KEY_RED);
-    assert(tower_tile(t, 7, 5, 3) == TOWER_TILE_DOOR_RED);
-    assert(tower_tile(t, 9, 5, 3) == TOWER_TILE_DEMON);
-    /* A guardian must be fought to collect its reward pocket. */
-    assert(tower_tile(t, 5, 3, 5) == TOWER_TILE_MAGE);
-    assert(tower_tile(t, 5, 2, 5) == TOWER_TILE_DEFENCE);
-    assert(tower_tile(t, 5, 7, 5) == TOWER_TILE_GOLEM);
-    assert(tower_tile(t, 5, 8, 5) == TOWER_TILE_ATTACK);
-    assert(tower_tile(t, 8, 3, 5) == TOWER_TILE_GOLEM);
-    assert(tower_tile(t, 8, 2, 5) == TOWER_TILE_DEFENCE);
-    assert(tower_tile(t, 8, 7, 5) == TOWER_TILE_WRAITH);
-    assert(tower_tile(t, 8, 8, 5) == TOWER_TILE_ATTACK);
+    /* The red-key route: 5F seal <- 3F vault, 8F seal <- 7F wraith. */
+    assert(tower_tile(t, 4, 1, 7) == TOWER_TILE_DOOR_RED);
+    assert(tower_tile(t, 4, 1, 6) == TOWER_TILE_GOLEM);
+    assert(tower_tile(t, 6, 8, 7) == TOWER_TILE_WRAITH);
+    assert(tower_tile(t, 6, 8, 8) == TOWER_TILE_KEY_RED);
+    assert(tower_tile(t, 7, 9, 3) == TOWER_TILE_DOOR_RED);
+    assert(tower_tile(t, 9, 5, 1) == TOWER_TILE_GOAL);
+    assert(tower_tile(t, 9, 5, 4) == TOWER_TILE_DEMON);
+    /* 6F's key sits between the mage and golem; 9F's exit wraith blocks U. */
+    assert(tower_tile(t, 5, 5, 8) == TOWER_TILE_KEY_YELLOW);
+    assert(tower_tile(t, 5, 4, 8) == TOWER_TILE_MAGE);
+    assert(tower_tile(t, 5, 6, 8) == TOWER_TILE_GOLEM);
+    assert(tower_tile(t, 8, 1, 8) == TOWER_TILE_WRAITH);
     assert(tower_move(t, 0, 1) == TOWER_STATUS_WALL);
     assert(tower_move(t, 1, 1) == TOWER_STATUS_WALL);
     assert(read_state(t).turns == 0);
@@ -76,14 +85,16 @@ int main(void)
     assert(tower_enemy_preview(t, TOWER_TILE_SENTINEL, &p) == TOWER_OK);
     assert(!p.winnable && p.damage == UINT32_MAX);
 
-    /* First floor: potion, intro NPC, and a real fight. */
-    assert(tower_move(t, 0, -1) == TOWER_STATUS_ITEM);
-    assert(read_state(t).hp == 130);
-    assert(tower_move(t, 0, 1) == TOWER_STATUS_MOVED);
+    /* First floor: intro NPC, then a short walk to the central potion. */
     assert(tower_move(t, 1, 0) == TOWER_STATUS_TALK);
     assert(read_state(t).x == 6 && read_state(t).y == 9);
     assert(tower_move(t, -1, 0) == TOWER_STATUS_MOVED);
     assert(tower_move(t, 0, -1) == TOWER_STATUS_MOVED);
+    assert(tower_move(t, 0, -1) == TOWER_STATUS_MOVED);
+    assert(tower_move(t, 0, -1) == TOWER_STATUS_MOVED);
+    assert(tower_move(t, 0, -1) == TOWER_STATUS_MOVED);
+    assert(tower_move(t, -1, 0) == TOWER_STATUS_ITEM);
+    assert(read_state(t).hp == 180);
 
     /* Full ten-floor route generated from the shipped map data. */
     tower_new(t);
