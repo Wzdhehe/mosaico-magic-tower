@@ -5,7 +5,7 @@
 
 #define MAP_CELLS (TOWER_WIDTH * TOWER_HEIGHT)
 #define MAP_OFFSET 116u
-#define SAVE_VERSION 3u
+#define SAVE_VERSION 4u
 #define MAX_TURNS 1000000000u
 
 struct tower_t {
@@ -14,40 +14,121 @@ struct tower_t {
     uint8_t wire[TOWER_SAVE_BYTES];
 };
 
-/* Ten floors. 'n' is a story NPC, 'w' a wraith and 'M' the Demon King.
- * Floor 3 keeps its main stair open; the blue door there guards the red key
- * needed by floor 5, and the matching blue key waits on floor 4. */
+/* Hand-authored 11x11 floors: combat costs, optional supply rooms and
+ * key-gated loops. F4 grants the blue key for F3's sealed red key; F5
+ * demands that red key. F7's wraith guards F8's mandatory red seal.
+ * Static layouts use no random generation or per-frame pathfinding. */
 static const char initial_map[TOWER_FLOORS][TOWER_HEIGHT][TOWER_WIDTH + 1] = {
-    {"###########", "#####U#####", "#####.#####", "#####sap###",
-     "#######k###", "###b.v.B###", "###adY###P#", "###s#.###.#",
-     "###y.p.r.R#", "###X#.n####", "###########"},
-    {"###########", "#####U#####", "#####k#####", "#####B#####",
-     "#S###v#####", "#b.......P#", "#####Y#####", "#a.....n.d#",
-     "#y.......p#", "#####D#####", "###########"},
-    {"###########", "#####U#####", "#r.B.....a#", "#####.#####",
-     "#a.......d#", "#####v#####", "#p.......P#", "#####Y#####",
-     "#y...n...p#", "#####D#####", "###########"},
-    {"###########", "#####U#####", "#a.......d#", "#R#########",
-     "#P.....b.r#", "#########B#", "#.b...n...#", "#Y#########",
-     "#y.......p#", "#....D....#", "###########"},
-    {"###########", "#####U#####", "#####.#####", "#####m#####",
-     "#P.......p#", "#####R#####", "#####g#####", "#a.n...d..#",
-     "#####.#####", "#####D#####", "###########"},
-    {"###########", "#####U#####", "#####.#####", "###a.w.d###",
-     "#####.#####", "#####g#####", "#####.#####", "###p.n.P###",
-     "#####.#####", "#####D#####", "###########"},
-    {"###########", "#####U#####", "#a.......d#", "#####.#####",
-     "#####w#####", "#p...n...P#", "#####.#####", "#####m#####",
-     "#y.......r#", "#####D#####", "###########"},
-    {"###########", "#####U#####", "#####.#####", "#####R#####",
-     "#a.k...d..#", "#####.#####", "#####w#####", "#p...n...P#",
-     "#####.#####", "#####D#####", "###########"},
-    {"###########", "#####U#####", "#a.......d#", "#####.#####",
-     "#####g#####", "#P...n...p#", "#####.#####", "#####w#####",
-     "#d.......a#", "#####D#####", "###########"},
-    {"###########", "#####G#####", "#####.#####", "#####M#####",
-     "#P...n...p#", "#####.#####", "#####w#####", "#a.......d#",
-     "#####.#####", "#####D#####", "###########"},
+    {"###########",
+     "#####U#####",
+     "#####.#####",
+     "#####sap###",
+     "#######k###",
+     "###b.v.B###",
+     "###adY###P#",
+     "###s#.###.#",
+     "###y.p.r.R#",
+     "###X#.n####",
+     "###########"},
+    {"###########",
+     "#####U#####",
+     "#####k#####",
+     "#####B#####",
+     "#S###v#####",
+     "#b.......P#",
+     "#####Y#####",
+     "#a.....n.d#",
+     "#y.......p#",
+     "#####D#####",
+     "###########"},
+    {"###########",
+     "#####U...##",
+     "##....na###",
+     "#######..##",
+     "#r..#...###",
+     "#.a.#...###",
+     "###.###v.##",
+     "#...#Y.Pd##",
+     "#yp.B...p##",
+     "#####D#####",
+     "###########"},
+    {"###########",
+     "###..U..###",
+     "###a.n..###",
+     "###R###.###",
+     "#...#..b..#",
+     "#.r.#.#.d.#",
+     "#P..###...#",
+     "####..##B##",
+     "#y..Y..b.p#",
+     "#####D#####",
+     "###########"},
+    {"###########",
+     "##...U...##",
+     "##.m....p##",
+     "##..###..##",
+     "##.......##",
+     "#####R#####",
+     "#a...g....#",
+     "#.P#n..#d.#",
+     "#..#...#..#",
+     "#####D#####",
+     "###########"},
+    {"###########",
+     "###..U..###",
+     "###.###.###",
+     "###.###.###",
+     "###.###.###",
+     "##dm###ga##",
+     "###.###.###",
+     "##.......##",
+     "##p..n..P##",
+     "#####D#####",
+     "###########"},
+    {"###########",
+     "###..U..###",
+     "#...#...d.#",
+     "#..m#...#.#",
+     "##a.#...###",
+     "###....n#r#",
+     "#...###..w#",
+     "#.p.#....P#",
+     "###.....y.#",
+     "#####D#####",
+     "###########"},
+    {"###########",
+     "#####U..###",
+     "#a..#....d#",
+     "#....R#####",
+     "#.#.#.###.#",
+     "#.#.#..k..#",
+     "#...###.###",
+     "#.p.#w....#",
+     "#..n....P.#",
+     "#####D#####",
+     "###########"},
+    {"###########",
+     "#####U#####",
+     "###a.d..###",
+     "###.###.###",
+     "###.###.###",
+     "##dg###wa##",
+     "###.###.###",
+     "###.....###",
+     "###P.n.p###",
+     "#####D#####",
+     "###########"},
+    {"###########",
+     "##...G...##",
+     "##.......##",
+     "#####M#####",
+     "###..n..###",
+     "##.a...d.##",
+     "##.###...##",
+     "##P....wp##",
+     "###.....###",
+     "#####D#####",
+     "###########"},
 };
 
 static tower_tile_t decode_tile(char c)
@@ -278,13 +359,24 @@ tower_status_t tower_cancel(tower_handle_t h)
     return set_status(h, TOWER_STATUS_CANCELLED);
 }
 
+uint32_t tower_shop_price(const tower_snapshot_t *state)
+{
+    uint64_t bought, price;
+    if (!state) return TOWER_SHOP_COST;
+    bought = (uint64_t)state->shop_attack + state->shop_defence;
+    price = TOWER_SHOP_COST + (uint64_t)TOWER_SHOP_STEP * bought;
+    return price > UINT32_MAX ? UINT32_MAX : (uint32_t)price;
+}
+
 tower_status_t tower_buy(tower_handle_t h, int kind)
 {
+    uint32_t price;
     if (!h) return TOWER_STATUS_NEED_GOLD;
     if (h->state.phase != TOWER_PHASE_PLAY) return h->state.status;
     if (kind != 0 && kind != 1) return set_status(h, TOWER_STATUS_NEED_GOLD);
-    if (h->state.gold < TOWER_SHOP_COST) return set_status(h, TOWER_STATUS_NEED_GOLD);
-    h->state.gold -= TOWER_SHOP_COST;
+    price = tower_shop_price(&h->state);
+    if (h->state.gold < price) return set_status(h, TOWER_STATUS_NEED_GOLD);
+    h->state.gold -= price;
     if (kind == 0) {
         h->state.attack += TOWER_SHOP_GAIN;
         ++h->state.shop_attack;
@@ -397,7 +489,11 @@ static bool valid_state(tower_handle_t h)
     for (f = TOWER_TILE_SLIME; f <= TOWER_TILE_DEMON; ++f)
         gold += enemy_gold((tower_tile_t)f) * consumed[f];
     {
-        uint64_t spent = (uint64_t)(s->shop_attack + s->shop_defence) * TOWER_SHOP_COST;
+        uint64_t bought = (uint64_t)s->shop_attack + s->shop_defence;
+        uint64_t spent;
+        if (bought > 1000000u) return false;
+        spent = bought * TOWER_SHOP_COST +
+                (bought * (bought - 1u) / 2u) * TOWER_SHOP_STEP;
         if (earned_less(gold, spent) || s->gold != gold - (uint32_t)spent) {
             return false;
         }

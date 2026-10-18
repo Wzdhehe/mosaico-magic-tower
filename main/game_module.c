@@ -6,10 +6,27 @@
 #include "mosaico_game_module.h"
 #include "mosaico_raylib_fast.h"
 #include "host_storage.h"
+#include "game_preferences.h"
 typedef struct {
     game_handle_t game;
     char save_path[768];
+    char preferences_path[784];
 } host_state_t;
+static bool save_preferences(void *context,const game_preferences_t *value)
+{
+    host_state_t *s=context;
+    uint8_t bytes[GAME_PREFERENCES_BYTES];
+    return game_preferences_encode(value,bytes) &&
+        game_host_save(s->preferences_path,bytes,sizeof bytes);
+}
+static bool load_preferences(void *context,game_preferences_t *out)
+{
+    host_state_t *s=context;
+    uint8_t bytes[GAME_PREFERENCES_BYTES];
+    return game_host_load(s->preferences_path,bytes,sizeof bytes) &&
+        game_preferences_decode(bytes,out);
+}
+static bool set_brightness(int value) { return value>=10 && value<=100; }
 static int initialize(void *value,const char *asset_root)
 {
     (void)asset_root;
@@ -25,8 +42,12 @@ static int initialize(void *value,const char *asset_root)
     const size_t length=strlen(s->save_path);
     if(length+sizeof("/magic_tower.save")>sizeof(s->save_path)) return -1;
     memcpy(s->save_path+length,"/magic_tower.save",sizeof("/magic_tower.save"));
+    if(snprintf(s->preferences_path,sizeof(s->preferences_path),"%s.prefs",s->save_path) >=
+       (int)sizeof(s->preferences_path)) return -1;
     const game_config_t config={.width=GAME_WIDTH,.height=GAME_HEIGHT,
-        .save=game_host_save,.load=game_host_load,.storage_context=s->save_path};
+        .save=game_host_save,.load=game_host_load,.storage_context=s->save_path,
+        .load_preferences=load_preferences,.save_preferences=save_preferences,
+        .preferences_context=s,.set_brightness=set_brightness};
     if(!game_create(&config,&s->game)) return -1;
     InitWindow(GAME_WIDTH,GAME_HEIGHT,GAME_NAME);
     SetTargetFPS(GAME_TICK_HZ);
@@ -63,7 +84,8 @@ static int state_json(const void *value,char *output,size_t capacity)
         "{\"phase\":\"%s\",\"tick\":%lu,\"floor\":%lu,\"floors\":%d,\"x\":%lu,\"y\":%lu,"
         "\"hp\":%lu,\"attack\":%lu,\"defence\":%lu,\"keys\":[%lu,%lu,%lu],\"gold\":%lu,"
         "\"turns\":%lu,\"cleared\":%s,\"damage\":%lu,\"status\":%d,\"has_save\":%s,\"shop_attack\":%lu,\"shop_defence\":%lu,"
-        "\"lang\":\"%s\",\"notice\":%d,\"pointer_down\":%s,\"state_hash\":\"%08lx\"}",phase,
+        "\"lang\":\"%s\",\"notice\":%d,\"pointer_down\":%s,\"settings_open\":%s,"
+        "\"volume\":%u,\"brightness\":%u,\"preferences_save_failed\":%s,\"state_hash\":\"%08lx\"}",phase,
         (unsigned long)s->tick,(unsigned long)s->tower.floor,TOWER_FLOORS,
         (unsigned long)s->tower.x,(unsigned long)s->tower.y,
         (unsigned long)s->tower.hp,(unsigned long)s->tower.attack,(unsigned long)s->tower.defence,
@@ -71,7 +93,8 @@ static int state_json(const void *value,char *output,size_t capacity)
         (unsigned long)s->tower.gold,(unsigned long)s->tower.turns,s->tower.cleared?"true":"false",
         (unsigned long)s->tower.pending.damage,(int)s->tower.status,s->has_save?"true":"false",(unsigned long)s->tower.shop_attack,(unsigned long)s->tower.shop_defence,
         s->lang==GAME_LANG_EN?"en":"zh",(int)s->notice_id,
-        s->pointer_down?"true":"false",(unsigned long)state_hash(value));
+        s->pointer_down?"true":"false",s->settings_open?"true":"false",
+        s->volume,s->brightness,s->preferences_save_failed?"true":"false",(unsigned long)state_hash(value));
     return size<0 || (size_t)size>=capacity?-1:size;
 }
 static const mosaico_game_module_v1_t s_module={
