@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "main.c" "game.c" "game_view.c" "tower.c" "raylib_screen_mirror.c" "game_audio.c"
+    SRCS "main.c" "game.c" "game_view.c" "game_device_render.c" "tower.c" "raylib_screen_mirror.c" "game_audio.c"
     INCLUDE_DIRS "."
     REQUIRES mosaico_game_app mosaico_raylib_fast esp-gsp nvs_flash)
 

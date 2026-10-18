@@ -492,7 +492,7 @@ static void story_modal(const game_snapshot_t *s)
     ui_draw(tx(s,name),48,138,1,BRASS);
     DrawRectangle(46,168,64,92,INK);
     DrawRectangleLines(46,168,64,92,EDGE);
-    npc_sprite(65,190,s->tick);
+    npc_sprite(65,190,0);
     DrawLine(126,164,126,300,EDGE);
     if(s->lang==GAME_LANG_EN){
         char paragraph[220];
@@ -558,11 +558,12 @@ static void dungeon(game_handle_t game,const game_snapshot_t *s)
         const int sx=GAME_MAP_X+x*GAME_TILE, sy=GAME_MAP_Y+y*GAME_TILE;
         DrawRectangle(sx,sy,GAME_TILE,GAME_TILE,((x+y)&1)?PANEL:(Color){30,38,50,255});
         DrawPixel(sx+4,sy+20,STONE);
-        tile_sprite(game_tile(game,x,y),sx,sy,s->tick);
+        /* No time-driven animation: an unchanged scene stays pixel-identical. */
+        tile_sprite(game_tile(game,x,y),sx,sy,0);
     }
     if(s->tower.cleared && s->tower.floor+1>=TOWER_FLOORS) {
-        beacon(GAME_MAP_X+5*GAME_TILE,GAME_MAP_Y+1*GAME_TILE,s->tick);
-        princess(GAME_MAP_X+6*GAME_TILE,GAME_MAP_Y+1*GAME_TILE,s->tick);
+        beacon(GAME_MAP_X+5*GAME_TILE,GAME_MAP_Y+1*GAME_TILE,0);
+        princess(GAME_MAP_X+6*GAME_TILE,GAME_MAP_Y+1*GAME_TILE,0);
     }
     const int hx=GAME_MAP_X+(int)s->tower.x*GAME_TILE, hy=GAME_MAP_Y+(int)s->tower.y*GAME_TILE;
     DrawRectangleLines(hx,hy,GAME_TILE,GAME_TILE,BRASS);
@@ -658,5 +659,14 @@ bool game_render(game_handle_t game)
     }
     if(s->volume_open) volume_modal(s);
     EndDrawing();
+    game_render_complete(game);
     return true;
+}
+
+/* Device scheduling uses this path. An explicit Host screenshot uses
+ * game_render() so that a new caller-owned target is always fully populated. */
+bool game_render_pending(game_handle_t game)
+{
+    if (!game) return false;
+    return !game_needs_redraw(game) || game_render(game);
 }

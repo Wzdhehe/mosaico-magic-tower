@@ -15,3 +15,13 @@ jobs:
         run: python3 tests/run_game_timing.py
       - name: Portable deterministic tower replay
         run: python3 tests/run_tests.py --label ci
+      - name: Check out the workspace-pinned RGB565 engine for render tests
+        uses: actions/checkout@v4
+        with:
+          repository: espressif2022/raylib-lite-engine
+          ref: ca3200a6b7f63e2bdea07851e19fdbd3a42eb742
+          path: test-deps/raylib-lite-engine
+      - name: Real renderer idle and operation scheduling
+        env:
+          MOSAICO_ENGINE_ROOT: ${{ github.workspace }}/test-deps/raylib-lite-engine
+        run: python3 tests/run_render_schedule.py

@@ -5,6 +5,7 @@
 #include "game.h"
 #include "game_audio.h"
 #include "game_config.h"
+#include "game_device_render.h"
 #include "mosaico_game_app.h"
 #include "raylib_screen_mirror.h"
 #include "esp_log.h"
@@ -54,7 +55,12 @@ static void on_update(void)
 
 static void on_render(void)
 {
-    (void)game_render(s_game);
+    (void)game_render_device_pending(s_game);
+}
+
+static bool on_idle(void)
+{
+    return game_is_idle(s_game);
 }
 
 static esp_err_t on_start(void)
@@ -79,6 +85,7 @@ static const mosaico_game_app_config_t s_config = {
     .register_mirror = raylib_screen_mirror_register,
     .on_start = on_start,
     .on_event = on_event,
+    .idle = on_idle,
     .on_update = on_update,
     .on_render = on_render,
 };

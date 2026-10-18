@@ -46,7 +46,16 @@ void game_set_paused(game_handle_t, bool);
 void game_set_pointer(game_handle_t, int32_t, int32_t, bool);
 void game_set_action(game_handle_t, int, bool);
 void game_update(game_handle_t);
+/* Instance-owned display scheduling; complete only a successful presentation.
+ * Request redraw again when a platform reports submission failure afterward. */
+bool game_needs_redraw(game_handle_t);
+void game_render_complete(game_handle_t);
+void game_request_redraw(game_handle_t);
+bool game_is_idle(game_handle_t);
+/* Forced rendering fills a fresh screenshot target even when settled. */
 bool game_render(game_handle_t);
+/* Device rendering avoids frame acquisition while no operation is pending. */
+bool game_render_pending(game_handle_t);
 const game_snapshot_t *game_read(game_handle_t);
 tower_tile_t game_tile(game_handle_t, int, int);
 uint32_t game_hash(game_handle_t);

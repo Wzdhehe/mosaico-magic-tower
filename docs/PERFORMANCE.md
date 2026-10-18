@@ -1,70 +1,45 @@
-# Performance pass — 15 FPS baseline
+# Operation-driven rendering
 
-This is a **low-risk first pass** for an event-driven puzzle game, not a
-hardware-confirmed temperature improvement.
+The square 480×480 UI draws its first frame, then redraws after gameplay or UI operations. Idle NPCs, enemies, the princess and the goal beacon use fixed sprite frames. Pickup and save/load feedback stays visible until a relevant operation replaces it; no countdown wakes the renderer just to erase text.
 
-## What changes
+## Scheduling and safety
 
-- Target frame/update cadence is reduced from 30 to **15 Hz** in the shared
-  `GAME_TICK_HZ`. Device (`main/main.c`) and host
-  (`main/game_module.c`) already read this constant.
-- Timed notifications (3 seconds) and item-gain feedback (4 seconds) now
-  derive their durations from `GAME_TICK_HZ`; holding a direction repeats
-  after four ticks (~267 ms versus the previous ~233 ms).
-- The CJK bitmap table has 258 glyphs and is generated in Unicode order.
-  Each lookup now uses binary search instead of scanning all entries.
-- Removes a redundant full-screen `ClearBackground` call in `game_render`.
+- The pinned engine's official `mosaico_game_app_config_t.idle` callback skips update/render work after the frame settles. The engine still polls input at the configured **15 Hz** cadence. This does not put the entire MCU to sleep.
+- A pending-frame flag belongs to each game instance. Input that changes the screen marks it pending. Repeated touch coordinates and unchanged volume do not request extra frames. Held movement keeps its four-tick repeat cadence; entering combat/dialogue suppresses held directions until release.
+- The engine presents the initial frame before its normal idle loop and keeps its existing Iris health/recovery sequence. No upstream engine change is required for this scheduling feature.
+- Failure to acquire a framebuffer leaves it pending. The device adapter also compares the official dropped-frame counter around submission: a rejected frame requests a retry, including when it was the user's last operation.
+- `game_render()` always draws into an explicitly requested Host screenshot target. The device uses the pending-only adapter. Music track delivery is independent of the pending-frame flag, so a screenshot cannot swallow an audio change.
+- Font lookup retains the 258-glyph binary search and one full-canvas clear. Maps, save format, audio generation and partition layout are unchanged.
 
-No map, game rules, save format, sound generation, display driver or
-framebuffer allocation changes are made in this PR. The existing sprite
-animations still run, but are rendered at fewer frames per second.
-
-## Why not skip all idle frames yet?
-
-The project uses a Raylib Lite/GSP frame acquisition and presentation contract.
-Simply skipping `BeginDrawing` or `EndDrawing` from a render callback is
-**not** an established safe, event-driven presentation path. The engine also
-requires a successfully presented first frame for its recovery safety
-contract. A future change should use a documented/verified engine integration
-for dirty-frame presentation, not guess from this game's API.
-
-Likewise, the 24-kHz audio mixing task remains independent from UI FPS and
-may contribute to power draw. Optimizing it is a separate experiment.
+The 24-kHz audio task, touch polling, Iris and display services keep their existing runtime behavior. There are no new clock, radio or power-management settings. Reduced redraw work is established by the host test; current draw and temperature require measurements on the physical device.
 
 ## Verification
 
-Portable host regression tests:
-
 ```sh
 python tests/run_game_timing.py
-python tests/run_tests.py --label low-fps
-```
-
-In the full ESP-Mosaico workspace, also run:
-
-```sh
+python tests/run_tests.py --label demand-render
+# Set MOSAICO_ENGINE_ROOT if outside the official workspace's projects/ tree.
+python tests/run_render_schedule.py
 python tests/test_integration.py
-python mosaico.py game build --project projects/magic_tower
+python mosaico.py game build --project projects/magic_tower_demand_render
 ```
 
-On hardware, compare **the same brightness, supply, volume, firmware and
-play duration** against `main`. Measure or log:
+`run_render_schedule.py` compiles the real pinned RGB565 rasterizer, game view and device retry adapter. Only frame acquisition/presentation and runtime statistics are replaced by a counting/failure-injection port. Its staged Host port header redirects the reduced Host game API include to the actual device API; upstream files are untouched. Assertions cover initial acquisition failure, submission rejection/retry, fresh screenshot targets, static pixels, sticky feedback, UI operations and repeated unchanged touch samples.
 
-| Measurement | Baseline (30 FPS) | This PR (15 FPS) |
-|---|---|---|
-| UI response and repeat timing | Not measured | Not measured |
-| Frame render/present time | Not measured | Not measured |
-| Idle/current consumption | Not measured | Not measured |
-| Surface temperature after 20 min | Not measured | Not measured |
-| BGM dropout / TE artifacts | Not measured | Not measured |
+| Scenario | Host result |
+|---|---|
+| 300 idle polls on title | 0 new acquisitions / presentations |
+| 300 idle polls after a pickup | 0 new acquisitions / presentations |
+| Acquisition or submission rejected | Pending retained; next accepted frame settles |
+| Repeated unchanged volume drag sample | 0 additional presentations |
+| Explicit screenshot into cleared target | Complete, identical RGB565 image |
 
-Use the Raylib Lite runtime render statistics if available. A reduction from
-30 to 15 requested FPS cuts the maximum scheduled redraw rate by half, **not
-necessarily CPU use or device temperature by half**. Thermal effect must be
-measured with the actual device.
+The portable state suite also replays the complete ten-floor route and covers combat, dialogue, both shop upgrades, saves, language, pause/reset edge handling, held-direction suppression and music changes after a forced render.
+
+For hardware comparison, keep brightness, supply, volume and play duration the same on both builds. Record idle current, render/display statistics, touch response, audio continuity, tearing and surface temperature. These physical measurements have **not** been performed for this change.
 
 ## References
 
-- [ESP-Mosaico user guide](https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32s31/esp-mosaico/index.html)
+- [Pinned engine idle/first-frame scheduler](https://github.com/espressif2022/raylib-lite-engine/blob/ca3200a6b7f63e2bdea07851e19fdbd3a42eb742/components/mosaico_game_app/mosaico_game_app.c)
+- [Pinned device frame port](https://github.com/espressif2022/raylib-lite-engine/blob/ca3200a6b7f63e2bdea07851e19fdbd3a42eb742/components/mosaico_raylib_port/mosaico_raylib_port.c)
 - [Official Mosaico game development](https://github.com/esp-mosaico/esp-mosaico-vibe/blob/main/docs/game-development_CN.md)
-- [Raylib Lite scheduler](https://github.com/espressif2022/raylib-lite-engine/blob/main/src/runner/raylib_lite_runner.c)

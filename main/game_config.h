@@ -2,13 +2,9 @@
 #pragma once
 #define GAME_NAME "magic_tower"
 #define GAME_VERSION "v1.1"
-/* Magic Tower is turn-based: halve the continuous draw/logic cadence.
- * Durations and held-key repetition are expressed relative to this rate. */
+/* Operation-driven rendering; this is the maximum active update cadence.
+ * Held-key repetition is expressed relative to this rate. */
 enum { GAME_WIDTH = 480, GAME_HEIGHT = 480, GAME_TICK_HZ = 15 };
-enum {
-    GAME_NOTICE_TICKS = 3 * GAME_TICK_HZ,
-    GAME_GAIN_TICKS = 4 * GAME_TICK_HZ
-};
 enum {
     GAME_ACTION_LEFT = 0, GAME_ACTION_RIGHT = 1, GAME_ACTION_UP = 2,
     GAME_ACTION_PAUSE = 3, GAME_ACTION_RESET = 4, GAME_ACTION_DOWN = 5,
