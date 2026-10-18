@@ -107,12 +107,12 @@ determinism, arbitrary chunk boundaries, immediate mute, advancing mute phase,
 non-silence, distinct tracks, 35-45 second loop lengths, signal/DC/clipping,
 loop-seam bounds and volume/track transition continuity checks.
 
-Current full-volume results with the 5× makeup gain and 100% codec output:
-peaks 29580/26970/27880, RMS about 10725/9618/9671 and mean sample values
--13.67/-13.26/-14.79 (out of 32768). No clipping occurs on the shipped scores.
-The maximum adjacent-sample jump is 5535, proportional to the higher peak. The
-mixer clamps to the int16 range as a safety net; all arithmetic stays inside
-signed 32-bit limits.
+Current full-volume results with the 2.25× makeup gain and 100% codec output:
+peaks about 13311/12136/12546, RMS about 4825/4328/4352 and mean sample values
+about -6.15/-5.97/-6.66 (out of 32768). This matches the loudness that was
+previously comfortable at 45%, with generous headroom. The mixer still clamps
+to the int16 range as a safety net; all arithmetic stays inside signed 32-bit
+limits.
 
 One observed optimized x64 host test rendered all 113.96 seconds of music in
 0.078 CPU seconds; 120 seconds of muted timeline was below the host clock's

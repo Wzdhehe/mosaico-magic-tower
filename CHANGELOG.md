@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.4 — 2026-10-18
+
+### Fixed
+
+- Recalibrated the music output after the v1.3 loudness increase was reported
+  as too loud and distorted at 100%. The makeup gain is now **2.25×** instead
+  of 5×, so the maximum volume matches the level that was comfortable at 45%
+  in v1.3, with ample headroom for the speaker.
+
+### Validation
+
+- Music core peaks are now about 13,311 / 12,136 / 12,546 of 32768, with no
+  clipping on the shipped scores.
+- Installed through the official recovery-first app-update path and validated
+  healthy; v1.4 is the current device build.
+- Settings and gameplay behavior are otherwise unchanged from v1.3.
+
 ## v1.3 — 2026-10-18
 
 ### Changed

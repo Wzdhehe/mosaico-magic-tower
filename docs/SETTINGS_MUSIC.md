@@ -29,8 +29,9 @@ Held RESET/PAUSE/START keys survive pointer capture until their real release;
 the review-discovered leak has a failing-before/passing-after regression.
 
 The three original 16-bar themes use four voices and one fixed echo buffer. The
-codec opens at 100% output and a 5x makeup gain brings full-volume peaks to
-roughly 90% of int16 full scale (27k-30k); the mixer clamps as a safety net.
+codec opens at 100% output and a 2.25x makeup gain keeps full-volume peaks
+around 13k/32768, roughly the comfortable level previously heard at 45%. The
+mixer still clamps as a safety net.
 The portable C core also produces the WAV previews; Python only writes headers
 and invokes that core. No sample files or external runtime synthesizer are
 needed. See `assets_src/music/README.md` for score provenance, keys, tempos,

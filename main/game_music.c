@@ -151,9 +151,9 @@ bool game_music_render(game_music_handle_t m, int16_t *output, size_t frames) {
         int32_t mixed=dry+(m->echo[m->echo_index]>>2);
         m->echo[m->echo_index]=(int16_t)dry;
         if (++m->echo_index==ECHO_FRAMES) m->echo_index=0;
-        /* The score is mixed conservatively (peak below 8k/32k). A 5x makeup
-         * gain brings full volume to roughly 30k/32k; clamp for safety. */
-        mixed=(((mixed*m->gain)>>15)*m->fade>>15)*5;
+        /* 2.25x makeup: full volume matches the comfortable level that was
+         * previously heard at 45%, leaving ample headroom for the speaker. */
+        mixed=(((mixed*m->gain)>>15)*m->fade>>15)*9/4;
         if(mixed>32767) mixed=32767;
         if(mixed<-32768) mixed=-32768;
         output[i]=(int16_t)mixed;
