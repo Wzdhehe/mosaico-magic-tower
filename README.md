@@ -120,6 +120,7 @@ The gameplay model is portable C and can be tested without hardware.
 ```bash
 python tests/test_level_design.py
 python tests/test_ui_glyphs.py
+python tests/test_ui_layout.py
 python tools/magic_tower_route.py
 python tests/run_tests.py --label local
 python -m unittest discover -s tests -p test_guarded_forks.py

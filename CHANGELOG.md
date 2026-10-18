@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased — UI layout guard
+
+### Added
+
+- Chinese NPC dialogue now automatically drops from the 24 px layout to a
+  16 px, 17-character layout when the copy needs more than five lines. If it
+  still needs more than seven lines, the dialog truncates and the new layout
+  test fails rather than hiding the problem with an unreadable font.
+- `tests/test_ui_layout.py` checks NPC names, both Chinese layout budgets, the
+  English wrapped-line budget and the settings GitHub address width. CI runs
+  the same check.
+
+### Validation
+
+- Current authored copy fits the 24 px layout; the fallback is reserved for
+  future edits. No visual change to the installed v1.5 content.
+
 ## v1.5 — 2026-10-18
 
 ### Changed
