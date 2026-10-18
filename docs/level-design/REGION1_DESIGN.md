@@ -1,3 +1,5 @@
+> 历史稿：当前完整50层权威接入单为 `CAMPAIGN50_HANDOFF.md`。暗地砖、地图与范围已更新；不要再按本稿接入。
+
 # 第一章逐格设计：断门城塞
 
 坐标从左上角(0,0)起；每行11格。数据源为`assets_src/level_design/region1_blueprint.py`。

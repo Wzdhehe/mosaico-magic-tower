@@ -1,0 +1,233 @@
+--- a/main/game_view.c
++++ b/main/game_view.c
+@@ -128,11 +128,57 @@
+     {"公主回声","PRINCESS ECHO"},
+     {"公主","PRINCESS"},
+ };
+-static const text_t SCENE_NAME[FLOOR_THEMES]={
+-    {"城门","GATEHOUSE"}, {"军械库","ARMORY"}, {"藏书阁","ARCHIVE"},
+-    {"苔庭","MOSS GARDEN"}, {"水牢","CISTERN"}, {"兵营","BARRACKS"},
+-    {"墓室","CRYPT"}, {"沙墓","SAND TOMB"}, {"星台","STAR TERRACE"},
+-    {"王座","THRONE"},
++static const text_t SCENE_NAME[TOWER_FLOORS]={
++    {"破门","Broken Gate"},
++    {"偏院","Side Court"},
++    {"旧库","Old Archive"},
++    {"哨楼","Watchtower"},
++    {"军械库","Armory"},
++    {"军需站","Supply Post"},
++    {"守望台","Lookout"},
++    {"旧营房","Old Camp"},
++    {"封门前厅","Sealed Hall"},
++    {"队长之门","Captain"},
++    {"双岸","Two Banks"},
++    {"泵房","Pump Room"},
++    {"外堤","Outer Levee"},
++    {"阀厅","Valve Hall"},
++    {"沉库","Sunken Stores"},
++    {"渡守庭","Ferry Court"},
++    {"旧宿舍","Old Dormitory"},
++    {"回流渠","Return Channel"},
++    {"双岸合流","Joined Banks"},
++    {"渡守","Ferryman"},
++    {"运料场","Loading Yard"},
++    {"废炉","Cold Furnace"},
++    {"分货库","Warehouse"},
++    {"精铸室","Fine Casting"},
++    {"交易所","Exchange"},
++    {"灰烬回道","Ash Return"},
++    {"账房","Ledger Room"},
++    {"封存炉","Sealed Furnace"},
++    {"熄火桥","Cold Bridge"},
++    {"炉心","Furnace Heart"},
++    {"王城前庭","Court Gates"},
++    {"王室税库","Royal Treasury"},
++    {"礼拜堂","Chapel"},
++    {"双翼兵营","Two Barracks"},
++    {"禁书室","Forbidden Books"},
++    {"长廊","Long Gallery"},
++    {"旧王寝","Royal Bed"},
++    {"王城侧库","Side Stores"},
++    {"守誓门","Oath Gate"},
++    {"守誓者","Oathkeeper"},
++    {"裂阶","Broken Stairs"},
++    {"旧观测室","Observatory"},
++    {"镜廊","Mirror Gallery"},
++    {"星钥仓","Star Stores"},
++    {"冠冕厅","Crown Hall"},
++    {"回响阶","Echo Stairs"},
++    {"归还之室","Return Room"},
++    {"封印庭","Seal Court"},
++    {"王座前室","Antechamber"},
++    {"星冠王座","Crown Throne"},
+ };
+ /* The five regions named by docs/TOWER50_DESIGN_SPINE.md; one per pair of
+  * chapter anchors (10, 20, 30, 40, 50). */
+@@ -287,59 +333,10 @@
+         x+=25;
+     }
+ }
+-static void ui_draw_cjk16(const char *text,int x,int y,Color color)
+-{ ui_draw(text,x,y,1,color); }
+-static int cjk_line_count(const char *text,int max_chars)
+-{
+-    int count=0; uint32_t cp;
+-    if(!text||!max_chars) return 0;
+-    while(*text){ utf8_next(&text,&cp); ++count; }
+-    return (count+max_chars-1)/max_chars;
+-}
+-static bool closing_punctuation(uint32_t cp)
+-{
+-    switch(cp){
+-    case 0x3002: case 0xFF0C: case 0xFF01: case 0xFF1F:
+-    case 0xFF1B: case 0xFF1A: case 0x3001: case 0xFF09:
+-    case 0x3011: case 0x300B: case 0x300D: case 0x300F:
+-    case 0x2026:
+-        return true;
+-    default:
+-        return false;
+-    }
+-}
+-static int ui_draw_wrap_cjk(const char *text,int x,int y,int max_chars,
+-                            int line_height,Color color,int max_lines,bool large)
+-{
+-    const char *start=text,*p=text;
+-    char line[128];
+-    int count=0,lines=0;
+-    while(*p&&lines<max_lines){
+-        if(count>=max_chars){
+-            const char *peek=p; uint32_t cp=0;
+-            utf8_next(&peek,&cp);
+-            if(!closing_punctuation(cp)){
+-                size_t n=(size_t)(p-start);
+-                if(n>=sizeof(line)) n=sizeof(line)-1;
+-                memcpy(line,start,n); line[n]=0;
+-                large?ui_draw_cjk15(line,x,y,color):ui_draw_cjk16(line,x,y,color);
+-                y+=line_height; ++lines; start=p; count=0;
+-                if(lines>=max_lines) break;
+-            }
+-        }
+-        const char *next=p; uint32_t cp;
+-        utf8_next(&next,&cp);
+-        p=next; ++count;
+-    }
+-    if(start<p&&lines<max_lines){
+-        size_t n=(size_t)(p-start);
+-        if(n>=sizeof(line)) n=sizeof(line)-1;
+-        memcpy(line,start,n); line[n]=0;
+-        large?ui_draw_cjk15(line,x,y,color):ui_draw_cjk16(line,x,y,color);
+-        ++lines;
+-    }
+-    return lines;
+-}
++
++
++
++
+ static void button(const game_snapshot_t *s,const text_t *label,int x,int y,int w,int h,bool active)
+ {
+     const char *text=label?tx(s,label):"";
+@@ -828,6 +825,32 @@
+ }
+ static bool is_gpt(const game_snapshot_t *s,int x,int y)
+ { return s->tower.floor==46u && x==12 && y==14; }
++/* Same normal 16px glyphs for every authored page. Pixel-width wrapping
++ * keeps mixed Latin/CJK text inside 288px; no font shrinking or clipping. */
++static int campaign_draw_paragraph(const char *text,int x,int y,int width,int lines)
++{
++    int used=0;
++    while(text && *text) {
++        const char *start=text,*end=text,*last_space=NULL;
++        int pixels=0;
++        while(*end) {
++            const char *next=end; uint32_t cp;
++            utf8_next(&next,&cp);
++            const int step=cp<0x80?12:17;
++            if(pixels+step-1>width || next-start>=190) break;
++            if(cp==' ') last_space=end;
++            pixels+=step; end=next;
++        }
++        if(used>=lines || end==start) return -1;
++        if(*end && last_space && last_space>start) end=last_space;
++        char line[192]; const size_t bytes=(size_t)(end-start);
++        memcpy(line,start,bytes);line[bytes]=0;
++        ui_draw(line,x,y+used*22,1,WHITE_INK);++used;
++        text=end;while(*text==' ')++text;
++    }
++    return used;
++}
++
+ static void story_modal(const game_snapshot_t *s)
+ {
+     const unsigned slot=floor_slot(s);
+@@ -842,44 +865,9 @@
+     if(is_gpt(s,(int)s->tower.x,(int)s->tower.y)) gpt_robot(38,185,3);
+     else npc_portrait(38,160,s->tick);
+     DrawLine(142,160,142,316,EDGE);
+-    if(s->lang==GAME_LANG_EN){
+-        char paragraph[220];
+-        snprintf(paragraph,sizeof(paragraph),"%s %s",story->en[0],story->en[1]);
+-        const char *p=paragraph;
+-        int y=172;
+-        while(*p&&y<284){
+-            int take=0,last_space=0;
+-            while(p[take]&&take<24){
+-                if(p[take]==' ') last_space=take;
+-                ++take;
+-            }
+-            if(p[take]&&last_space) take=last_space;
+-            char line[40];
+-            int n=take<39?take:39;
+-            memcpy(line,p,(size_t)n); line[n]=0;
+-            MosaicoFastDrawText(line,150+(290-MosaicoFastMeasureText(line,16))/2,y,16,WHITE_INK);
+-            p+=take;
+-            while(*p==' ') ++p;
+-            y+=22;
+-        }
+-    } else {
+-        const int l0=cjk_line_count(story->zh[0],11);
+-        const int l1=cjk_line_count(story->zh[1],11);
+-        const int s0=cjk_line_count(story->zh[0],17);
+-        const int s1=cjk_line_count(story->zh[1],17);
+-        if(l0+l1<=5){
+-            const int first=ui_draw_wrap_cjk(story->zh[0],150,174,11,28,WHITE_INK,l0,true);
+-            ui_draw_wrap_cjk(story->zh[1],150,174+first*28,11,28,WHITE_INK,l1,true);
+-        } else if(s0+s1<=7){
+-            const int first=ui_draw_wrap_cjk(story->zh[0],150,174,17,20,WHITE_INK,s0,false);
+-            ui_draw_wrap_cjk(story->zh[1],150,174+first*20,17,20,WHITE_INK,s1,false);
+-        } else {
+-            /* Far too long to rescue: keep the compact font and let the
+-             * authored-text layout test fail instead of inventing a tiny UI. */
+-            const int first=ui_draw_wrap_cjk(story->zh[0],150,174,17,20,WHITE_INK,3,false);
+-            ui_draw_wrap_cjk(story->zh[1],150,174+first*20,17,20,WHITE_INK,3,false);
+-        }
+-    }
++    const char *const *lines=s->lang==GAME_LANG_EN?story->en:story->zh;
++    const int first=campaign_draw_paragraph(lines[0],150,174,288,6);
++    if(first>=0) (void)campaign_draw_paragraph(lines[1],150,174+first*22,288,6-first);
+     button(s,&T_TALK_CONTINUE,180,330,120,32,false);
+ }
+ static bool view_has(const game_snapshot_t *s,int x,int y)
+@@ -891,8 +879,9 @@
+ {
+     char text[96];
+     char label[24];
+-    const unsigned slot=floor_slot(s);
+-    const scene_t *sc=&SCENES[slot];
++    const unsigned slot=s->tower.floor;
++    static const unsigned region_scene[5]={SCENE_GATE,SCENE_CISTERN,SCENE_ARMORY,SCENE_ARCHIVE,SCENE_ASTRAL};
++    const scene_t *sc=&SCENES[slot==49u?SCENE_THRONE:region_scene[slot/10u]];
+     DrawRectangle(0,0,GAME_WIDTH,GAME_HEIGHT,sc->bg);
+     DrawRectangleLines(3,3,GAME_WIDTH-6,GAME_HEIGHT-6,sc->wall_hi);
+     if(s->tower.floor+1>=TOWER_FLOORS)
+@@ -941,6 +930,10 @@
+             /* No time-driven animation: an unchanged scene stays pixel-identical. */
+             if(tile==TOWER_TILE_NPC && is_gpt(s,x,y)) gpt_robot(sx,sy,1);
+             else tile_sprite(tile,sx,sy,0,sc->accent);
++            if(tile==TOWER_TILE_SECRET) {
++                DrawRectangle(sx+1,sy+1,30,30,Fade(INK,.20f));
++                DrawLine(sx+4,sy+29,sx+27,sy+29,sc->wall_lo);
++            }
+         }
+     }
+     if(s->tower.cleared && s->tower.floor+1>=TOWER_FLOORS) {

@@ -1,159 +1,66 @@
 #include "tower.h"
+#include "tower_floors.h"
+
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define MAP_CELLS (TOWER_WIDTH * TOWER_HEIGHT)
-#define MAP_OFFSET 116u
-#define SAVE_VERSION 5u
+/* The saved map is a per-floor bitmap of consumed cells, not a tile array.
+ * Its geometry has to be constant so that a floor can change shape without
+ * changing the wire format: the largest campaign floor is 19x19, and every
+ * floor reserves TOWER_MAX_CELLS bits. TOWER_FLAG_BYTES (from tower.h) rounds
+ * that to whole bytes, so the surplus high bits are always zero. */
+#define TOWER_MAX_W 19u
+#define TOWER_MAX_H 19u
+#define TOWER_MAX_CELLS (TOWER_MAX_W * TOWER_MAX_H)
+
+#define SAVE_VERSION 7u
 #define MAX_TURNS 1000000000u
+
+/* tower_snapshot_t order, one little-endian u32 each. The header reserves
+ * TOWER_SAVE_FIELDS == 30 slots while the snapshot documents 29 fields, so the
+ * 30th slot is written as zero and rejected on import when it is not. */
+enum {
+    FIELD_PHASE = 0, FIELD_STATUS, FIELD_FLOOR, FIELD_X, FIELD_Y, FIELD_HP,
+    FIELD_ATTACK, FIELD_DEFENCE, FIELD_KEY_YELLOW, FIELD_KEY_BLUE, FIELD_KEY_RED,
+    FIELD_GOLD, FIELD_TURNS, FIELD_SHOP_ATTACK, FIELD_SHOP_DEFENCE, FIELD_CLEARED,
+    FIELD_EXPLORED_LO, FIELD_EXPLORED_HI, FIELD_PENDING_X, FIELD_PENDING_Y,
+    FIELD_PENDING_TILE, FIELD_PENDING_HP, FIELD_PENDING_ATTACK,
+    FIELD_PENDING_DEFENCE, FIELD_PENDING_GOLD, FIELD_PENDING_DAMAGE,
+    FIELD_PENDING_ROUNDS, FIELD_PENDING_WINNABLE, FIELD_CHAPTERS,
+    FIELD_COUNT
+};
+
+#define SAVE_HEADER_BYTES 12u
+#define SAVE_FIELD_OFFSET(i) (SAVE_HEADER_BYTES + (unsigned)(i) * 4u)
+#define SAVE_BITMAP_OFFSET (SAVE_HEADER_BYTES + TOWER_SAVE_FIELDS * 4u)
+#define SAVE_RESERVED_OFFSET (SAVE_HEADER_BYTES + (TOWER_SAVE_FIELDS - 1u) * 4u)
+
+_Static_assert(TOWER_MAX_W <= (unsigned)TOWER_FLOOR_W,
+               "bitmap width exceeds the flag budget in tower.h");
+_Static_assert(TOWER_MAX_H <= (unsigned)TOWER_FLOOR_H,
+               "bitmap height exceeds the flag budget in tower.h");
+_Static_assert(TOWER_MAX_CELLS <= TOWER_FLAG_BYTES * 8u,
+               "19x19 bitmap does not fit TOWER_FLAG_BYTES");
+_Static_assert((unsigned)FIELD_COUNT == 29u,
+               "the documented snapshot has 29 u32 fields");
+_Static_assert((unsigned)FIELD_COUNT + 1u == TOWER_SAVE_FIELDS,
+               "one reserved slot completes TOWER_SAVE_FIELDS");
+_Static_assert(SAVE_RESERVED_OFFSET + 4u == SAVE_BITMAP_OFFSET,
+               "reserved slot must sit directly before the bitmap");
+_Static_assert(SAVE_BITMAP_OFFSET + TOWER_FLOORS * TOWER_FLAG_BYTES ==
+                   TOWER_SAVE_BYTES,
+               "wire bitmap does not match TOWER_SAVE_BYTES");
 
 struct tower_t {
     tower_snapshot_t state;
-    uint8_t map[TOWER_FLOORS][MAP_CELLS];
+    uint8_t flags[TOWER_FLOORS][TOWER_FLAG_BYTES];
     uint8_t wire[TOWER_SAVE_BYTES];
 };
 
-/* Ten hand-authored 11x11 rooms. The tower climbs through a gatehouse,
- * armory, archive, moss garden, cistern, barracks, crypt, sand tomb, star
- * terrace and throne room. Every floor has a distinct plan; the stairs land
- * on the matching stair tile of the destination floor, so their coordinates
- * are free to differ. F4's blue keys unlock F3's red vault; F3's red key
- * opens F5; F7's guarded red key opens F8; F6's mage/golem and F9's
- * golem/wraith guard alternative rewards. */
-static const char initial_map[TOWER_FLOORS][TOWER_HEIGHT][TOWER_WIDTH + 1] = {
-    {
-     "###########",
-     "#U##.#..a.#",
-     "#v##.#..s.#",
-     "#.##.#..v.#",
-     "#Y##.#..s.#",
-     "#...P...p.#",
-     "#..y#.p...#",
-     "#.p.#..v..#",
-     "#.s.#.....#",
-     "#.....n...#",
-     "###########",
-    },
-    {
-     "###########",
-     "#..v#...###",
-     "#.s#.a.####",
-     "#..#p..##U#",
-     "#........Y#",
-     "#..#####..#",
-     "#....S.da.#",
-     "#.y#v..#..#",
-     "#..#.pk#.s#",
-     "#D.p.n....#",
-     "###########",
-    },
-    {
-     "###########",
-     "#.k...#v..#",
-     "#.###.#.#D#",
-     "#.#r#.#.#.#",
-     "#.#B#.#.m.#",
-     "#.#.#.###.#",
-     "#yP.#k..n.#",
-     "#Y#####.#.#",
-     "#.#a...m#.#",
-     "#U#.....p.#",
-     "###########",
-    },
-    {
-     "###########",
-     "#.s#...m..#",
-     "#..#.##..U#",
-     "#..#a.#d..#",
-     "#.....#...#",
-     "#p##k.#...#",
-     "#.#b....k.#",
-     "#.#..###B##",
-     "#..a...#b##",
-     "#D...Pn.###",
-     "###########",
-    },
-    {
-     "###########",
-     "#..#......#",
-     "#am#p.#.pD#",
-     "#..#..#...#",
-     "#..k..#...#",
-     "#.##.g#.#.#",
-     "#g#p..#.md#",
-     "#R#.###.#.#",
-     "#U#....nwa#",
-     "##........#",
-     "###########",
-    },
-    {
-     "###########",
-     "#.##...####",
-     "#.s#.#.####",
-     "#..#.#.##U#",
-     "#....#...Y#",
-     "#.##.#.##.#",
-     "#.#k.#.a#.#",
-     "#.#d##v.#p#",
-     "#D#.mygP#a#",
-     "#d.p.#n...#",
-     "###########",
-    },
-    {
-     "###########",
-     "#.w#..m...#",
-     "#..#.###.D#",
-     "#....#d#..#",
-     "#.##w#.#..#",
-     "#a#..#..w##",
-     "#.#g##.#..#",
-     "#.P.#..#wm#",
-     "#.###P.#r##",
-     "#.....n#U##",
-     "###########",
-    },
-    {
-     "###########",
-     "#.g#..g..##",
-     "#..#....#U#",
-     "#..#d...#R#",
-     "#.Pp..#.w.#",
-     "#.###w#.#.#",
-     "#.#a.P#.#w#",
-     "#.#.###.#.#",
-     "#D#.g..n.p#",
-     "##........#",
-     "###########",
-    },
-    {
-     "###########",
-     "#.g#.p.g.a#",
-     "#..#g.#...#",
-     "#.....#..D#",
-     "#.##..#.#.#",
-     "#.#g..#.w.#",
-     "#a#..w#.ww#",
-     "#.P.###...#",
-     "#ww...Pd..#",
-     "#U#..n....#",
-     "###########",
-    },
-    {
-     "###########",
-     "#####G.####",
-     "#.wP#.#.wa#",
-     "#...#.#...#",
-     "#.P.#M#.P.#",
-     "#...#.#...#",
-     "#.pP#.#.aP#",
-     "#...w.....#",
-     "#.d.....aP#",
-     "#D...n....#",
-     "###########",
-    }
-};
-
+/* One character per tile. Unknown characters are plain floor so that a map
+ * table with decorative glyphs still loads; the generator only emits the
+ * characters listed here. */
 static tower_tile_t decode_tile(char c)
 {
     switch (c) {
@@ -181,6 +88,8 @@ static tower_tile_t decode_tile(char c)
     case 'U': return TOWER_TILE_UP;
     case 'D': return TOWER_TILE_DOWN;
     case 'G': return TOWER_TILE_GOAL;
+    case '%': return TOWER_TILE_SECRET;
+    case '!': return TOWER_TILE_EVENT;
     default: return TOWER_TILE_FLOOR;
     }
 }
@@ -190,10 +99,23 @@ static bool is_enemy(tower_tile_t t)
     return t >= TOWER_TILE_SLIME && t <= TOWER_TILE_DEMON;
 }
 
+/* Everything a move turns into TOWER_TILE_FLOOR. Rows, walls and the two
+ * stair tiles are permanent; shops and NPCs are revisited without consuming. */
 static bool consumable(tower_tile_t t)
 {
     return (t >= TOWER_TILE_KEY_YELLOW && t <= TOWER_TILE_DEMON) ||
-           t == TOWER_TILE_GOAL;
+           t == TOWER_TILE_GOAL || t == TOWER_TILE_SECRET ||
+           t == TOWER_TILE_EVENT;
+}
+
+/* A tile the player can legally stand on after an action. Every exclusive
+ * tile (loot, door, enemy, secret, event, goal) is consumed before the player
+ * lands on it, so only these remain. */
+static bool player_standable(tower_tile_t t)
+{
+    return t == TOWER_TILE_FLOOR || t == TOWER_TILE_UP ||
+           t == TOWER_TILE_DOWN || t == TOWER_TILE_SHOP ||
+           t == TOWER_TILE_NPC;
 }
 
 static uint32_t enemy_gold(tower_tile_t t)
@@ -211,31 +133,221 @@ static uint32_t enemy_gold(tower_tile_t t)
     }
 }
 
+static bool enemy_base(tower_tile_t t, uint32_t *hp, uint32_t *attack,
+                       uint32_t *defence)
+{
+    switch (t) {
+    case TOWER_TILE_SLIME: *hp = 24; *attack = 6; *defence = 2; return true;
+    case TOWER_TILE_BAT: *hp = 35; *attack = 11; *defence = 4; return true;
+    case TOWER_TILE_KNIGHT: *hp = 70; *attack = 20; *defence = 8; return true;
+    case TOWER_TILE_SENTINEL: *hp = 999; *attack = 200; *defence = 120; return true;
+    case TOWER_TILE_MAGE: *hp = 120; *attack = 22; *defence = 10; return true;
+    case TOWER_TILE_GOLEM: *hp = 180; *attack = 30; *defence = 16; return true;
+    case TOWER_TILE_WRAITH: *hp = 260; *attack = 36; *defence = 22; return true;
+    case TOWER_TILE_DEMON: *hp = 700; *attack = 58; *defence = 46; return true;
+    default: return false;
+    }
+}
+
+/* Floor f scales hp/attack/defence by (100 + 10*f)/100 with integer division.
+ * Gold is deliberately unscaled. Both tower_move and valid_state go through
+ * this helper so the preview and the save validator can never disagree. */
+static bool preview_for(uint32_t floor, const tower_snapshot_t *s,
+                        tower_tile_t tile, tower_enemy_preview_t *p)
+{
+    uint32_t hp, attack, defence, scale, hit, retaliation;
+    uint64_t damage;
+    if (!s || !p || !is_enemy(tile) ||
+        !enemy_base(tile, &hp, &attack, &defence)) {
+        return false;
+    }
+    memset(p, 0, sizeof *p);
+    scale = 100u + 10u * floor;
+    p->tile = tile;
+    p->hp = hp * scale / 100u;
+    p->attack = attack * scale / 100u;
+    p->defence = defence * scale / 100u;
+    p->gold = enemy_gold(tile);
+    if (s->attack <= p->defence) {
+        /* Cannot deal even one point: the fight is impossible by formula. */
+        p->damage = UINT32_MAX;
+        p->rounds = 0;
+        p->winnable = false;
+        return true;
+    }
+    hit = s->attack - p->defence;
+    p->rounds = (p->hp + hit - 1u) / hit;
+    retaliation = p->attack > s->defence ? p->attack - s->defence : 0u;
+    damage = (uint64_t)(p->rounds - 1u) * retaliation;
+    p->damage = damage > UINT32_MAX ? UINT32_MAX : (uint32_t)damage;
+    p->winnable = damage < (uint64_t)s->hp;
+    return true;
+}
+
+static const tower_floor_desc_t *floor_desc(unsigned floor)
+{
+    const tower_floor_desc_t *d;
+    if (floor >= TOWER_FLOORS) return NULL;
+    d = &tower_floor_table[floor];
+    if (!d->rows || d->w == 0 || d->h == 0 ||
+        (unsigned)d->w > TOWER_MAX_W || (unsigned)d->h > TOWER_MAX_H) {
+        return NULL;
+    }
+    return d;
+}
+
+static bool flag_get(const struct tower_t *h, unsigned floor, unsigned x,
+                     unsigned y)
+{
+    unsigned index = y * TOWER_MAX_W + x;
+    return (h->flags[floor][index / 8u] & (uint8_t)(1u << (index % 8u))) != 0;
+}
+
+static void flag_set(struct tower_t *h, unsigned floor, unsigned x, unsigned y)
+{
+    unsigned index = y * TOWER_MAX_W + x;
+    h->flags[floor][index / 8u] |= (uint8_t)(1u << (index % 8u));
+}
+
+static tower_tile_t tile_at(const struct tower_t *h, unsigned floor, int x,
+                            int y)
+{
+    const tower_floor_desc_t *d;
+    if (!h || floor >= TOWER_FLOORS || x < 0 || y < 0) return TOWER_TILE_WALL;
+    d = floor_desc(floor);
+    if (!d || (unsigned)x >= (unsigned)d->w || (unsigned)y >= (unsigned)d->h) {
+        return TOWER_TILE_WALL;
+    }
+    if (flag_get(h, floor, (unsigned)x, (unsigned)y)) return TOWER_TILE_FLOOR;
+    return decode_tile(d->rows[y][x]);
+}
+
 static tower_status_t set_status(tower_handle_t h, tower_status_t status)
 {
     h->state.status = status;
     return status;
 }
 
-/* Stairs are linked by tile, not by a fixed screen coordinate. Each floor
- * may put its up/down stair anywhere, and the player lands on the matching
- * stair of the destination floor. */
-static bool find_tile(tower_handle_t h, unsigned floor, tower_tile_t want,
-                      unsigned *x, unsigned *y)
+static void mark_explored(struct tower_t *h, unsigned floor)
 {
+    if (floor < 32u) {
+        h->state.explored_lo |= 1u << floor;
+    } else if (floor < TOWER_FLOORS) {
+        h->state.explored_hi |= 1u << (floor - 32u);
+    }
+}
+
+static bool find_tile(const struct tower_t *h, unsigned floor,
+                      tower_tile_t want, unsigned *x, unsigned *y)
+{
+    const tower_floor_desc_t *d = floor_desc(floor);
     unsigned cx, cy;
-    if (!h || floor >= TOWER_FLOORS) return false;
-    for (cy = 0; cy < TOWER_HEIGHT; ++cy)
-        for (cx = 0; cx < TOWER_WIDTH; ++cx)
-            if (tower_tile(h, floor, (int)cx, (int)cy) == want) {
+    if (!d) return false;
+    for (cy = 0; cy < (unsigned)d->h; ++cy) {
+        for (cx = 0; cx < (unsigned)d->w; ++cx) {
+            if (tile_at(h, floor, (int)cx, (int)cy) == want) {
                 if (x) *x = cx;
                 if (y) *y = cy;
                 return true;
             }
+        }
+    }
     return false;
 }
 
-tower_result_t tower_create(const tower_config_t *config, tower_handle_t *ret_handle)
+static bool find_walkable(const struct tower_t *h, unsigned floor,
+                          unsigned *x, unsigned *y)
+{
+    const tower_floor_desc_t *d = floor_desc(floor);
+    unsigned cx, cy;
+    if (!d) return false;
+    for (cy = 0; cy < (unsigned)d->h; ++cy) {
+        for (cx = 0; cx < (unsigned)d->w; ++cx) {
+            if (player_standable(tile_at(h, floor, (int)cx, (int)cy))) {
+                if (x) *x = cx;
+                if (y) *y = cy;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/* Stairs are linked by tile: climbing floor f's 'U' lands on floor f+1's 'D'
+ * and descending lands on the 'U' below. The fallback only matters for a
+ * malformed floor table; generated floors always carry exactly one of each. */
+static void place_at_stairs(struct tower_t *h, unsigned floor,
+                            tower_tile_t want)
+{
+    unsigned x = 0, y = 0;
+    if (!find_tile(h, floor, want, &x, &y) &&
+        !find_walkable(h, floor, &x, &y)) {
+        x = 0;
+        y = 0;
+    }
+    h->state.x = x;
+    h->state.y = y;
+}
+
+static void enter_floor(struct tower_t *h, unsigned floor)
+{
+    h->state.floor = floor;
+    mark_explored(h, floor);
+}
+
+static void clear_pending(tower_handle_t h)
+{
+    h->state.phase = TOWER_PHASE_PLAY;
+    h->state.pending_x = 0;
+    h->state.pending_y = 0;
+    memset(&h->state.pending, 0, sizeof h->state.pending);
+}
+
+static void advance_turn(tower_handle_t h)
+{
+    if (h->state.turns < MAX_TURNS) ++h->state.turns;
+}
+
+static bool explored_bit(const tower_snapshot_t *s, unsigned floor)
+{
+    if (!s || floor >= TOWER_FLOORS) return false;
+    if (floor < 32u) return ((s->explored_lo >> floor) & 1u) != 0;
+    return ((s->explored_hi >> (floor - 32u)) & 1u) != 0;
+}
+
+/* Anchor 0 is floor 1, anchor n is the last floor of chapter n. */
+unsigned tower_anchor_floor(unsigned anchor)
+{
+    if (anchor == 0) return 0;
+    if (anchor >= TOWER_ANCHORS) return TOWER_FLOORS - 1u;
+    return anchor * 10u - 1u;
+}
+
+bool tower_chapter_complete(const tower_snapshot_t *state, unsigned chapter)
+{
+    if (!state || chapter < 1u || chapter > TOWER_CHAPTERS) return false;
+    return ((state->chapters >> (chapter - 1u)) & 1u) != 0;
+}
+
+bool tower_anchor_unlocked(const tower_snapshot_t *state, unsigned anchor)
+{
+    if (!state || anchor >= TOWER_ANCHORS) return false;
+    if (anchor == 0) return true;
+    return tower_chapter_complete(state, anchor);
+}
+
+/* The goal tile is the chapter gate: on the last floor it ends the campaign,
+ * everywhere else it records that this ten-floor chapter is done. The chapter
+ * number follows the floor that carries the tile, so a mis-placed goal still
+ * has one unambiguous meaning; tools reject goals off a chapter boundary. */
+static void complete_chapter(struct tower_t *h, unsigned floor, bool last)
+{
+    h->state.chapters |= 1u << (floor / 10u);
+    if (last) h->state.cleared = true;
+}
+
+tower_result_t tower_create(const tower_config_t *config,
+                            tower_handle_t *ret_handle)
 {
     tower_handle_t h;
     (void)config;
@@ -252,15 +364,16 @@ void tower_delete(tower_handle_t h) { free(h); }
 
 void tower_new(tower_handle_t h)
 {
-    unsigned f, x, y;
     if (!h) return;
     memset(&h->state, 0, sizeof h->state);
-    h->state.x = 5; h->state.y = 9;
-    h->state.hp = 100; h->state.attack = 12; h->state.defence = 4;
-    for (f = 0; f < TOWER_FLOORS; ++f)
-        for (y = 0; y < TOWER_HEIGHT; ++y)
-            for (x = 0; x < TOWER_WIDTH; ++x)
-                h->map[f][y * TOWER_WIDTH + x] = (uint8_t)decode_tile(initial_map[f][y][x]);
+    memset(h->flags, 0, sizeof h->flags);
+    h->state.phase = TOWER_PHASE_PLAY;
+    h->state.status = TOWER_STATUS_READY;
+    h->state.hp = 100;
+    h->state.attack = 12;
+    h->state.defence = 4;
+    mark_explored(h, 0);
+    place_at_stairs(h, 0, TOWER_TILE_DOWN);
 }
 
 tower_result_t tower_read(tower_handle_t h, tower_snapshot_t *snapshot)
@@ -270,54 +383,37 @@ tower_result_t tower_read(tower_handle_t h, tower_snapshot_t *snapshot)
     return TOWER_OK;
 }
 
-tower_tile_t tower_tile(tower_handle_t h, unsigned f, int x, int y)
+tower_tile_t tower_tile(tower_handle_t h, unsigned floor, int x, int y)
 {
-    if (!h || f >= TOWER_FLOORS || x < 0 || x >= TOWER_WIDTH ||
-        y < 0 || y >= TOWER_HEIGHT) return TOWER_TILE_WALL;
-    return (tower_tile_t)h->map[f][y * TOWER_WIDTH + x];
+    return tile_at(h, floor, x, y);
+}
+
+tower_tile_t tower_tile_current(tower_handle_t h, int x, int y)
+{
+    if (!h) return TOWER_TILE_WALL;
+    return tile_at(h, h->state.floor, x, y);
+}
+
+/* No handle is available here, so these report the model's capacity
+ * (TOWER_FLOOR_W/H from tower.h). An individual floor may be smaller; the
+ * shape is observed by probing tower_tile()/tower_tile_current(). */
+unsigned tower_floor_width(void) { return TOWER_FLOOR_W; }
+unsigned tower_floor_height(void) { return TOWER_FLOOR_H; }
+unsigned tower_floors(void) { return TOWER_FLOORS; }
+
+bool tower_explored(const tower_snapshot_t *state, unsigned floor)
+{
+    return explored_bit(state, floor);
 }
 
 tower_result_t tower_enemy_preview(tower_handle_t h, tower_tile_t tile,
-                                   tower_enemy_preview_t *p)
+                                   tower_enemy_preview_t *preview)
 {
-    uint32_t hit, retaliation;
-    uint64_t damage;
-    if (!h || !p || !is_enemy(tile)) return TOWER_ERR_ARGUMENT;
-    memset(p, 0, sizeof *p);
-    p->tile = tile;
-    switch (tile) {
-    case TOWER_TILE_SLIME: p->hp = 24; p->attack = 6; p->defence = 2; p->gold = 3; break;
-    case TOWER_TILE_BAT: p->hp = 35; p->attack = 11; p->defence = 4; p->gold = 6; break;
-    case TOWER_TILE_KNIGHT: p->hp = 70; p->attack = 20; p->defence = 8; p->gold = 12; break;
-    case TOWER_TILE_MAGE: p->hp = 120; p->attack = 22; p->defence = 10; p->gold = 18; break;
-    case TOWER_TILE_GOLEM: p->hp = 180; p->attack = 30; p->defence = 16; p->gold = 26; break;
-    case TOWER_TILE_WRAITH: p->hp = 260; p->attack = 36; p->defence = 22; p->gold = 34; break;
-    case TOWER_TILE_DEMON: p->hp = 700; p->attack = 58; p->defence = 46; p->gold = 150; break;
-    default: p->hp = 999; p->attack = 200; p->defence = 120; p->gold = 0; break;
+    if (!h || !preview) return TOWER_ERR_ARGUMENT;
+    if (!preview_for(h->state.floor, &h->state, tile, preview)) {
+        return TOWER_ERR_ARGUMENT;
     }
-    if (h->state.attack <= p->defence) {
-        p->damage = UINT32_MAX;
-        return TOWER_OK;
-    }
-    hit = h->state.attack - p->defence;
-    p->rounds = (p->hp + hit - 1) / hit;
-    retaliation = p->attack > h->state.defence ? p->attack - h->state.defence : 0;
-    damage = (uint64_t)(p->rounds - 1) * retaliation;
-    p->damage = damage > UINT32_MAX ? UINT32_MAX : (uint32_t)damage;
-    p->winnable = damage < h->state.hp;
     return TOWER_OK;
-}
-
-static void clear_pending(tower_handle_t h)
-{
-    h->state.phase = TOWER_PHASE_PLAY;
-    h->state.pending_x = h->state.pending_y = 0;
-    memset(&h->state.pending, 0, sizeof h->state.pending);
-}
-
-static void advance_turn(tower_handle_t h)
-{
-    if (h->state.turns < MAX_TURNS) ++h->state.turns;
 }
 
 tower_status_t tower_move(tower_handle_t h, int dx, int dy)
@@ -327,74 +423,134 @@ tower_status_t tower_move(tower_handle_t h, int dx, int dy)
     tower_tile_t tile;
     tower_enemy_preview_t preview;
     tower_status_t status = TOWER_STATUS_MOVED;
+
     if (!h) return TOWER_STATUS_WALL;
-    if (h->state.phase == TOWER_PHASE_COMBAT) return TOWER_STATUS_CONFIRM;
+    if (h->state.hp == 0) return set_status(h, TOWER_STATUS_DEAD);
+    if (h->state.phase != TOWER_PHASE_PLAY) return TOWER_STATUS_CONFIRM;
     if (!((dx == 0 && (dy == -1 || dy == 1)) ||
-          (dy == 0 && (dx == -1 || dx == 1)))) return set_status(h, TOWER_STATUS_WALL);
-    x = (int)h->state.x + dx; y = (int)h->state.y + dy;
-    tile = tower_tile(h, h->state.floor, x, y);
+          (dy == 0 && (dx == -1 || dx == 1)))) {
+        return set_status(h, TOWER_STATUS_WALL);
+    }
+
+    x = (int)h->state.x + dx;
+    y = (int)h->state.y + dy;
+    tile = tile_at(h, h->state.floor, x, y);
+
     if (tile == TOWER_TILE_WALL) return set_status(h, TOWER_STATUS_WALL);
+
+    /* A secret wall opens on contact but does not pull the player through. */
+    if (tile == TOWER_TILE_SECRET) {
+        flag_set(h, h->state.floor, (unsigned)x, (unsigned)y);
+        advance_turn(h);
+        return set_status(h, TOWER_STATUS_SECRET);
+    }
+
     if (is_enemy(tile)) {
-        tower_enemy_preview(h, tile, &preview);
-        if (!preview.winnable) return set_status(h, TOWER_STATUS_TOO_STRONG);
+        if (!preview_for(h->state.floor, &h->state, tile, &preview)) {
+            return set_status(h, TOWER_STATUS_WALL);
+        }
+        /* Only a fight where not a single point of damage lands is refused.
+         * A losing fight is legal: the preview already shows the damage. */
+        if (h->state.attack <= preview.defence) {
+            return set_status(h, TOWER_STATUS_TOO_STRONG);
+        }
         h->state.phase = TOWER_PHASE_COMBAT;
-        h->state.pending_x = (unsigned)x; h->state.pending_y = (unsigned)y;
+        h->state.pending_x = (unsigned)x;
+        h->state.pending_y = (unsigned)y;
         h->state.pending = preview;
         return set_status(h, TOWER_STATUS_CONFIRM);
     }
+
     if (tile >= TOWER_TILE_DOOR_YELLOW && tile <= TOWER_TILE_DOOR_RED) {
         color = (unsigned)(tile - TOWER_TILE_DOOR_YELLOW);
         if (!h->state.keys[color]) return set_status(h, TOWER_STATUS_NEED_KEY);
         --h->state.keys[color];
         status = TOWER_STATUS_DOOR;
     } else if (tile >= TOWER_TILE_KEY_YELLOW && tile <= TOWER_TILE_KEY_RED) {
-        ++h->state.keys[tile - TOWER_TILE_KEY_YELLOW]; status = TOWER_STATUS_ITEM;
+        color = (unsigned)(tile - TOWER_TILE_KEY_YELLOW);
+        ++h->state.keys[color];
+        status = TOWER_STATUS_ITEM;
     } else if (tile == TOWER_TILE_POTION || tile == TOWER_TILE_BIG_POTION) {
-        h->state.hp += tile == TOWER_TILE_POTION ? 30 : 80; status = TOWER_STATUS_ITEM;
+        h->state.hp += tile == TOWER_TILE_POTION ? 30u : 80u;
+        status = TOWER_STATUS_ITEM;
     } else if (tile == TOWER_TILE_ATTACK) {
-        h->state.attack += 5; status = TOWER_STATUS_ITEM;
+        h->state.attack += 5;
+        status = TOWER_STATUS_ITEM;
     } else if (tile == TOWER_TILE_DEFENCE) {
-        h->state.defence += 3; status = TOWER_STATUS_ITEM;
+        h->state.defence += 3;
+        status = TOWER_STATUS_ITEM;
     } else if (tile == TOWER_TILE_GOAL) {
-        h->state.cleared = true; status = TOWER_STATUS_CLEARED;
+        /* Only the final floor ends the campaign; every other goal closes its
+         * chapter and leaves the tower open. */
+        complete_chapter(h, h->state.floor,
+                         h->state.floor + 1u == TOWER_FLOORS);
+        status = h->state.cleared ? TOWER_STATUS_CLEARED
+                                  : TOWER_STATUS_CHAPTER;
     } else if (tile == TOWER_TILE_SHOP) {
         status = TOWER_STATUS_SHOP;
     } else if (tile == TOWER_TILE_NPC) {
         status = TOWER_STATUS_TALK;
+    } else if (tile == TOWER_TILE_EVENT) {
+        status = TOWER_STATUS_EVENT;
     }
-    if (consumable(tile)) h->map[h->state.floor][y * TOWER_WIDTH + x] = TOWER_TILE_FLOOR;
-    h->state.x = (unsigned)x; h->state.y = (unsigned)y;
-    if (tile == TOWER_TILE_UP || tile == TOWER_TILE_DOWN) {
-        if (tile == TOWER_TILE_UP) {
-            if (h->state.floor + 1 < TOWER_FLOORS) {
-                unsigned nx = 5, ny = 9;
-                if (!find_tile(h, h->state.floor + 1, TOWER_TILE_DOWN, &nx, &ny)) {
-                    nx = 5; ny = 9;
-                }
-                h->state.floor += 1; h->state.x = nx; h->state.y = ny;
-                status = TOWER_STATUS_STAIRS;
-            }
-        } else if (h->state.floor > 0) {
-            unsigned nx = 5, ny = 1;
-            if (!find_tile(h, h->state.floor - 1, TOWER_TILE_UP, &nx, &ny)) {
-                nx = 5; ny = 1;
-            }
-            h->state.floor -= 1; h->state.x = nx; h->state.y = ny;
+
+    if (consumable(tile)) {
+        flag_set(h, h->state.floor, (unsigned)x, (unsigned)y);
+    }
+    h->state.x = (unsigned)x;
+    h->state.y = (unsigned)y;
+
+    if (tile == TOWER_TILE_UP) {
+        if (h->state.floor + 1u < TOWER_FLOORS) {
+            /* Taking a chapter's exit stair is an explicit completion event:
+             * it is not inferred later from the explored bitmap. */
+            const unsigned leaving = h->state.floor;
+            enter_floor(h, leaving + 1u);
+            if (leaving % 10u == 9u) complete_chapter(h, leaving, false);
+            place_at_stairs(h, h->state.floor, TOWER_TILE_DOWN);
+            status = TOWER_STATUS_STAIRS;
+        }
+    } else if (tile == TOWER_TILE_DOWN) {
+        if (h->state.floor > 0) {
+            enter_floor(h, h->state.floor - 1u);
+            place_at_stairs(h, h->state.floor, TOWER_TILE_UP);
             status = TOWER_STATUS_STAIRS;
         }
     }
+
     advance_turn(h);
     return set_status(h, status);
 }
 
 tower_status_t tower_confirm(tower_handle_t h)
 {
+    unsigned floor, x, y;
     if (!h) return TOWER_STATUS_READY;
     if (h->state.phase != TOWER_PHASE_COMBAT) return h->state.status;
+
+    /* Lethal damage ends the run: the enemy survives, no gold, no movement. */
+    if (h->state.pending.damage >= h->state.hp) {
+        h->state.hp = 0;
+        clear_pending(h);
+        advance_turn(h);
+        return set_status(h, TOWER_STATUS_DEAD);
+    }
+
     h->state.hp -= h->state.pending.damage;
     h->state.gold += h->state.pending.gold;
-    h->state.x = h->state.pending_x; h->state.y = h->state.pending_y;
-    h->map[h->state.floor][h->state.y * TOWER_WIDTH + h->state.x] = TOWER_TILE_FLOOR;
+    floor = h->state.floor;
+    x = h->state.pending_x;
+    y = h->state.pending_y;
+    h->state.x = x;
+    h->state.y = y;
+    flag_set(h, floor, x, y);
+    if (h->state.pending.tile == TOWER_TILE_DEMON &&
+        floor == TOWER_FLOORS - 1u) {
+        complete_chapter(h, floor, true);
+        clear_pending(h);
+        advance_turn(h);
+        return set_status(h, TOWER_STATUS_CLEARED);
+    }
     clear_pending(h);
     advance_turn(h);
     return set_status(h, TOWER_STATUS_VICTORY);
@@ -421,6 +577,7 @@ tower_status_t tower_buy(tower_handle_t h, int kind)
 {
     uint32_t price;
     if (!h) return TOWER_STATUS_NEED_GOLD;
+    if (h->state.hp == 0) return set_status(h, TOWER_STATUS_DEAD);
     if (h->state.phase != TOWER_PHASE_PLAY) return h->state.status;
     if (kind != 0 && kind != 1) return set_status(h, TOWER_STATUS_NEED_GOLD);
     price = tower_shop_price(&h->state);
@@ -436,10 +593,29 @@ tower_status_t tower_buy(tower_handle_t h, int kind)
     return set_status(h, TOWER_STATUS_ITEM);
 }
 
+tower_status_t tower_teleport(tower_handle_t h, unsigned anchor)
+{
+    unsigned floor;
+    if (!h) return TOWER_STATUS_WALL;
+    if (h->state.hp == 0) return set_status(h, TOWER_STATUS_DEAD);
+    if (h->state.phase != TOWER_PHASE_PLAY) return h->state.status;
+    if (anchor >= TOWER_ANCHORS) return set_status(h, TOWER_STATUS_WALL);
+    if (!tower_anchor_unlocked(&h->state, anchor)) {
+        return set_status(h, TOWER_STATUS_LOCKED);
+    }
+    floor = tower_anchor_floor(anchor);
+    /* Standing on the anchor already: a no-op must not look like a floor
+     * change, because that is what triggers the caller's auto-save. */
+    if (floor == h->state.floor) return set_status(h, TOWER_STATUS_READY);
+    enter_floor(h, floor);
+    place_at_stairs(h, floor, TOWER_TILE_DOWN);
+    return set_status(h, TOWER_STATUS_STAIRS);
+}
+
 static void put32(uint8_t *b, unsigned offset, uint32_t value)
 {
     unsigned i;
-    for (i = 0; i < 4; ++i) b[offset + i] = (uint8_t)(value >> (8 * i));
+    for (i = 0; i < 4; ++i) b[offset + i] = (uint8_t)(value >> (8u * i));
 }
 
 static uint32_t get32(const uint8_t *b, unsigned offset)
@@ -452,161 +628,292 @@ static uint32_t wire_checksum(const uint8_t *b)
 {
     uint32_t hash = 2166136261u;
     unsigned i;
-    for (i = 0; i < TOWER_SAVE_BYTES; ++i)
-        if (i < 8 || i > 11) hash = (hash ^ b[i]) * 16777619u;
+    for (i = 0; i < TOWER_SAVE_BYTES; ++i) {
+        if (i < 8u || i > 11u) hash = (hash ^ b[i]) * 16777619u;
+    }
     return hash;
 }
 
-/* Explicit fields avoid ABI, alignment, endianness and bool representation issues. */
-static void encode(tower_handle_t h, uint8_t *b)
+/* Explicit little-endian fields avoid ABI, alignment, endianness and bool
+ * representation issues. Field order is exactly tower_snapshot_t order. */
+static void encode(const struct tower_t *h, uint8_t *b)
 {
     const tower_snapshot_t *s = &h->state;
-    const tower_enemy_preview_t *p = &s->pending;
-    unsigned offset = 12;
-#define FIELD(v) do { put32(b, offset, (uint32_t)(v)); offset += 4; } while (0)
     memset(b, 0, TOWER_SAVE_BYTES);
-    memcpy(b, "MTWR", 4); b[4] = SAVE_VERSION;
-    b[6] = (uint8_t)TOWER_SAVE_BYTES; b[7] = (uint8_t)(TOWER_SAVE_BYTES >> 8);
-    FIELD(s->phase); FIELD(s->status); FIELD(s->floor); FIELD(s->x); FIELD(s->y);
-    FIELD(s->hp); FIELD(s->attack); FIELD(s->defence);
-    FIELD(s->keys[0]); FIELD(s->keys[1]); FIELD(s->keys[2]);
-    FIELD(s->gold); FIELD(s->turns); FIELD(s->cleared);
-    FIELD(s->pending_x); FIELD(s->pending_y);
-    FIELD(p->tile); FIELD(p->hp); FIELD(p->attack); FIELD(p->defence); FIELD(p->gold);
-    FIELD(p->damage); FIELD(p->rounds); FIELD(p->winnable);
-    FIELD(s->shop_attack); FIELD(s->shop_defence);
-#undef FIELD
-    memcpy(b + MAP_OFFSET, h->map, sizeof h->map);
+    memcpy(b, "MTWR", 4);
+    b[4] = (uint8_t)SAVE_VERSION;
+    b[5] = 0;
+    b[6] = (uint8_t)(TOWER_SAVE_BYTES & 0xffu);
+    b[7] = (uint8_t)((TOWER_SAVE_BYTES >> 8) & 0xffu);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_PHASE), (uint32_t)s->phase);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_STATUS), (uint32_t)s->status);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_FLOOR), s->floor);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_X), s->x);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_Y), s->y);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_HP), s->hp);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_ATTACK), s->attack);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_DEFENCE), s->defence);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_KEY_YELLOW), s->keys[0]);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_KEY_BLUE), s->keys[1]);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_KEY_RED), s->keys[2]);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_GOLD), s->gold);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_TURNS), s->turns);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_SHOP_ATTACK), s->shop_attack);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_SHOP_DEFENCE), s->shop_defence);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_CLEARED), (uint32_t)s->cleared);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_EXPLORED_LO), s->explored_lo);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_EXPLORED_HI), s->explored_hi);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_X), s->pending_x);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_Y), s->pending_y);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_TILE), (uint32_t)s->pending.tile);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_HP), s->pending.hp);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_ATTACK), s->pending.attack);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_DEFENCE), s->pending.defence);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_GOLD), s->pending.gold);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_DAMAGE), s->pending.damage);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_ROUNDS), s->pending.rounds);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_WINNABLE),
+          (uint32_t)s->pending.winnable);
+    put32(b, SAVE_FIELD_OFFSET(FIELD_CHAPTERS), s->chapters);
+    put32(b, SAVE_RESERVED_OFFSET, 0);
+    memcpy(b + SAVE_BITMAP_OFFSET, h->flags, sizeof h->flags);
     put32(b, 8, wire_checksum(b));
 }
 
-tower_result_t tower_export(tower_handle_t h, uint8_t *b, size_t size)
-{
-    if (!h || !b || size != TOWER_SAVE_BYTES) return TOWER_ERR_ARGUMENT;
-    encode(h, b);
-    return TOWER_OK;
-}
-
-static void decode(tower_handle_t h, const uint8_t *b)
+static void decode(struct tower_t *h, const uint8_t *b)
 {
     tower_snapshot_t *s = &h->state;
-    tower_enemy_preview_t *p = &s->pending;
-    unsigned offset = 12;
-#define FIELD(v) do { (v) = get32(b, offset); offset += 4; } while (0)
-    FIELD(s->phase); FIELD(s->status); FIELD(s->floor); FIELD(s->x); FIELD(s->y);
-    FIELD(s->hp); FIELD(s->attack); FIELD(s->defence);
-    FIELD(s->keys[0]); FIELD(s->keys[1]); FIELD(s->keys[2]);
-    FIELD(s->gold); FIELD(s->turns); FIELD(s->cleared);
-    FIELD(s->pending_x); FIELD(s->pending_y);
-    FIELD(p->tile); FIELD(p->hp); FIELD(p->attack); FIELD(p->defence); FIELD(p->gold);
-    FIELD(p->damage); FIELD(p->rounds); FIELD(p->winnable);
-    FIELD(s->shop_attack); FIELD(s->shop_defence);
-#undef FIELD
-    memcpy(h->map, b + MAP_OFFSET, sizeof h->map);
+    s->phase = (tower_phase_t)get32(b, SAVE_FIELD_OFFSET(FIELD_PHASE));
+    s->status = (tower_status_t)get32(b, SAVE_FIELD_OFFSET(FIELD_STATUS));
+    s->floor = get32(b, SAVE_FIELD_OFFSET(FIELD_FLOOR));
+    s->x = get32(b, SAVE_FIELD_OFFSET(FIELD_X));
+    s->y = get32(b, SAVE_FIELD_OFFSET(FIELD_Y));
+    s->hp = get32(b, SAVE_FIELD_OFFSET(FIELD_HP));
+    s->attack = get32(b, SAVE_FIELD_OFFSET(FIELD_ATTACK));
+    s->defence = get32(b, SAVE_FIELD_OFFSET(FIELD_DEFENCE));
+    s->keys[0] = get32(b, SAVE_FIELD_OFFSET(FIELD_KEY_YELLOW));
+    s->keys[1] = get32(b, SAVE_FIELD_OFFSET(FIELD_KEY_BLUE));
+    s->keys[2] = get32(b, SAVE_FIELD_OFFSET(FIELD_KEY_RED));
+    s->gold = get32(b, SAVE_FIELD_OFFSET(FIELD_GOLD));
+    s->turns = get32(b, SAVE_FIELD_OFFSET(FIELD_TURNS));
+    s->shop_attack = get32(b, SAVE_FIELD_OFFSET(FIELD_SHOP_ATTACK));
+    s->shop_defence = get32(b, SAVE_FIELD_OFFSET(FIELD_SHOP_DEFENCE));
+    s->cleared = get32(b, SAVE_FIELD_OFFSET(FIELD_CLEARED)) != 0;
+    s->explored_lo = get32(b, SAVE_FIELD_OFFSET(FIELD_EXPLORED_LO));
+    s->explored_hi = get32(b, SAVE_FIELD_OFFSET(FIELD_EXPLORED_HI));
+    s->pending_x = get32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_X));
+    s->pending_y = get32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_Y));
+    s->pending.tile =
+        (tower_tile_t)get32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_TILE));
+    s->pending.hp = get32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_HP));
+    s->pending.attack = get32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_ATTACK));
+    s->pending.defence = get32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_DEFENCE));
+    s->pending.gold = get32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_GOLD));
+    s->pending.damage = get32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_DAMAGE));
+    s->pending.rounds = get32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_ROUNDS));
+    s->pending.winnable =
+        get32(b, SAVE_FIELD_OFFSET(FIELD_PENDING_WINNABLE)) != 0;
+    s->chapters = get32(b, SAVE_FIELD_OFFSET(FIELD_CHAPTERS));
+    memcpy(h->flags, b + SAVE_BITMAP_OFFSET, sizeof h->flags);
 }
 
-static bool earned_less(uint32_t earned, uint64_t spent)
-{ return (uint64_t)earned < spent; }
-
-static bool valid_state(tower_handle_t h)
+/* Reject a decoded save that the game could never have produced. Everything
+ * is derived from the initial map plus the consumed bitmap, so the checks are
+ * exact rather than heuristic:
+ *   - a consumed bit may only cover a consumable/secret/event cell inside the
+ *     floor's real shape; the reserved high bits are zero;
+ *   - key/door and gold/shop arithmetic must balance;
+ *   - attack/defence/hp follow from the consumed loot;
+ *   - explored floors form a contiguous prefix (stairs move by one floor and
+ *     teleport is limited to chapter anchors that were already reached), so the
+ *     current floor is always covered and no unreachable floor can be marked;
+ *   - the chapter mask only claims a chapter backed by evidence: its gate tile
+ *     was consumed or the run left that chapter's exit stair. Chapter five
+ *     additionally requires cleared. Chapter state stays its own saved field;
+ *   - the player stands on a walkable tile and, if fighting, the pending
+ *     preview is the one the model would compute;
+ *   - cleared is set exactly when the goal on the last floor was stepped on or
+ *     the demon king fell there. A goal on any other floor ends its chapter and
+ *     must not end the campaign. */
+static bool valid_state(const struct tower_t *h)
 {
     const tower_snapshot_t *s = &h->state;
-    uint32_t consumed[TOWER_TILE_COUNT] = {0};
-    tower_enemy_preview_t p;
-    unsigned f, x, y, color;
-    uint32_t max_hp, gold;
+    uint32_t consumed[TOWER_TILE_COUNT];
+    uint64_t explored, earned, bought, spent;
+    uint32_t max_hp, goal_mask = 0;
+    unsigned f, x, y, color, k, demon_last = 0, goal_last = 0;
     tower_tile_t current;
-    if (s->phase > TOWER_PHASE_COMBAT || s->status > TOWER_STATUS_TALK ||
-        s->floor >= TOWER_FLOORS || s->x >= TOWER_WIDTH || s->y >= TOWER_HEIGHT ||
-        !s->hp || s->turns > MAX_TURNS) {
+    bool expect_cleared;
+
+    memset(consumed, 0, sizeof consumed);
+    if (s->phase > TOWER_PHASE_COMBAT || s->status > TOWER_STATUS_CHAPTER ||
+        s->floor >= TOWER_FLOORS || s->turns > MAX_TURNS ||
+        s->chapters >= (1u << TOWER_CHAPTERS)) {
         return false;
     }
-    for (f = 0; f < TOWER_FLOORS; ++f)
-        for (y = 0; y < TOWER_HEIGHT; ++y)
-            for (x = 0; x < TOWER_WIDTH; ++x) {
-                tower_tile_t original = decode_tile(initial_map[f][y][x]);
-                tower_tile_t tile = tower_tile(h, f, (int)x, (int)y);
-                if (tile == original) continue;
-                if (tile != TOWER_TILE_FLOOR || !consumable(original)) {
+
+    for (f = 0; f < TOWER_FLOORS; ++f) {
+        const tower_floor_desc_t *d = floor_desc(f);
+        for (y = 0; y < TOWER_MAX_H; ++y) {
+            for (x = 0; x < TOWER_MAX_W; ++x) {
+                tower_tile_t original;
+                if (!flag_get(h, f, x, y)) continue;
+                if (!d || x >= (unsigned)d->w || y >= (unsigned)d->h) {
                     return false;
                 }
+                original = decode_tile(d->rows[y][x]);
+                if (!consumable(original)) return false;
                 ++consumed[original];
+                if (original == TOWER_TILE_DEMON && f == TOWER_FLOORS - 1u) {
+                    ++demon_last;
+                }
+                if (original == TOWER_TILE_GOAL) {
+                    goal_mask |= 1u << (f / 10u);
+                    if (f == TOWER_FLOORS - 1u) ++goal_last;
+                }
             }
-    max_hp = 100 + 30 * consumed[TOWER_TILE_POTION] +
-             80 * consumed[TOWER_TILE_BIG_POTION];
-    gold = 0;
-    for (f = TOWER_TILE_SLIME; f <= TOWER_TILE_DEMON; ++f)
-        gold += enemy_gold((tower_tile_t)f) * consumed[f];
-    {
-        uint64_t bought = (uint64_t)s->shop_attack + s->shop_defence;
-        uint64_t spent;
-        if (bought > 1000000u) return false;
-        spent = bought * TOWER_SHOP_COST +
-                (bought * (bought - 1u) / 2u) * TOWER_SHOP_STEP;
-        if (earned_less(gold, spent) || s->gold != gold - (uint32_t)spent) {
-            return false;
+        }
+        for (k = TOWER_MAX_CELLS; k < TOWER_FLAG_BYTES * 8u; ++k) {
+            if (h->flags[f][k / 8u] & (uint8_t)(1u << (k % 8u))) return false;
         }
     }
-    if (s->hp > max_hp ||
-        s->attack != 12 + 5 * consumed[TOWER_TILE_ATTACK] + TOWER_SHOP_GAIN * s->shop_attack ||
-        s->defence != 4 + 3 * consumed[TOWER_TILE_DEFENCE] + TOWER_SHOP_GAIN * s->shop_defence ||
-        s->cleared != (consumed[TOWER_TILE_GOAL] == 1) ||
-        consumed[TOWER_TILE_SENTINEL]) {
-        return false;
-    }
+
     for (color = 0; color < 3; ++color) {
         uint32_t keys = consumed[TOWER_TILE_KEY_YELLOW + color];
         uint32_t doors = consumed[TOWER_TILE_DOOR_YELLOW + color];
-        if (doors > keys || s->keys[color] != keys - doors) {
+        if (doors > keys || s->keys[color] != keys - doors) return false;
+    }
+
+    earned = 0;
+    for (f = TOWER_TILE_SLIME; f <= TOWER_TILE_DEMON; ++f) {
+        earned += (uint64_t)enemy_gold((tower_tile_t)f) * consumed[f];
+    }
+    bought = (uint64_t)s->shop_attack + s->shop_defence;
+    if (bought > 1000000u) return false;
+    spent = bought * TOWER_SHOP_COST +
+            (bought * (bought - 1u) / 2u) * TOWER_SHOP_STEP;
+    if (earned < spent || (uint64_t)s->gold != earned - spent) return false;
+
+    max_hp = 100u + 30u * consumed[TOWER_TILE_POTION] +
+             80u * consumed[TOWER_TILE_BIG_POTION];
+    if (s->hp > max_hp) return false;
+    if (s->hp == 0) {
+        if (s->status != TOWER_STATUS_DEAD ||
+            s->phase != TOWER_PHASE_PLAY) {
             return false;
         }
-    }
-    current = tower_tile(h, s->floor, (int)s->x, (int)s->y);
-    if (current != TOWER_TILE_FLOOR && current != TOWER_TILE_UP &&
-        current != TOWER_TILE_DOWN && current != TOWER_TILE_SHOP &&
-        current != TOWER_TILE_NPC) {
+    } else if (s->status == TOWER_STATUS_DEAD) {
         return false;
     }
+    if ((uint64_t)s->attack != 12u + 5u * consumed[TOWER_TILE_ATTACK] +
+                                     3u * s->shop_attack) {
+        return false;
+    }
+    if ((uint64_t)s->defence != 4u + 3u * consumed[TOWER_TILE_DEFENCE] +
+                                       3u * s->shop_defence) {
+        return false;
+    }
+
+    expect_cleared = goal_last > 0 || demon_last > 0;
+    if (s->cleared != expect_cleared) return false;
+
+    explored = (uint64_t)s->explored_lo | ((uint64_t)s->explored_hi << 32);
+    if ((explored >> TOWER_FLOORS) != 0) return false;
+    if ((explored & (UINT64_C(1) << s->floor)) == 0) return false;
+    k = 63;
+    while (((explored >> k) & 1u) == 0) --k;
+    if (((UINT64_C(1) << (k + 1u)) - 1u) != explored) return false;
+    /* Chapter evidence. A consumed gate tile always records its chapter; a
+     * chapter without a gate tile must have been left through its exit stair,
+     * which is the only way the next chapter's first floor became explored.
+     * Chapter five exists only once the campaign is cleared. */
+    if ((s->chapters & (1u << (TOWER_CHAPTERS - 1u))) !=
+        (s->cleared ? 1u << (TOWER_CHAPTERS - 1u) : 0u)) {
+        return false;
+    }
+    for (k = 0; k + 1u < TOWER_CHAPTERS; ++k) {
+        const uint32_t bit = 1u << k;
+        if ((goal_mask & bit) && !(s->chapters & bit)) return false;
+        if (!(s->chapters & bit) || (goal_mask & bit)) continue;
+        if (!((explored >> (10u * (k + 1u))) & 1u)) return false;
+    }
+
+    if (s->x >= TOWER_MAX_W || s->y >= TOWER_MAX_H) return false;
+    current = tile_at(h, s->floor, (int)s->x, (int)s->y);
+    if (!player_standable(current)) return false;
+
     if (s->phase == TOWER_PHASE_COMBAT) {
+        tower_enemy_preview_t p;
         int dx, dy;
-        if (s->pending_x >= TOWER_WIDTH || s->pending_y >= TOWER_HEIGHT ||
-            s->status != TOWER_STATUS_CONFIRM) return false;
-        dx = (int)s->pending_x - (int)s->x; dy = (int)s->pending_y - (int)s->y;
-        if (abs(dx) + abs(dy) != 1) return false;
-        if (tower_enemy_preview(h, tower_tile(h, s->floor, (int)s->pending_x,
-            (int)s->pending_y), &p) != TOWER_OK || !p.winnable) return false;
+        if (s->status != TOWER_STATUS_CONFIRM) return false;
+        if (s->pending_x >= TOWER_MAX_W || s->pending_y >= TOWER_MAX_H) {
+            return false;
+        }
+        dx = (int)s->pending_x - (int)s->x;
+        dy = (int)s->pending_y - (int)s->y;
+        if (dx < 0) dx = -dx;
+        if (dy < 0) dy = -dy;
+        if (dx + dy != 1) return false;
+        if (!preview_for(s->floor, s,
+                         tile_at(h, s->floor, (int)s->pending_x,
+                                 (int)s->pending_y), &p)) {
+            return false;
+        }
+        if (s->attack <= p.defence) return false;
         if (s->pending.tile != p.tile || s->pending.hp != p.hp ||
             s->pending.attack != p.attack || s->pending.defence != p.defence ||
             s->pending.gold != p.gold || s->pending.damage != p.damage ||
-            s->pending.rounds != p.rounds || !s->pending.winnable) return false;
-    } else {
-        if (s->status == TOWER_STATUS_CONFIRM || s->pending_x || s->pending_y ||
-            s->pending.tile || s->pending.hp || s->pending.attack || s->pending.defence ||
-            s->pending.gold || s->pending.damage || s->pending.rounds || s->pending.winnable)
+            s->pending.rounds != p.rounds ||
+            s->pending.winnable != p.winnable) {
             return false;
+        }
+    } else {
+        if (s->status == TOWER_STATUS_CONFIRM) return false;
+        if (s->pending_x || s->pending_y || s->pending.tile ||
+            s->pending.hp || s->pending.attack || s->pending.defence ||
+            s->pending.gold || s->pending.damage || s->pending.rounds ||
+            s->pending.winnable) {
+            return false;
+        }
     }
     return true;
 }
 
-tower_result_t tower_import(tower_handle_t h, const uint8_t *b, size_t size)
+tower_result_t tower_export(tower_handle_t h, uint8_t *bytes, size_t size)
+{
+    if (!h || !bytes || size != TOWER_SAVE_BYTES) return TOWER_ERR_ARGUMENT;
+    encode(h, bytes);
+    return TOWER_OK;
+}
+
+tower_result_t tower_import(tower_handle_t h, const uint8_t *bytes, size_t size)
 {
     tower_handle_t candidate;
-    unsigned i;
-    if (!h || !b) return TOWER_ERR_ARGUMENT;
-    if (size != TOWER_SAVE_BYTES || memcmp(b, "MTWR", 4) || b[4] != SAVE_VERSION ||
-        b[5] || b[6] != (uint8_t)TOWER_SAVE_BYTES || b[7] != (uint8_t)(TOWER_SAVE_BYTES >> 8) ||
-        get32(b, 8) != wire_checksum(b) || get32(b, 12 + 13 * 4) > 1 ||
-        get32(b, 12 + 23 * 4) > 1) return TOWER_ERR_SAVE;
-    for (i = MAP_OFFSET + TOWER_FLOORS * MAP_CELLS; i < TOWER_SAVE_BYTES; ++i)
-        if (b[i]) return TOWER_ERR_SAVE;
+    if (!h || !bytes) return TOWER_ERR_ARGUMENT;
+    if (size != TOWER_SAVE_BYTES) return TOWER_ERR_SAVE;
+    if (memcmp(bytes, "MTWR", 4) != 0 || bytes[4] != (uint8_t)SAVE_VERSION ||
+        bytes[5] != 0) {
+        return TOWER_ERR_SAVE;
+    }
+    if (((uint32_t)bytes[6] | (uint32_t)bytes[7] << 8) != TOWER_SAVE_BYTES) {
+        return TOWER_ERR_SAVE;
+    }
+    if (get32(bytes, 8) != wire_checksum(bytes)) return TOWER_ERR_SAVE;
+    if (get32(bytes, SAVE_RESERVED_OFFSET) != 0) return TOWER_ERR_SAVE;
+    /* bool fields are stored as u32; anything but 0/1 is not a valid save. */
+    if (get32(bytes, SAVE_FIELD_OFFSET(FIELD_CLEARED)) > 1u ||
+        get32(bytes, SAVE_FIELD_OFFSET(FIELD_PENDING_WINNABLE)) > 1u) {
+        return TOWER_ERR_SAVE;
+    }
     candidate = calloc(1, sizeof *candidate);
     if (!candidate) return TOWER_ERR_MEMORY;
-    decode(candidate, b);
+    decode(candidate, bytes);
     if (!valid_state(candidate)) {
-        tower_delete(candidate); return TOWER_ERR_SAVE;
+        tower_delete(candidate);
+        return TOWER_ERR_SAVE;
     }
     h->state = candidate->state;
-    memcpy(h->map, candidate->map, sizeof h->map);
+    memcpy(h->flags, candidate->flags, sizeof h->flags);
     tower_delete(candidate);
     return TOWER_OK;
 }
@@ -636,6 +943,11 @@ const char *tower_status_text(tower_status_t status)
     case TOWER_STATUS_SHOP: return "Merchant: buy or leave";
     case TOWER_STATUS_NEED_GOLD: return "Not enough gold";
     case TOWER_STATUS_TALK: return "A voice calls out";
+    case TOWER_STATUS_DEAD: return "You have fallen";
+    case TOWER_STATUS_SECRET: return "A secret passage opens";
+    case TOWER_STATUS_EVENT: return "Something stirs";
+    case TOWER_STATUS_LOCKED: return "This anchor is not unlocked";
+    case TOWER_STATUS_CHAPTER: return "Chapter cleared: anchor lit";
     default: return "";
     }
 }

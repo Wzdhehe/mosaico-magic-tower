@@ -1,0 +1,158 @@
+--- a/main/tower.c
++++ b/main/tower.c
+@@ -14,7 +14,7 @@
+ #define TOWER_MAX_H 19u
+ #define TOWER_MAX_CELLS (TOWER_MAX_W * TOWER_MAX_H)
+ 
+-#define SAVE_VERSION 7u
++#define SAVE_VERSION 8u /* authored campaign revision */
+ #define MAX_TURNS 1000000000u
+ 
+ /* tower_snapshot_t order, one little-endian u32 each. The header reserves
+@@ -167,6 +167,20 @@
+     p->hp = hp * scale / 100u;
+     p->attack = attack * scale / 100u;
+     p->defence = defence * scale / 100u;
++    /* Fixed regional identities let players compare upgrade thresholds.
++     * The first chapter retains its already verified floor scaling. */
++    if (floor >= 10u) {
++        static const uint32_t profile[4][8][3] = {{{40,13,5},{60,25,9},{100,36,14},{600,120,90},{160,39,18},{200,48,28},{260,52,30},{700,150,100}},
++{{90,36,16},{110,49,22},{190,62,30},{900,200,140},{240,63,35},{300,79,48},{370,86,55},{1100,220,150}},
++{{140,60,30},{200,78,38},{300,94,50},{1200,230,190},{360,103,56},{450,121,72},{550,128,78},{1400,250,180}},
++{{200,88,45},{280,108,56},{400,128,70},{1200,230,160},{460,139,78},{560,151,95},{700,158,100},{1200,170,110}}};
++        const uint32_t *v = profile[floor / 10u - 1u][(unsigned)tile - TOWER_TILE_SLIME];
++        p->hp = v[0]; p->attack = v[1]; p->defence = v[2];
++    }
++    if (floor == 19u && tile == TOWER_TILE_GOLEM) { p->hp=260u; p->attack=62u; p->defence=24u; }
++    if (floor == 29u && tile == TOWER_TILE_GOLEM) { p->hp=400u; p->attack=90u; p->defence=43u; }
++    if (floor == 39u && tile == TOWER_TILE_WRAITH) { p->hp=650u; p->attack=126u; p->defence=70u; }
++    if (floor == 49u && tile == TOWER_TILE_DEMON) { p->hp=1200u; p->attack=170u; p->defence=110u; }
+     p->gold = enemy_gold(tile);
+     if (s->attack <= p->defence) {
+         /* Cannot deal even one point: the fight is impossible by formula. */
+@@ -209,6 +223,42 @@
+     h->flags[floor][index / 8u] |= (uint8_t)(1u << (index % 8u));
+ }
+ 
++/* Sluice is the only reversible event. Marks are consumed event cells. */
++bool tower_sluice_south(tower_handle_t h) {
++    return h && flag_get(h, 13u, 3u, 4u);
++}
++unsigned tower_sigils(tower_handle_t h) {
++    if (!h) return 0u;
++    return (flag_get(h,11u,4u,3u)?1u:0u) |
++           (flag_get(h,26u,5u,6u)?2u:0u) |
++           (flag_get(h,34u,11u,9u)?4u:0u);
++}
++
++static bool campaign_npc(unsigned f,unsigned x,unsigned y) {
++    return (f==10u && x==1u && y==9u) || (f==20u && x==3u && y==10u) || (f==32u && x==9u && y==5u);
++}
++unsigned tower_quest_state(tower_handle_t h,unsigned q) {
++    if (!h) return 0u;
++    switch(q) {
++    case 0u: return flag_get(h,10u,1u,9u)?2u:flag_get(h,17u,7u,7u)?1u:0u;
++    case 1u: return flag_get(h,20u,3u,10u)?2u:flag_get(h,33u,3u,5u)?1u:0u;
++    case 2u: return flag_get(h,32u,9u,5u)?2u:flag_get(h,42u,13u,11u)?1u:0u;
++    default: return 0u;
++    }
++}
++
++static bool campaign_hidden(const struct tower_t *h,unsigned f,unsigned x,unsigned y) {
++    if (f==7u && !flag_get(h,7u,2u,7u) && ((x>=1u && x<=3u && y>=8u && y<=9u))) return true;
++    if (f==10u && !flag_get(h,10u,6u,9u) && ((x>=7u && x<=11u && y>=7u && y<=9u))) return true;
++    if (f==17u && !flag_get(h,17u,4u,5u) && ((x>=5u && x<=7u && y>=5u && y<=7u))) return true;
++    if (f==20u && !flag_get(h,20u,3u,8u) && ((x>=1u && x<=3u && y>=5u && y<=7u))) return true;
++    if (f==27u && !flag_get(h,27u,11u,8u) && ((x>=9u && x<=13u && y>=5u && y<=7u))) return true;
++    if (f==32u && !flag_get(h,32u,10u,11u) && ((x>=11u && x<=11u && y>=11u && y<=12u) || (x>=11u && x<=13u && y>=13u && y<=15u))) return true;
++    if (f==36u && !flag_get(h,36u,5u,6u) && ((x>=3u && x<=7u && y>=7u && y<=9u))) return true;
++    if (f==46u && !flag_get(h,46u,9u,11u) && ((x>=10u && x<=10u && y>=11u && y<=11u) || (x>=11u && x<=13u && y>=11u && y<=15u))) return true;
++    return false;
++}
++
+ static tower_tile_t tile_at(const struct tower_t *h, unsigned floor, int x,
+                             int y)
+ {
+@@ -218,6 +268,21 @@
+     if (!d || (unsigned)x >= (unsigned)d->w || (unsigned)y >= (unsigned)d->h) {
+         return TOWER_TILE_WALL;
+     }
++    if (campaign_hidden(h,floor,(unsigned)x,(unsigned)y)) return TOWER_TILE_WALL;
++    /* Event stays visible in either state so it can be operated again. */
++    if (floor == 13u && x == 3 && y == 4 && d->rows[y][x] == '!')
++        return TOWER_TILE_EVENT;
++    if (floor == 14u && x == 5) {
++        if ((y == 2 && tower_sluice_south((tower_handle_t)h)) ||
++            (y == 10 && !tower_sluice_south((tower_handle_t)h)))
++            return TOWER_TILE_WALL;
++    }
++    if (floor == 46u && x == 9 && y == 11 &&
++        tower_sigils((tower_handle_t)h) != 7u) return TOWER_TILE_WALL;
++    if (campaign_npc(floor,(unsigned)x,(unsigned)y)) return TOWER_TILE_NPC;
++    if (floor==10u && x==6 && y==9 && tower_quest_state((tower_handle_t)h,0u)!=2u) return TOWER_TILE_WALL;
++    if (floor==20u && x==3 && y==8 && tower_quest_state((tower_handle_t)h,1u)!=2u) return TOWER_TILE_WALL;
++    if (floor==32u && x==10 && y==11 && tower_quest_state((tower_handle_t)h,2u)!=2u) return TOWER_TILE_WALL;
+     if (flag_get(h, floor, (unsigned)x, (unsigned)y)) return TOWER_TILE_FLOOR;
+     return decode_tile(d->rows[y][x]);
+ }
+@@ -438,9 +503,11 @@
+ 
+     if (tile == TOWER_TILE_WALL) return set_status(h, TOWER_STATUS_WALL);
+ 
+-    /* A secret wall opens on contact but does not pull the player through. */
++    /* Entering a darker floor mouth reveals its authored chamber. */
+     if (tile == TOWER_TILE_SECRET) {
+         flag_set(h, h->state.floor, (unsigned)x, (unsigned)y);
++        h->state.x = (unsigned)x;
++        h->state.y = (unsigned)y;
+         advance_turn(h);
+         return set_status(h, TOWER_STATUS_SECRET);
+     }
+@@ -490,11 +557,17 @@
+         status = TOWER_STATUS_SHOP;
+     } else if (tile == TOWER_TILE_NPC) {
+         status = TOWER_STATUS_TALK;
++        if (h->state.floor==10u && x==1 && y==9 && tower_quest_state(h,0u)==1u) flag_set(h,10u,1u,9u);
++        if (h->state.floor==20u && x==3 && y==10 && tower_quest_state(h,1u)==1u) flag_set(h,20u,3u,10u);
++        if (h->state.floor==32u && x==9 && y==5 && tower_quest_state(h,2u)==1u) flag_set(h,32u,9u,5u);
+     } else if (tile == TOWER_TILE_EVENT) {
+         status = TOWER_STATUS_EVENT;
+     }
+ 
+-    if (consumable(tile)) {
++    if (tile == TOWER_TILE_EVENT && h->state.floor == 13u && x == 3 && y == 4) {
++        const unsigned index = 4u * TOWER_MAX_W + 3u;
++        h->flags[13][index / 8u] ^= (uint8_t)(1u << (index % 8u));
++    } else if (consumable(tile)) {
+         flag_set(h, h->state.floor, (unsigned)x, (unsigned)y);
+     }
+     h->state.x = (unsigned)x;
+@@ -762,7 +835,8 @@
+                     return false;
+                 }
+                 original = decode_tile(d->rows[y][x]);
+-                if (!consumable(original)) return false;
++                if (!consumable(original) && !(original==TOWER_TILE_NPC && campaign_npc(f,x,y))) return false;
++                if (campaign_hidden(h,f,x,y)) return false;
+                 ++consumed[original];
+                 if (original == TOWER_TILE_DEMON && f == TOWER_FLOORS - 1u) {
+                     ++demon_last;
+@@ -840,7 +914,17 @@
+ 
+     if (s->x >= TOWER_MAX_W || s->y >= TOWER_MAX_H) return false;
+     current = tile_at(h, s->floor, (int)s->x, (int)s->y);
+-    if (!player_standable(current)) return false;
++    if (!player_standable(current) &&
++        !(current == TOWER_TILE_EVENT && s->floor == 13u && s->x == 3u && s->y == 4u))
++        return false;
++    /* A looted three-mark room cannot exist without all three recorded marks. */
++    if (flag_get(h,46u,9u,11u) && tower_sigils((tower_handle_t)h) != 7u) return false;
++    if (flag_get(h,10u,1u,9u) && !flag_get(h,17u,7u,7u)) return false;
++    if (flag_get(h,10u,6u,9u) && tower_quest_state((tower_handle_t)h,0u)!=2u) return false;
++    if (flag_get(h,20u,3u,10u) && !flag_get(h,33u,3u,5u)) return false;
++    if (flag_get(h,20u,3u,8u) && tower_quest_state((tower_handle_t)h,1u)!=2u) return false;
++    if (flag_get(h,32u,9u,5u) && !flag_get(h,42u,13u,11u)) return false;
++    if (flag_get(h,32u,10u,11u) && tower_quest_state((tower_handle_t)h,2u)!=2u) return false;
+ 
+     if (s->phase == TOWER_PHASE_COMBAT) {
+         tower_enemy_preview_t p;

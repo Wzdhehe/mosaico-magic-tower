@@ -78,27 +78,37 @@ static int state_json(const void *value,char *output,size_t capacity)
     if(!output || !capacity) return -1;
     const host_state_t *host=value;
     const game_snapshot_t *s=game_read(host->game);
+    const char *screen=s->screen==GAME_TITLE?"title":s->screen==GAME_NEW_CONFIRM?"new_confirm":
+        s->screen==GAME_SHOP?"shop":s->screen==GAME_DIALOG?"dialog":s->screen==GAME_OVER?"over":
+        s->screen==GAME_VICTORY?"victory":s->screen==GAME_TELEPORT?"teleport":"dungeon";
     const char *phase=s->screen==GAME_TITLE?"title":s->screen==GAME_NEW_CONFIRM?"new_confirm":s->screen==GAME_SHOP?"shop":
         s->tower.phase==TOWER_PHASE_COMBAT?"combat":s->paused?"paused":"playing";
     const int size=snprintf(output,capacity,
-        "{\"phase\":\"%s\",\"tick\":%lu,\"floor\":%lu,\"floors\":%d,\"x\":%lu,\"y\":%lu,"
+        "{\"phase\":\"%s\",\"screen\":\"%s\",\"tick\":%lu,\"floor\":%lu,\"floors\":%d,\"x\":%lu,\"y\":%lu,"
         "\"hp\":%lu,\"attack\":%lu,\"defence\":%lu,\"keys\":[%lu,%lu,%lu],\"gold\":%lu,"
-        "\"turns\":%lu,\"cleared\":%s,\"damage\":%lu,\"status\":%d,\"has_save\":%s,\"shop_attack\":%lu,\"shop_defence\":%lu,"
+        "\"turns\":%lu,\"cleared\":%s,\"damage\":%lu,\"status\":%d,\"has_save\":%s,\"has_checkpoint\":%s,"
+        "\"chapters\":%lu,\"anchors\":[%d,%d,%d,%d,%d,%d],\"anchor_cursor\":%u,"
+        "\"shop_attack\":%lu,\"shop_defence\":%lu,"
         "\"lang\":\"%s\",\"notice\":%d,\"pointer_down\":%s,\"settings_open\":%s,"
-        "\"volume\":%u,\"brightness\":%u,\"preferences_save_failed\":%s,\"state_hash\":\"%08lx\"}",phase,
+        "\"volume\":%u,\"brightness\":%u,\"preferences_save_failed\":%s,\"state_hash\":\"%08lx\"}",phase,screen,
         (unsigned long)s->tick,(unsigned long)s->tower.floor,TOWER_FLOORS,
         (unsigned long)s->tower.x,(unsigned long)s->tower.y,
         (unsigned long)s->tower.hp,(unsigned long)s->tower.attack,(unsigned long)s->tower.defence,
         (unsigned long)s->tower.keys[0],(unsigned long)s->tower.keys[1],(unsigned long)s->tower.keys[2],
         (unsigned long)s->tower.gold,(unsigned long)s->tower.turns,s->tower.cleared?"true":"false",
-        (unsigned long)s->tower.pending.damage,(int)s->tower.status,s->has_save?"true":"false",(unsigned long)s->tower.shop_attack,(unsigned long)s->tower.shop_defence,
+        (unsigned long)s->tower.pending.damage,(int)s->tower.status,s->has_save?"true":"false",
+        s->has_checkpoint?"true":"false",(unsigned long)s->tower.chapters,
+        tower_anchor_unlocked(&s->tower,0),tower_anchor_unlocked(&s->tower,1),
+        tower_anchor_unlocked(&s->tower,2),tower_anchor_unlocked(&s->tower,3),
+        tower_anchor_unlocked(&s->tower,4),tower_anchor_unlocked(&s->tower,5),
+        s->anchor_cursor,(unsigned long)s->tower.shop_attack,(unsigned long)s->tower.shop_defence,
         s->lang==GAME_LANG_EN?"en":"zh",(int)s->notice_id,
         s->pointer_down?"true":"false",s->settings_open?"true":"false",
         s->volume,s->brightness,s->preferences_save_failed?"true":"false",(unsigned long)state_hash(value));
     return size<0 || (size_t)size>=capacity?-1:size;
 }
 static const mosaico_game_module_v1_t s_module={
-    .descriptor={MOSAICO_HOST_GAME_ABI_V1,GAME_NAME,"Magic Tower - Ten Floors",GAME_WIDTH,GAME_HEIGHT,GAME_TICK_HZ,1},
+    .descriptor={MOSAICO_HOST_GAME_ABI_V1,GAME_NAME,"Magic Tower - Fifty Floors",GAME_WIDTH,GAME_HEIGHT,GAME_TICK_HZ,1},
     .state_size=sizeof(host_state_t),.initialize=initialize,.shutdown=shutdown,.input=input,
     .update=update,.render=render,.state_hash=state_hash,.state_json=state_json
 };

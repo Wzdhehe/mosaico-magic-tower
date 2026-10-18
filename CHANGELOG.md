@@ -1,5 +1,36 @@
 # Changelog
 
+## v1.7 — 2026-10-18 (checkpoint and warp rules)
+
+### Added
+
+- **Automatic checkpoints.** A new run writes its first checkpoint, and every
+  real floor change (stairs or a cross-floor warp) writes the next one. There is
+  no manual save or load button; the title offers “继续旅程” and the death panel
+  offers “从检查点重试”. A failed write is reported as `保存失败` and never
+  pretends a checkpoint moved.
+- **Six fixed warp anchors: 1 / 10 / 20 / 30 / 40 / 50.** The panel is a fixed
+  2×3 grid, shows locked anchors explicitly, and has no paging. Warping is free
+  and lands on the anchor floor's down stair.
+- **Chapter unlocks.** Anchors 10/20/30/40/50 open only after the matching
+  ten-floor chapter is completed: stepping on that chapter's goal, or leaving it
+  through its exit stair. Merely visiting a floor does not unlock anything.
+- Save format **v7** (2632 bytes) adds an explicit chapter mask. v6 and older
+  records are rejected cleanly.
+- Clearing the tower returns to floor 50 (“继续探索”) instead of the title, so
+  the last anchor is a real teleport target and post-game exploration survives.
+- `tests/run_game_timing.py` now drives the checkpoint/warp/retry rules through
+  the public game API; `tests/test_tower50.c` covers the model side, including
+  forged chapter masks.
+
+### Changed
+
+- The goal tile is a chapter gate everywhere except the last floor: floor 10's
+  `G` ends chapter one and leaves the tower open; only floor 50's `G`/Demon King
+  ends the campaign.
+- 10F gained its missing up stair (one tile) so floors 11–50 are reachable and
+  chapter two can be unlocked.
+
 ## v1.6 — 2026-10-18
 
 ### Added

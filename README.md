@@ -18,7 +18,8 @@ Current release: **v1.6** — see [CHANGELOG.md](CHANGELOG.md).
 - **Three original RPG loops**: a warm title theme, quiet lower-tower exploration and a more urgent upper-tower theme, using the same bounded C synthesizer on device and in previews.
 - **One settings button** at the top right: Chinese/English, volume, brightness and the readable GitHub repository address. Preferences survive restarting and loading journeys.
 - **Ponkan** credited on the welcome screen.
-- **Versioned transactional saves** (2 KiB, v5 wire format, FNV checksum + semantic validation) in NVS. Old v4 journeys are rejected cleanly after the floor redesign.
+- **Versioned transactional saves** (2632 bytes, v7 wire format, FNV checksum + semantic validation) in NVS. A checkpoint is written on every real floor change; older v4/v6 journeys are rejected cleanly.
+- **Six chapter warp anchors** (1/10/20/30/40/50) that unlock when their ten-floor chapter is completed, free to use, with no manual save/load button.
 - **Operation-driven rendering**: redraw after input, static idle sprites, and a 15 Hz active update cap.
 - **TE-synchronized output** through GSP composition; the user currently reports no visible tearing on the device.
 
@@ -37,7 +38,7 @@ Current release: **v1.6** — see [CHANGELOG.md](CHANGELOG.md).
 | Move one tile | Tap a neighbouring tile, or swipe | Arrow keys / WASD |
 | Confirm fight | Tap **Fight** | Start / F / Ctrl |
 | Cancel fight | Tap **Back** | Left |
-| Save / Load / New | Footer buttons | — |
+| Save / Warp / Restart | Automatic on floor changes; footer **传送 / 重开** | — |
 | Settings | Gear button, top right | — |
 | Language / Volume / Brightness | Choices and sliders inside settings | — |
 
@@ -181,13 +182,14 @@ algorithm cost only; speaker quality and power consumption require device checks
 
 ### Map revision and saves
 
-The v1.6 floor redesign bumps the NVS save wire version from v4 to v5 so
-older position/map snapshots are rejected instead of being loaded into changed
-geometry. Start a new journey after updating; a v4 record is rejected rather
-than loaded into the new floors, and until you save again the title screen
-offers no saved journey. There is nothing to repair by hand: **do not erase or
-rewrite NVS** to work around the rejection, because the v4 record is simply
-ignored and a new game begins on floor one.
+The fifty-floor campaign uses NVS save wire version **v7** (2632 bytes, an
+explicit five-chapter mask). Older v4/v6 records are rejected rather than loaded
+into changed geometry. A new journey writes its first checkpoint immediately and
+every real floor change writes the next one; the title offers “继续旅程”, the
+death panel offers “从检查点重试”, and there is no manual save or load button.
+Until a checkpoint exists the title offers no saved journey. There is nothing to
+repair by hand: **do not erase or rewrite NVS** to work around a rejection,
+because an old record is simply ignored and a new game begins on floor one.
 
 ### Guarded-fork strategies and merchant prices
 
