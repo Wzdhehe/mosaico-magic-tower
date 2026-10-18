@@ -229,6 +229,15 @@ static void ui_draw_cjk15(const char *text,int x,int y,Color color)
         x+=25;
     }
 }
+static void ui_draw_cjk16(const char *text,int x,int y,Color color)
+{ ui_draw(text,x,y,1,color); }
+static int cjk_line_count(const char *text,int max_chars)
+{
+    int count=0; uint32_t cp;
+    if(!text||!max_chars) return 0;
+    while(*text){ utf8_next(&text,&cp); ++count; }
+    return (count+max_chars-1)/max_chars;
+}
 static bool closing_punctuation(uint32_t cp)
 {
     switch(cp){
@@ -242,7 +251,7 @@ static bool closing_punctuation(uint32_t cp)
     }
 }
 static int ui_draw_wrap_cjk(const char *text,int x,int y,int max_chars,
-                            int line_height,Color color,int max_lines)
+                            int line_height,Color color,int max_lines,bool large)
 {
     const char *start=text,*p=text;
     char line[128];
@@ -255,7 +264,7 @@ static int ui_draw_wrap_cjk(const char *text,int x,int y,int max_chars,
                 size_t n=(size_t)(p-start);
                 if(n>=sizeof(line)) n=sizeof(line)-1;
                 memcpy(line,start,n); line[n]=0;
-                ui_draw_cjk15(line,x,y,color);
+                large?ui_draw_cjk15(line,x,y,color):ui_draw_cjk16(line,x,y,color);
                 y+=line_height; ++lines; start=p; count=0;
                 if(lines>=max_lines) break;
             }
@@ -268,7 +277,7 @@ static int ui_draw_wrap_cjk(const char *text,int x,int y,int max_chars,
         size_t n=(size_t)(p-start);
         if(n>=sizeof(line)) n=sizeof(line)-1;
         memcpy(line,start,n); line[n]=0;
-        ui_draw_cjk15(line,x,y,color);
+        large?ui_draw_cjk15(line,x,y,color):ui_draw_cjk16(line,x,y,color);
         ++lines;
     }
     return lines;
@@ -641,8 +650,22 @@ static void story_modal(const game_snapshot_t *s)
             y+=22;
         }
     } else {
-        const int first_lines=ui_draw_wrap_cjk(story->zh[0],150,174,11,28,WHITE_INK,2);
-        ui_draw_wrap_cjk(story->zh[1],150,174+first_lines*28,11,28,WHITE_INK,2);
+        const int l0=cjk_line_count(story->zh[0],11);
+        const int l1=cjk_line_count(story->zh[1],11);
+        const int s0=cjk_line_count(story->zh[0],17);
+        const int s1=cjk_line_count(story->zh[1],17);
+        if(l0+l1<=5){
+            const int first=ui_draw_wrap_cjk(story->zh[0],150,174,11,28,WHITE_INK,l0,true);
+            ui_draw_wrap_cjk(story->zh[1],150,174+first*28,11,28,WHITE_INK,l1,true);
+        } else if(s0+s1<=7){
+            const int first=ui_draw_wrap_cjk(story->zh[0],150,174,17,20,WHITE_INK,s0,false);
+            ui_draw_wrap_cjk(story->zh[1],150,174+first*20,17,20,WHITE_INK,s1,false);
+        } else {
+            /* Far too long to rescue: keep the compact font and let the
+             * authored-text layout test fail instead of inventing a tiny UI. */
+            const int first=ui_draw_wrap_cjk(story->zh[0],150,174,17,20,WHITE_INK,3,false);
+            ui_draw_wrap_cjk(story->zh[1],150,174+first*20,17,20,WHITE_INK,3,false);
+        }
     }
     button(s,&T_TALK_CONTINUE,180,330,120,32,false);
 }

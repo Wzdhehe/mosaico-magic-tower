@@ -13,6 +13,8 @@ jobs:
         run: python3 --version && gcc --version
       - name: Portable game timing regression
         run: python3 tests/run_game_timing.py
+      - name: Authored UI copy fits its panels
+        run: python3 tests/test_ui_layout.py
       - name: Portable deterministic tower replay
         run: python3 tests/run_tests.py --label ci
       - name: Validated transactional preference storage
