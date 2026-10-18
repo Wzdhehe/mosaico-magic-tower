@@ -17,7 +17,10 @@
 - Music core tests pass with the new gain; peak 29,580 / 26,970 / 27,880 and
   maximum adjacent-sample jump 5,535 at 24 kHz.
 - Settings and NPC screens were re-rendered from the shared C renderer.
-- Not installed on hardware in this revision; v1.2 remains the last device build.
+- Installed through the official recovery-first app-update path; identity and
+  health validation passed, and the device shows UI v1.3 with the larger
+  settings address and 24 px NPC dialogue. Audible loudness still needs the
+  user's listening check.
 
 ## v1.2 — 2026-10-18
 
