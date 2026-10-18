@@ -533,7 +533,8 @@ static void dungeon(game_handle_t game,const game_snapshot_t *s)
              (unsigned long)s->tower.attack,(unsigned long)s->tower.defence);
     ascii_center(text,31,20,WHITE_INK);
     {
-        char k0[8],k1[8],k2[8],gold[8];
+        /* A uint32_t value needs up to ten digits and a terminator. */
+        char k0[11],k1[11],k2[11],gold[11];
         snprintf(k0,sizeof(k0),"%lu",(unsigned long)s->tower.keys[0]);
         snprintf(k1,sizeof(k1),"%lu",(unsigned long)s->tower.keys[1]);
         snprintf(k2,sizeof(k2),"%lu",(unsigned long)s->tower.keys[2]);
