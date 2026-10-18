@@ -63,7 +63,10 @@ Screenshots are rendered from the same C renderer used on the device.
   <img src="docs/images/floor10.png" width="30%" />
 </p>
 
-> **Roadmap:** the current ten layouts are intentionally compact and still being revised. The next pass reworks them with the room/corridor language of the original 21-floor Magic Tower (asymmetric stairs, guard rooms, treasure alcoves, dead ends, tighter key economy) while keeping the cross-floor key detour.
+> **Design:** all ten floors are hand-authored 11×11 rooms and corridors with
+> asymmetric stairs, supply alcoves, optional fights and a cross-floor key
+> detour. Floors 6 and 9 each offer a guarded attack/defence fork. A larger
+> scrolling map with a fixed camera remains a separate future feature.
 
 ## Building
 
@@ -125,8 +128,9 @@ Project code is released under the **MIT License**; see [LICENSE](LICENSE). Some
 
 The layout update bumps the NVS save wire version from v3 to v4 so older
 position/map snapshots are rejected instead of being loaded into changed
-geometry. Start a new journey after updating. The gameplay renderer and
-30 FPS device configuration remain unchanged in this design-only PR.
+geometry. Start a new journey after updating; existing saves are rejected, not
+migrated. This content update leaves the renderer and the device frame policy
+unchanged; on-demand rendering is a separate PR.
 
 ### Guarded-fork strategies and merchant prices
 
