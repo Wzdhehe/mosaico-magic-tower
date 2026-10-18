@@ -4,7 +4,7 @@ A ten-floor Magic Tower game for the **ESP-Mosaico** handheld (ESP32-S31, 480×4
 
 The game is a compact, original take on the classic key-and-door dungeon formula: deterministic combat previews, coloured keys, shops, NPC story scenes, an original generated soundtrack, and a crisp pixel UI rendered entirely in code.
 
-Current release: **v1.4** — see [CHANGELOG.md](CHANGELOG.md).
+Current release: **v1.5** — see [CHANGELOG.md](CHANGELOG.md).
 
 ![Title screen](docs/images/title.png)
 

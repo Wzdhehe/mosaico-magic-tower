@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #define GAME_NAME "magic_tower"
-#define GAME_VERSION "v1.4"
+#define GAME_VERSION "v1.5"
 /* Operation-driven rendering; this is the maximum active update cadence.
  * Held-key repetition is expressed relative to this rate. */
 enum { GAME_WIDTH = 480, GAME_HEIGHT = 480, GAME_TICK_HZ = 15 };

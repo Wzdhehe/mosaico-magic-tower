@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.5 — 2026-10-18
+
+### Changed
+
+- The welcome page renders “MOSAICO ORIGINAL”, the Ponkan credit and the
+  version at double size; the credit moved directly under the header.
+- NPC dialogue now uses a 96×150 portrait that fills the left column instead of
+  the previous 26×26 map sprite, so the character occupies a meaningful share
+  of the dialog. The 24 px Chinese text area was narrowed to 11 characters per
+  line and now avoids starting a line with closing punctuation.
+
+### Validation
+
+- Settings and NPC screens re-rendered from the shared C renderer; model and
+  glyph tests pass.
+- Installed through the official app-update path and validated healthy; v1.5
+  is the current device build.
+
 ## v1.4 — 2026-10-18
 
 ### Fixed

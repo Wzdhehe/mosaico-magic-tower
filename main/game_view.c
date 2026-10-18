@@ -229,6 +229,18 @@ static void ui_draw_cjk15(const char *text,int x,int y,Color color)
         x+=25;
     }
 }
+static bool closing_punctuation(uint32_t cp)
+{
+    switch(cp){
+    case 0x3002: case 0xFF0C: case 0xFF01: case 0xFF1F:
+    case 0xFF1B: case 0xFF1A: case 0x3001: case 0xFF09:
+    case 0x3011: case 0x300B: case 0x300D: case 0x300F:
+    case 0x2026:
+        return true;
+    default:
+        return false;
+    }
+}
 static int ui_draw_wrap_cjk(const char *text,int x,int y,int max_chars,
                             int line_height,Color color,int max_lines)
 {
@@ -236,13 +248,17 @@ static int ui_draw_wrap_cjk(const char *text,int x,int y,int max_chars,
     char line[128];
     int count=0,lines=0;
     while(*p&&lines<max_lines){
-        if(count==max_chars){
-            size_t n=(size_t)(p-start);
-            if(n>=sizeof(line)) n=sizeof(line)-1;
-            memcpy(line,start,n); line[n]=0;
-            ui_draw_cjk15(line,x,y,color);
-            y+=line_height; ++lines; start=p; count=0;
-            if(lines>=max_lines) break;
+        if(count>=max_chars){
+            const char *peek=p; uint32_t cp=0;
+            utf8_next(&peek,&cp);
+            if(!closing_punctuation(cp)){
+                size_t n=(size_t)(p-start);
+                if(n>=sizeof(line)) n=sizeof(line)-1;
+                memcpy(line,start,n); line[n]=0;
+                ui_draw_cjk15(line,x,y,color);
+                y+=line_height; ++lines; start=p; count=0;
+                if(lines>=max_lines) break;
+            }
         }
         const char *next=p; uint32_t cp;
         utf8_next(&next,&cp);
@@ -322,6 +338,26 @@ static void npc_sprite(int x,int y,uint32_t tick)
     DrawPixel(x+10,y+10+(tick/18)%2,glow); DrawPixel(x+15,y+10+(tick/18)%2,glow);
     DrawRectangle(x+4,y+23,18,2,(Color){74,70,90,255});
     DrawRectangle(x+20,y+11,2,9,BRASS);
+}
+static void npc_portrait(int x,int y,uint32_t tick)
+{
+    const Color hood={72,66,92,255}, trim={112,104,136,255};
+    const Color face={200,186,196,255}, dark={30,26,40,255};
+    const Color glow={172,214,224,255};
+    DrawCircle(x+48,y+54,34,Fade(glow,.08f));
+    DrawTriangle((Vector2){x+18,y+140},(Vector2){x+78,y+140},(Vector2){x+48,y+48},trim);
+    DrawRectangle(x+18,y+98,60,42,trim);
+    DrawCircle(x+48,y+54,30,hood);
+    DrawCircle(x+48,y+58,23,dark);
+    DrawCircle(x+48,y+60,14,face);
+    DrawRectangle(x+40,y+56+(tick/18)%2,4,5,glow);
+    DrawRectangle(x+53,y+56+(tick/18)%2,4,5,glow);
+    DrawRectangle(x+44,y+69,8,2,INK);
+    DrawTriangle((Vector2){x+18,y+54},(Vector2){x+28,y+96},(Vector2){x+40,y+54},hood);
+    DrawTriangle((Vector2){x+78,y+54},(Vector2){x+68,y+96},(Vector2){x+56,y+54},hood);
+    DrawRectangle(x+78,y+34,3,104,BRASS);
+    DrawCircle(x+79,y+32,5,glow);
+    DrawRectangle(x+14,y+138,68,4,INK);
 }
 static void wraith(int x,int y,uint32_t tick)
 {
@@ -535,7 +571,8 @@ static void title_label(const game_snapshot_t *s)
 }
 static void title(const game_snapshot_t *s)
 {
-    ascii_center("MOSAICO ORIGINAL",48,14,MUTED);
+    ascii_center("MOSAICO ORIGINAL",42,16,MUTED);
+    ascii_center("Created by Ponkan",62,16,MUTED);
     castle(135);
     title_label(s);
     ui_center(tx(s,&T_SUBTITLE),248,1,BRASS);
@@ -543,8 +580,7 @@ static void title(const game_snapshot_t *s)
     button(s,s->has_save?&T_CONTINUE:&T_NO_SAVE,140,326,200,34,false);
     ui_center(tx(s,&T_HINT1),383,1,MUTED);
     ui_center(tx(s,&T_HINT2),404,1,MUTED);
-    ascii_center("Created by Ponkan",428,14,MUTED);
-    ascii_center(GAME_VERSION,451,12,MUTED);
+    ascii_center(GAME_VERSION,448,16,MUTED);
 }
 static bool gain_message(const game_snapshot_t *s,char *out,size_t size,Color *color)
 {
@@ -580,10 +616,10 @@ static void story_modal(const game_snapshot_t *s)
     DrawRectangle(30,120,420,260,PANEL);
     DrawRectangleLines(30,120,420,260,BRASS);
     ui_draw_cjk15(tx(s,name),48,138,BRASS);
-    DrawRectangle(46,168,64,92,INK);
-    DrawRectangleLines(46,168,64,92,EDGE);
-    npc_sprite(65,190,0);
-    DrawLine(126,164,126,300,EDGE);
+    DrawRectangle(38,160,96,150,INK);
+    DrawRectangleLines(38,160,96,150,EDGE);
+    npc_portrait(38,160,s->tick);
+    DrawLine(142,160,142,316,EDGE);
     if(s->lang==GAME_LANG_EN){
         char paragraph[220];
         snprintf(paragraph,sizeof(paragraph),"%s %s",story->en[0],story->en[1]);
@@ -591,7 +627,7 @@ static void story_modal(const game_snapshot_t *s)
         int y=172;
         while(*p&&y<284){
             int take=0,last_space=0;
-            while(p[take]&&take<26){
+            while(p[take]&&take<24){
                 if(p[take]==' ') last_space=take;
                 ++take;
             }
@@ -599,14 +635,14 @@ static void story_modal(const game_snapshot_t *s)
             char line[40];
             int n=take<39?take:39;
             memcpy(line,p,(size_t)n); line[n]=0;
-            MosaicoFastDrawText(line,140+(310-MosaicoFastMeasureText(line,16))/2,y,16,WHITE_INK);
+            MosaicoFastDrawText(line,150+(290-MosaicoFastMeasureText(line,16))/2,y,16,WHITE_INK);
             p+=take;
             while(*p==' ') ++p;
             y+=22;
         }
     } else {
-        const int first_lines=ui_draw_wrap_cjk(story->zh[0],140,174,12,28,WHITE_INK,2);
-        ui_draw_wrap_cjk(story->zh[1],140,174+first_lines*28,12,28,WHITE_INK,2);
+        const int first_lines=ui_draw_wrap_cjk(story->zh[0],150,174,11,28,WHITE_INK,2);
+        ui_draw_wrap_cjk(story->zh[1],150,174+first_lines*28,11,28,WHITE_INK,2);
     }
     button(s,&T_TALK_CONTINUE,180,330,120,32,false);
 }
