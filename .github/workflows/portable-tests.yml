@@ -1,0 +1,37 @@
+name: Portable model and timing checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  portable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python and GCC versions
+        run: python3 --version && gcc --version
+      - name: Portable game timing regression
+        run: python3 tests/run_game_timing.py
+      - name: Portable deterministic tower replay
+        run: python3 tests/run_tests.py --label ci
+      - name: Validated transactional preference storage
+        run: python3 tests/run_preferences_storage.py
+      - name: Portable soundtrack limits and deterministic rendering
+        run: python3 tests/run_game_music.py
+      - name: Check out the workspace-pinned RGB565 engine for render tests
+        uses: actions/checkout@v4
+        with:
+          repository: espressif2022/raylib-lite-engine
+          ref: ca3200a6b7f63e2bdea07851e19fdbd3a42eb742
+          path: test-deps/raylib-lite-engine
+      - name: Apply required display ownership integration
+        run: git -C test-deps/raylib-lite-engine apply "$GITHUB_WORKSPACE/tools/patches/raylib-lite-engine-settings-display.patch"
+      - name: Actual engine brightness transaction failure paths
+        env:
+          MOSAICO_ENGINE_ROOT: ${{ github.workspace }}/test-deps/raylib-lite-engine
+        run: python3 tests/run_display_control.py
+      - name: Real renderer idle and operation scheduling
+        env:
+          MOSAICO_ENGINE_ROOT: ${{ github.workspace }}/test-deps/raylib-lite-engine
+        run: python3 tests/run_render_schedule.py

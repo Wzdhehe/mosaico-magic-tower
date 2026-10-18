@@ -32,7 +32,13 @@ static const text_t T_LOAD={"读取","LOAD"};
 static const text_t T_NEW_GAME={"新游戏","NEW"};
 static const text_t T_DAMAGE={"伤害","DAMAGE"};
 static const text_t T_VOLUME={"音量","VOLUME"};
-static const text_t T_CLOSE={"关闭","CLOSE"};
+static const text_t T_SETTINGS={"设置","SETTINGS"};
+static const text_t T_LANGUAGE={"语言","LANGUAGE"};
+static const text_t T_BRIGHTNESS={"亮度","BRIGHTNESS"};
+static const text_t T_CHINESE={"中文","中文"};
+static const text_t T_ENGLISH={"ENGLISH","ENGLISH"};
+static const text_t T_REPOSITORY={"GitHub 仓库","GitHub REPOSITORY"};
+static const text_t T_PREFERENCES_FAILED={"设置保存失败，请重试","Settings not saved. Try again"};
 static const text_t T_BACK={"返回","BACK"};
 static const text_t T_FIGHT={"战斗","FIGHT"};
 static const text_t T_RESTART={"重新开始？","RESTART?"};
@@ -54,24 +60,24 @@ typedef struct { const char *zh[2], *en[2]; } story_t;
 static const story_t STORY[TOWER_FLOORS]={
     {{"魔王掳走了公主，囚禁在塔顶。","钥匙颜色对应门。别硬闯。"},
      {"The Demon King holds the princess at the summit.","Keys match doors. Do not rush in."}},
-    {{"商人只认金币，不认英雄。","受伤就去一楼找药水，别逞强。"},
-     {"The merchant serves gold, not heroes.","Healing waits below. Pride is expensive."}},
-    {{"蓝门后是红钥匙，可我的蓝钥匙丢了。","四层的守卫把它带走了。"},
-     {"A red key lies behind the blue door.","I lost the blue key. The fourth-floor guard took it."}},
-    {{"蓝钥匙在我身边，拿去开三层的蓝门。","红钥匙留给五层的封印门。"},
-     {"The blue key is beside me. Open the third-floor door.","Save the red key for the fifth-floor seal."}},
-    {{"红门之后是魔王的旧书房。","六层起，怪物不再留手。"},
-     {"Beyond the red door is the Demon King's old study.","From the sixth floor, the monsters stop holding back."}},
-    {{"六层以上是死地，我的队伍只剩我。","若还听得见歌声，就还没到终点。"},
-     {"Above the sixth floor is a graveyard. I am all that is left.","If you can still hear music, you have not reached the end."}},
-    {{"魔王把公主的心封在水晶里。","钥匙和门，都是他的玩笑。"},
-     {"The Demon King sealed the princess's heart in crystal.","Keys and doors: all of it is his cruel joke."}},
-    {{"我曾是公主的护卫，如今只是回声。","替我走到最后。"},
-     {"I once guarded the princess. Now I am only an echo.","Walk to the end for me."}},
-    {{"别信塔顶的声音，那不是我的声音。","真正的我，在魔王身后。"},
-     {"Do not trust the voice at the summit. It is not mine.","The real me is behind the Demon King."}},
-    {{"你终于来了。魔王还在王座后看着。","击败他，带我回家。"},
-     {"You came at last. The Demon King still watches from his throne.","Defeat him. Take me home."}},
+    {{"购买攻击或防御。","金币不足就离开。"},
+     {"Buying power or defence costs gold.","Each purchase raises the next price."}},
+    {{"西侧蓝门后藏着红钥匙。","四层有第二把蓝钥匙。"},
+     {"The west vault hides a red key.","Find another blue key on floor four."}},
+    {{"先开右侧蓝门继续前进。","左边红门藏着备用资源。"},
+     {"The right blue gate is the way onward.","The left red vault holds spare supplies."}},
+    {{"旧书库只认红钥匙。","没有就回三层的密室找。"},
+     {"The archive seal needs a red key.","Search the sealed room on floor three."}},
+    {{"法师守着防御宝石。","石魔守着攻击宝石。"},
+     {"The mage guards defence.","The golem guards attack. Choose a path."}},
+    {{"东侧怨灵守着红钥匙。","八层的封印也在等它。"},
+     {"A wraith guards the eastern red key.","Floor eight has a matching seal."}},
+    {{"牢房上方的红门封住出口。","资源不足就返回下层。"},
+     {"A red lock seals the upper exit.","Go below if you need more supplies."}},
+    {{"石魔守防御，怨灵守攻击。","先选择，再看伤害。"},
+     {"Golem guards defence; wraith guards attack.","Each choice changes the final battle."}},
+    {{"魔王就挡在最后的门前。","算清伤害，再决定是否开战。"},
+     {"The Demon King blocks the final way.","Check the damage before you commit."}},
 };
 
 static const text_t NPC_NAME[TOWER_FLOORS]={
@@ -120,9 +126,16 @@ static const text_t NOTICE_TEXT[]={
 
 static const ui_glyph_t *glyph_for(uint32_t cp)
 {
-    for(unsigned i=0;i<UI_GLYPH_COUNT;++i)
-        if(ui_glyphs[i].codepoint==cp) return &ui_glyphs[i];
-    return NULL;
+    /* gen_ui_font.py writes glyphs sorted by Unicode codepoint.
+     * Binary search avoids a linear scan of the CJK table for each label. */
+    size_t lo=0, hi=UI_GLYPH_COUNT;
+    while(lo<hi) {
+        const size_t mid=lo+(hi-lo)/2;
+        if(ui_glyphs[mid].codepoint<cp) lo=mid+1;
+        else hi=mid;
+    }
+    return lo<UI_GLYPH_COUNT && ui_glyphs[lo].codepoint==cp
+        ? &ui_glyphs[lo] : NULL;
 }
 static int utf8_next(const char **p,uint32_t *cp)
 {
@@ -180,6 +193,85 @@ static void ui_center_fit(const char *text,int y,int scale,Color color,int max_w
 {
     while(scale>1&&ui_width(text,scale)>max_width) --scale;
     ui_draw(text,(GAME_WIDTH-ui_width(text,scale))/2,y,scale,color);
+}
+static void ui_draw_cjk15(const char *text,int x,int y,Color color)
+{
+    const char *p=text; uint32_t cp;
+    if(!text) return;
+    while(*p){
+        utf8_next(&p,&cp);
+        if(cp<0x80){
+            char one[2]={(char)cp,0};
+            MosaicoFastDrawText(one,x,y+4,20,color);
+            x+=18;
+            continue;
+        }
+        const ui_glyph_t *g=glyph_for(cp);
+        if(g){
+            for(int dy=0;dy<24;++dy){
+                const int sy=dy*2/3;
+                const uint8_t hi=g->bitmap[sy*2],lo=g->bitmap[sy*2+1];
+                int start=-1;
+                for(int dx=0;dx<=24;++dx){
+                    bool on=false;
+                    if(dx<24){
+                        const int sx=dx*2/3;
+                        on=sx<8?(hi&(1U<<(7-sx))):(lo&(1U<<(15-sx)));
+                    }
+                    if(on&&start<0) start=dx;
+                    if(!on&&start>=0){
+                        MosaicoFastDrawRectangle(x+start,y+dy,dx-start,1,color);
+                        start=-1;
+                    }
+                }
+            }
+        }
+        x+=25;
+    }
+}
+static bool closing_punctuation(uint32_t cp)
+{
+    switch(cp){
+    case 0x3002: case 0xFF0C: case 0xFF01: case 0xFF1F:
+    case 0xFF1B: case 0xFF1A: case 0x3001: case 0xFF09:
+    case 0x3011: case 0x300B: case 0x300D: case 0x300F:
+    case 0x2026:
+        return true;
+    default:
+        return false;
+    }
+}
+static int ui_draw_wrap_cjk(const char *text,int x,int y,int max_chars,
+                            int line_height,Color color,int max_lines)
+{
+    const char *start=text,*p=text;
+    char line[128];
+    int count=0,lines=0;
+    while(*p&&lines<max_lines){
+        if(count>=max_chars){
+            const char *peek=p; uint32_t cp=0;
+            utf8_next(&peek,&cp);
+            if(!closing_punctuation(cp)){
+                size_t n=(size_t)(p-start);
+                if(n>=sizeof(line)) n=sizeof(line)-1;
+                memcpy(line,start,n); line[n]=0;
+                ui_draw_cjk15(line,x,y,color);
+                y+=line_height; ++lines; start=p; count=0;
+                if(lines>=max_lines) break;
+            }
+        }
+        const char *next=p; uint32_t cp;
+        utf8_next(&next,&cp);
+        p=next; ++count;
+    }
+    if(start<p&&lines<max_lines){
+        size_t n=(size_t)(p-start);
+        if(n>=sizeof(line)) n=sizeof(line)-1;
+        memcpy(line,start,n); line[n]=0;
+        ui_draw_cjk15(line,x,y,color);
+        ++lines;
+    }
+    return lines;
 }
 static void button(const game_snapshot_t *s,const text_t *label,int x,int y,int w,int h,bool active)
 {
@@ -246,6 +338,26 @@ static void npc_sprite(int x,int y,uint32_t tick)
     DrawPixel(x+10,y+10+(tick/18)%2,glow); DrawPixel(x+15,y+10+(tick/18)%2,glow);
     DrawRectangle(x+4,y+23,18,2,(Color){74,70,90,255});
     DrawRectangle(x+20,y+11,2,9,BRASS);
+}
+static void npc_portrait(int x,int y,uint32_t tick)
+{
+    const Color hood={72,66,92,255}, trim={112,104,136,255};
+    const Color face={200,186,196,255}, dark={30,26,40,255};
+    const Color glow={172,214,224,255};
+    DrawCircle(x+48,y+54,34,Fade(glow,.08f));
+    DrawTriangle((Vector2){x+18,y+140},(Vector2){x+78,y+140},(Vector2){x+48,y+48},trim);
+    DrawRectangle(x+18,y+98,60,42,trim);
+    DrawCircle(x+48,y+54,30,hood);
+    DrawCircle(x+48,y+58,23,dark);
+    DrawCircle(x+48,y+60,14,face);
+    DrawRectangle(x+40,y+56+(tick/18)%2,4,5,glow);
+    DrawRectangle(x+53,y+56+(tick/18)%2,4,5,glow);
+    DrawRectangle(x+44,y+69,8,2,INK);
+    DrawTriangle((Vector2){x+18,y+54},(Vector2){x+28,y+96},(Vector2){x+40,y+54},hood);
+    DrawTriangle((Vector2){x+78,y+54},(Vector2){x+68,y+96},(Vector2){x+56,y+54},hood);
+    DrawRectangle(x+78,y+34,3,104,BRASS);
+    DrawCircle(x+79,y+32,5,glow);
+    DrawRectangle(x+14,y+138,68,4,INK);
 }
 static void wraith(int x,int y,uint32_t tick)
 {
@@ -386,43 +498,64 @@ static void castle(int cy)
     DrawRectangle(240,cy-36,2,20,BRASS);
     DrawTriangle((Vector2){242,cy-36},(Vector2){242,cy-22},(Vector2){260,cy-29},RED_INK);
 }
-static void language_chip(const game_snapshot_t *s)
+static void settings_button(const game_snapshot_t *s)
 {
-    const char *lang=s->lang==GAME_LANG_ZH?"EN":"中";
-    DrawRectangle(GAME_LANG_X,GAME_LANG_Y,GAME_LANG_W,GAME_LANG_H,PANEL);
-    DrawRectangleLines(GAME_LANG_X,GAME_LANG_Y,GAME_LANG_W,GAME_LANG_H,EDGE);
-    ui_draw(lang,GAME_LANG_X+(GAME_LANG_W-ui_width(lang,1))/2,
-            GAME_LANG_Y+(GAME_LANG_H-16)/2,1,WHITE_INK);
+    const int x=GAME_SETTINGS_X,y=GAME_SETTINGS_Y;
+    const int cx=x+GAME_SETTINGS_W/2,cy=y+GAME_SETTINGS_H/2;
+    const Color ink=s->settings_open?BRASS:WHITE_INK;
+    DrawRectangle(x,y,GAME_SETTINGS_W,GAME_SETTINGS_H,PANEL);
+    DrawRectangleLines(x,y,GAME_SETTINGS_W,GAME_SETTINGS_H,s->settings_open?BRASS:EDGE);
+    DrawRectangle(cx-4,cy-14,8,28,ink);
+    DrawRectangle(cx-14,cy-4,28,8,ink);
+    DrawRectangle(cx-10,cy-10,20,20,ink);
+    DrawCircle(cx,cy,6,PANEL);
 }
-static void volume_button(const game_snapshot_t *s)
+static void settings_slider(int x,int y,int w,int h,int percent)
 {
-    const Color c=s->volume_open?BRASS:MUTED;
-    const int x=GAME_VOL_X,y=GAME_VOL_Y;
-    DrawRectangle(x,y,GAME_VOL_W,GAME_VOL_H,PANEL);
-    DrawRectangleLines(x,y,GAME_VOL_W,GAME_VOL_H,s->volume_open?BRASS:EDGE);
-    DrawRectangle(x+10,y+16,6,8,c);
-    DrawTriangle((Vector2){x+16,y+14},(Vector2){x+16,y+26},(Vector2){x+31,y+31},c);
-    DrawTriangle((Vector2){x+16,y+14},(Vector2){x+31,y+31},(Vector2){x+31,y+9},c);
-    DrawLine(x+35,y+14,x+39,y+20,c); DrawLine(x+39,y+20,x+35,y+26,c);
-    DrawLine(x+42,y+10,x+46,y+20,c); DrawLine(x+46,y+20,x+42,y+30,c);
-    if(s->volume==0) DrawLine(x+12,y+31,x+48,y+9,RED_INK);
+    const int filled=w*percent/100;
+    DrawRectangle(x,y,w,h,EDGE);
+    DrawRectangle(x,y,filled,h,BRASS);
+    int knob=x+filled;
+    if(knob>x+w-2) knob=x+w-2;
+    DrawRectangle(knob-4,y-4,8,h+8,WHITE_INK);
 }
-static void volume_modal(const game_snapshot_t *s)
+static void settings_modal(const game_snapshot_t *s)
 {
-    char text[24];
-    DrawRectangle(0,0,480,480,Fade(INK,.80f));
-    DrawRectangle(GAME_VOL_PANEL_X,GAME_VOL_PANEL_Y,GAME_VOL_PANEL_W,GAME_VOL_PANEL_H,PANEL);
-    DrawRectangleLines(GAME_VOL_PANEL_X,GAME_VOL_PANEL_Y,GAME_VOL_PANEL_W,GAME_VOL_PANEL_H,BRASS);
-    ui_center(tx(s,&T_VOLUME),178,2,BRASS);
-    DrawRectangle(GAME_VOL_SLIDER_X,GAME_VOL_SLIDER_Y,GAME_VOL_SLIDER_W,GAME_VOL_SLIDER_H,EDGE);
-    const int filled=GAME_VOL_SLIDER_W*s->volume/100;
-    DrawRectangle(GAME_VOL_SLIDER_X,GAME_VOL_SLIDER_Y,filled,GAME_VOL_SLIDER_H,BRASS);
-    int knob=GAME_VOL_SLIDER_X+filled;
-    if(knob>GAME_VOL_SLIDER_X+GAME_VOL_SLIDER_W-2) knob=GAME_VOL_SLIDER_X+GAME_VOL_SLIDER_W-2;
-    DrawRectangle(knob-4,GAME_VOL_SLIDER_Y-4,8,GAME_VOL_SLIDER_H+8,WHITE_INK);
-    snprintf(text,sizeof(text),"%u / 100",s->volume);
-    ascii_center(text,252,16,WHITE_INK);
-    button(s,&T_CLOSE,GAME_VOL_CLOSE_X,GAME_VOL_CLOSE_Y,GAME_VOL_CLOSE_W,GAME_VOL_CLOSE_H,false);
+    char text[12];
+    DrawRectangle(0,0,GAME_WIDTH,GAME_HEIGHT,Fade(INK,.84f));
+    DrawRectangle(GAME_SETTINGS_PANEL_X,GAME_SETTINGS_PANEL_Y,
+                  GAME_SETTINGS_PANEL_W,GAME_SETTINGS_PANEL_H,PANEL);
+    DrawRectangleLines(GAME_SETTINGS_PANEL_X,GAME_SETTINGS_PANEL_Y,
+                       GAME_SETTINGS_PANEL_W,GAME_SETTINGS_PANEL_H,BRASS);
+    ui_draw(tx(s,&T_SETTINGS),80,88,2,BRASS);
+    DrawRectangle(GAME_SETTINGS_CLOSE_X,GAME_SETTINGS_CLOSE_Y,
+                  GAME_SETTINGS_CLOSE_W,GAME_SETTINGS_CLOSE_H,INK);
+    DrawRectangleLines(GAME_SETTINGS_CLOSE_X,GAME_SETTINGS_CLOSE_Y,
+                       GAME_SETTINGS_CLOSE_W,GAME_SETTINGS_CLOSE_H,EDGE);
+    const int cx=GAME_SETTINGS_CLOSE_X+GAME_SETTINGS_CLOSE_W/2;
+    const int cy=GAME_SETTINGS_CLOSE_Y+GAME_SETTINGS_CLOSE_H/2;
+    DrawLine(cx-6,cy-6,cx+6,cy+6,WHITE_INK);
+    DrawLine(cx-6,cy+6,cx+6,cy-6,WHITE_INK);
+    ui_draw(tx(s,&T_LANGUAGE),80,151,1,WHITE_INK);
+    button(s,&T_CHINESE,GAME_SETTINGS_ZH_X,GAME_SETTINGS_ZH_Y,
+           GAME_SETTINGS_ZH_W,GAME_SETTINGS_ZH_H,s->lang==GAME_LANG_ZH);
+    button(s,&T_ENGLISH,GAME_SETTINGS_EN_X,GAME_SETTINGS_EN_Y,
+           GAME_SETTINGS_EN_W,GAME_SETTINGS_EN_H,s->lang==GAME_LANG_EN);
+    ui_draw(tx(s,&T_VOLUME),80,195,1,WHITE_INK);
+    snprintf(text,sizeof(text),"%u%%",s->volume);
+    ui_draw(text,400-ui_width(text,1),195,1,BRASS);
+    settings_slider(GAME_SETTINGS_VOLUME_X,GAME_SETTINGS_VOLUME_Y,
+                    GAME_SETTINGS_VOLUME_W,GAME_SETTINGS_VOLUME_H,s->volume);
+    ui_draw(tx(s,&T_BRIGHTNESS),80,271,1,WHITE_INK);
+    snprintf(text,sizeof(text),"%u%%",s->brightness);
+    ui_draw(text,400-ui_width(text,1),271,1,BRASS);
+    settings_slider(GAME_SETTINGS_BRIGHTNESS_X,GAME_SETTINGS_BRIGHTNESS_Y,
+                    GAME_SETTINGS_BRIGHTNESS_W,GAME_SETTINGS_BRIGHTNESS_H,
+                    (s->brightness-GAME_BRIGHTNESS_MIN)*100/(GAME_BRIGHTNESS_MAX-GAME_BRIGHTNESS_MIN));
+    ui_center(tx(s,&T_REPOSITORY),343,1,MUTED);
+    ascii_center("github.com/Wzdhehe/",368,16,KEY_BLUE);
+    ascii_center("mosaico-magic-tower",388,16,KEY_BLUE);
+    if(s->preferences_save_failed) ui_center(tx(s,&T_PREFERENCES_FAILED),418,1,RED_INK);
 }
 static void title_label(const game_snapshot_t *s)
 {
@@ -438,7 +571,8 @@ static void title_label(const game_snapshot_t *s)
 }
 static void title(const game_snapshot_t *s)
 {
-    ascii_center("MOSAICO ORIGINAL",48,14,MUTED);
+    ascii_center("MOSAICO ORIGINAL",42,16,MUTED);
+    ascii_center("Created by Ponkan",62,16,MUTED);
     castle(135);
     title_label(s);
     ui_center(tx(s,&T_SUBTITLE),248,1,BRASS);
@@ -446,8 +580,7 @@ static void title(const game_snapshot_t *s)
     button(s,s->has_save?&T_CONTINUE:&T_NO_SAVE,140,326,200,34,false);
     ui_center(tx(s,&T_HINT1),383,1,MUTED);
     ui_center(tx(s,&T_HINT2),404,1,MUTED);
-    ascii_center(GAME_VERSION,438,16,MUTED);
-    language_chip(s);
+    ascii_center(GAME_VERSION,448,16,MUTED);
 }
 static bool gain_message(const game_snapshot_t *s,char *out,size_t size,Color *color)
 {
@@ -482,11 +615,11 @@ static void story_modal(const game_snapshot_t *s)
     DrawRectangle(0,0,480,480,Fade(INK,.82f));
     DrawRectangle(30,120,420,260,PANEL);
     DrawRectangleLines(30,120,420,260,BRASS);
-    ui_draw(tx(s,name),48,138,1,BRASS);
-    DrawRectangle(46,168,64,92,INK);
-    DrawRectangleLines(46,168,64,92,EDGE);
-    npc_sprite(65,190,s->tick);
-    DrawLine(126,164,126,300,EDGE);
+    ui_draw_cjk15(tx(s,name),48,138,BRASS);
+    DrawRectangle(38,160,96,150,INK);
+    DrawRectangleLines(38,160,96,150,EDGE);
+    npc_portrait(38,160,s->tick);
+    DrawLine(142,160,142,316,EDGE);
     if(s->lang==GAME_LANG_EN){
         char paragraph[220];
         snprintf(paragraph,sizeof(paragraph),"%s %s",story->en[0],story->en[1]);
@@ -494,7 +627,7 @@ static void story_modal(const game_snapshot_t *s)
         int y=172;
         while(*p&&y<284){
             int take=0,last_space=0;
-            while(p[take]&&take<26){
+            while(p[take]&&take<24){
                 if(p[take]==' ') last_space=take;
                 ++take;
             }
@@ -502,14 +635,14 @@ static void story_modal(const game_snapshot_t *s)
             char line[40];
             int n=take<39?take:39;
             memcpy(line,p,(size_t)n); line[n]=0;
-            MosaicoFastDrawText(line,140+(310-MosaicoFastMeasureText(line,16))/2,y,16,WHITE_INK);
+            MosaicoFastDrawText(line,150+(290-MosaicoFastMeasureText(line,16))/2,y,16,WHITE_INK);
             p+=take;
             while(*p==' ') ++p;
             y+=22;
         }
     } else {
-        ui_draw(story->zh[0],140,174,1,WHITE_INK);
-        ui_draw(story->zh[1],140,206,1,WHITE_INK);
+        const int first_lines=ui_draw_wrap_cjk(story->zh[0],150,174,11,28,WHITE_INK,2);
+        ui_draw_wrap_cjk(story->zh[1],150,174+first_lines*28,11,28,WHITE_INK,2);
     }
     button(s,&T_TALK_CONTINUE,180,330,120,32,false);
 }
@@ -526,7 +659,8 @@ static void dungeon(game_handle_t game,const game_snapshot_t *s)
              (unsigned long)s->tower.attack,(unsigned long)s->tower.defence);
     ascii_center(text,31,20,WHITE_INK);
     {
-        char k0[8],k1[8],k2[8],gold[8];
+        /* A uint32_t value needs up to ten digits and a terminator. */
+        char k0[11],k1[11],k2[11],gold[11];
         snprintf(k0,sizeof(k0),"%lu",(unsigned long)s->tower.keys[0]);
         snprintf(k1,sizeof(k1),"%lu",(unsigned long)s->tower.keys[1]);
         snprintf(k2,sizeof(k2),"%lu",(unsigned long)s->tower.keys[2]);
@@ -551,11 +685,12 @@ static void dungeon(game_handle_t game,const game_snapshot_t *s)
         const int sx=GAME_MAP_X+x*GAME_TILE, sy=GAME_MAP_Y+y*GAME_TILE;
         DrawRectangle(sx,sy,GAME_TILE,GAME_TILE,((x+y)&1)?PANEL:(Color){30,38,50,255});
         DrawPixel(sx+4,sy+20,STONE);
-        tile_sprite(game_tile(game,x,y),sx,sy,s->tick);
+        /* No time-driven animation: an unchanged scene stays pixel-identical. */
+        tile_sprite(game_tile(game,x,y),sx,sy,0);
     }
     if(s->tower.cleared && s->tower.floor+1>=TOWER_FLOORS) {
-        beacon(GAME_MAP_X+5*GAME_TILE,GAME_MAP_Y+1*GAME_TILE,s->tick);
-        princess(GAME_MAP_X+6*GAME_TILE,GAME_MAP_Y+1*GAME_TILE,s->tick);
+        beacon(GAME_MAP_X+5*GAME_TILE,GAME_MAP_Y+1*GAME_TILE,0);
+        princess(GAME_MAP_X+6*GAME_TILE,GAME_MAP_Y+1*GAME_TILE,0);
     }
     const int hx=GAME_MAP_X+(int)s->tower.x*GAME_TILE, hy=GAME_MAP_Y+(int)s->tower.y*GAME_TILE;
     DrawRectangleLines(hx,hy,GAME_TILE,GAME_TILE,BRASS);
@@ -619,12 +754,12 @@ static void shop_modal(const game_snapshot_t *s)
     ui_center(tx(s,&T_SHOP),156,2,BRASS);
     snprintf(text,sizeof(text),"%s %lu",tx(s,&T_GOLD),(unsigned long)s->tower.gold);
     ui_center(text,198,1,WHITE_INK);
-    snprintf(text,sizeof(text),"%s  %u%s",tx(s,&T_SHOP_ATK),TOWER_SHOP_COST,
-             s->lang==GAME_LANG_EN?"G":"金");
+    snprintf(text,sizeof(text),"%s  %lu%s",tx(s,&T_SHOP_ATK),
+             (unsigned long)tower_shop_price(&s->tower),s->lang==GAME_LANG_EN?"G":"金");
     button(s,NULL,130,222,220,36,true);
     ui_draw(text,130+(220-ui_width(text,1))/2,222+(36-16)/2,1,INK);
-    snprintf(text,sizeof(text),"%s  %u%s",tx(s,&T_SHOP_DEF),TOWER_SHOP_COST,
-             s->lang==GAME_LANG_EN?"G":"金");
+    snprintf(text,sizeof(text),"%s  %lu%s",tx(s,&T_SHOP_DEF),
+             (unsigned long)tower_shop_price(&s->tower),s->lang==GAME_LANG_EN?"G":"金");
     button(s,NULL,130,264,220,36,true);
     ui_draw(text,130+(220-ui_width(text,1))/2,264+(36-16)/2,1,INK);
     if(s->tower.status==TOWER_STATUS_ITEM) ui_center(tx(s,&T_BOUGHT),302,1,MINT);
@@ -637,19 +772,32 @@ bool game_render(game_handle_t game)
     if(!s) return false;
     BeginDrawing();
     if(!MosaicoFastFrameAvailable()) { EndDrawing(); return false; }
-    ClearBackground(INK);
+    /* A single full-canvas clear is sufficient. */
     ClearBackground(BG);
     DrawRectangleLines(3,3,GAME_WIDTH-6,GAME_HEIGHT-6,STONE);
     if(s->screen==GAME_TITLE) title(s);
-    else { dungeon(game,s); language_chip(s); }
-    volume_button(s);
+    else dungeon(game,s);
     if(s->screen==GAME_NEW_CONFIRM || (s->screen==GAME_DUNGEON && s->tower.phase==TOWER_PHASE_COMBAT)) modal(s);
     if(s->screen==GAME_SHOP) shop_modal(s);
     if(s->screen==GAME_DIALOG) story_modal(s);
     if(s->paused) {
         DrawRectangle(110,204,260,60,PANEL); ui_center(tx(s,&T_PAUSED),226,1,BRASS);
     }
-    if(s->volume_open) volume_modal(s);
+    if(s->settings_open) settings_modal(s);
+    else if(s->preferences_save_failed) {
+        DrawRectangle(56,426,368,19,PANEL);
+        ui_center(tx(s,&T_PREFERENCES_FAILED),428,1,RED_INK);
+    }
+    settings_button(s);
     EndDrawing();
+    game_render_complete(game);
     return true;
+}
+
+/* Device scheduling uses this path. An explicit Host screenshot uses
+ * game_render() so that a new caller-owned target is always fully populated. */
+bool game_render_pending(game_handle_t game)
+{
+    if (!game) return false;
+    return !game_needs_redraw(game) || game_render(game);
 }

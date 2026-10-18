@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate main/ui_font.h: a 16x16 1-bit bitmap subset for the UI strings."""
 from pathlib import Path
+import re
 import sys
 
 from PIL import Image, ImageDraw, ImageFont
@@ -15,37 +16,16 @@ FONT_CANDIDATES = [
 CELL = 16
 THRESHOLD = 96
 
-STRINGS = [
-    "魔塔", "六层试炼", "新的旅程", "继续旅程", "暂无存档",
-    "点击相邻格子或滑动移动", "查看伤害，选择战斗",
-    "第层塔顶", "钥匙金币", "存档读取新游戏",
-    "向上攀登", "选择下一步", "石块挡住了去路", "需要对应颜色的钥匙",
-    "获得补给", "门开了", "战斗？确认或取消", "太强了：先收集宝石",
-    "敌人已击败", "已取消战斗", "楼层已切换", "塔顶信标已点亮！",
-    "塔顶到达！可返回或探索", "暂停",
-    "史莱姆蝙蝠骑士哨兵法师石魔", "伤害", "返回", "战斗",
-    "重新开始？", "未保存的进度将丢失",
-    "旅程已保存", "保存失败，请重试", "存档已损坏，旅程未变", "旅程已恢复",
-    "中", "商店购买金币不足离开攻击防御", "音量关闭",
-    "十层试炼", "有人想和你说话", "继续",
-    "魔王掳走了公主，囚禁在塔顶。钥匙颜色对应门。别硬闯。",
-    "商人只认金币，不认英雄。受伤就去一楼找药水，别逞强。",
-    "蓝门后是红钥匙，可我的蓝钥匙丢了。四层的守卫把它带走了。",
-    "蓝钥匙在我身边，拿去开三层的蓝门。红钥匙留给五层的封印门。",
-    "红门之后是魔王的旧书房。六层起，怪物不再留手。",
-    "六层以上是死地，我的队伍只剩我。若还听得见歌声，就还没到终点。",
-    "魔王把公主的心封在水晶里。钥匙和门，都是他的玩笑。",
-    "我曾是公主的护卫，如今只是回声。替我走到最后。",
-    "别信塔顶的声音，那不是我的声音。真正的我，在魔王身后。",
-    "你终于来了。魔王还在王座后看着。击败他，带我回家。",
-    "守夜人吟游诗人侍女幽魂守卫亡魂老学者伤兵黑祭司骑士团长公主回声",
-    "生命药水大生命药水攻击宝石防御宝石黄钥匙蓝钥匙红钥匙",
-    "魔王陨落，公主获救", "怨灵",
-]
+def ui_characters():
+    # Read the authored C UI instead of maintaining a second narrative copy.
+    source = (PROJECT / "main" / "game_view.c").read_text(encoding="utf-8")
+    strings = re.findall(r'"(?:\\.|[^"\\])*"', source)
+    return sorted({ch for value in strings for ch in value if ord(ch) > 0x7F})
+
 
 
 def main():
-    chars = sorted({ch for text in STRINGS for ch in text if ord(ch) > 0x7F})
+    chars = ui_characters()
     font_path = next((p for p in FONT_CANDIDATES if Path(p).exists()), None)
     if not font_path:
         print("no CJK font found", file=sys.stderr)

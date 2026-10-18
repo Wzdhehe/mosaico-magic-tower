@@ -68,9 +68,11 @@ tower_status_t tower_move(tower_handle_t handle, int dx, int dy);
 tower_status_t tower_confirm(tower_handle_t handle);
 tower_status_t tower_cancel(tower_handle_t handle);
 tower_tile_t tower_tile(tower_handle_t handle, unsigned floor, int x, int y);
-/* Merchant: kind 0 buys +3 attack, kind 1 buys +3 defence, 15 gold each. */
+/* Shared rising purchase price: 15, 25, 35, ... for both attributes. */
 #define TOWER_SHOP_COST 15u
+#define TOWER_SHOP_STEP 10u
 #define TOWER_SHOP_GAIN 3u
+uint32_t tower_shop_price(const tower_snapshot_t *state);
 tower_status_t tower_buy(tower_handle_t handle, int kind);
 tower_result_t tower_enemy_preview(tower_handle_t handle, tower_tile_t tile,
                                    tower_enemy_preview_t *preview);

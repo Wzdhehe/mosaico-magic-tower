@@ -1,0 +1,156 @@
+diff --git a/components/mosaico_game_app/include/mosaico_game_app.h b/components/mosaico_game_app/include/mosaico_game_app.h
+index 817ec57..02bbed0 100644
+--- a/components/mosaico_game_app/include/mosaico_game_app.h
++++ b/components/mosaico_game_app/include/mosaico_game_app.h
+@@ -21,6 +21,10 @@ typedef struct {
+     int target_fps;
+     uint16_t drawbuf_lines;
+     uint8_t te_compose_buffers;
++    /** Compose full frames and push them on the panel TE edge instead of
++     *  streaming tiles directly to GRAM. Removes scanout tearing; costs one
++     *  full-screen compose buffer per requested buffer. */
++    bool te_sync;
+     uint32_t stats_interval;
+     esp_gsp_config_t (*gsp_bundle)(void);
+     esp_err_t (*register_mirror)(void);
+@@ -36,6 +40,16 @@ typedef struct {
+ 
+ esp_err_t mosaico_game_app_run(const mosaico_game_app_config_t *config);
+ 
++/** Set 0-100% brightness from the task running mosaico_game_app_run(), after
++ * display startup. Quiesces GSP and waits at most 250ms for presentation fences
++ * before touching the panel, then resumes GSP even when the panel command fails.
++ * A failed resume retains its pause token for retry by this task's main loop;
++ * subsequent brightness calls also retry before starting another transaction.
++ * Returns INVALID_ARG for range, INVALID_STATE for uninitialized/foreign task,
++ * a pause error without issuing the command, otherwise the panel error or the
++ * resume error. Resume has no timeout parameter in the GSP lifecycle API. */
++esp_err_t mosaico_game_app_set_brightness(int percent);
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/components/mosaico_game_app/mosaico_game_app.c b/components/mosaico_game_app/mosaico_game_app.c
+index ea2708b..ead0d43 100644
+--- a/components/mosaico_game_app/mosaico_game_app.c
++++ b/components/mosaico_game_app/mosaico_game_app.c
+@@ -24,6 +24,40 @@
+ static const mosaico_game_app_config_t *s_config;
+ static esp_lcd_touch_handle_t s_touch;
+ static esp_gsp_handle_t s_gsp;
++static TaskHandle_t s_app_task;
++static esp_gsp_esp_lcd_pause_t *s_brightness_pause;
++enum { MOSAICO_BRIGHTNESS_PAUSE_TIMEOUT_MS = 250 };
++
++static esp_err_t resume_brightness_display(void)
++{
++    if (!s_brightness_pause) return ESP_OK;
++    /* Failed resume must retain both the token and the original GSP handle.
++     * The token is consumed only on success; an idle app must retry it too. */
++    esp_gsp_handle_t resumed = NULL;
++    const esp_err_t err = esp_gsp_esp_lcd_resume_paused(s_brightness_pause, &resumed);
++    if (err == ESP_OK) {
++        s_brightness_pause = NULL;
++        s_gsp = resumed;
++    }
++    return err;
++}
++
++esp_err_t mosaico_game_app_set_brightness(int percent)
++{
++    if (percent < 0 || percent > 100) return ESP_ERR_INVALID_ARG;
++    if (!s_gsp || !s_app_task || xTaskGetCurrentTaskHandle() != s_app_task)
++        return ESP_ERR_INVALID_STATE;
++    esp_err_t err = resume_brightness_display();
++    if (err != ESP_OK) return err;
++    /* Pause waits for presenter fences, so the command cannot race GSP's
++     * panel transfers. A timeout leaves brightness unchanged. */
++    err = esp_gsp_esp_lcd_pause(s_gsp, MOSAICO_BRIGHTNESS_PAUSE_TIMEOUT_MS,
++                               &s_brightness_pause);
++    if (err != ESP_OK) return err;
++    const esp_err_t brightness_err = bsp_display_brightness_set(percent);
++    const esp_err_t resume_err = resume_brightness_display();
++    return brightness_err != ESP_OK ? brightness_err : resume_err;
++}
+ 
+ static void imu_task(void *ctx)
+ {
+@@ -99,16 +133,26 @@ static esp_err_t start_display(void)
+     esp_gsp_config_t app = s_config->gsp_bundle();
+     esp_gsp_esp_lcd_config_t host = ESP_GSP_ESP_LCD_CONFIG_INIT();
+     host.perf_log = true;
++    /* TE composition is opt-in: games that stream small tiles directly to GRAM
++     * keep the lowest-latency path, while games that show a mostly static,
++     * full-screen scene can trade one PSRAM compose buffer for a tear-free
++     * scanout. The bus figures only seed the first-frame TE estimate. */
++    const bool te_sync = s_config->te_sync;
+     host.display = (esp_display_present_target_config_t){
+         .hw = {.panel = panel, .io = bsp_display_get_panel_io(),
+             .panel_type = ESP_DISPLAY_PRESENT_PANEL_IO,
+             .input_pixel_format = ESP_DISPLAY_PRESENT_PIXEL_FORMAT_RGB565,
+             .rotation = ESP_DISPLAY_PRESENT_ROTATE_0, .swap_bytes = true,
+-            .te_enabled = false,
+-            .te_sync = ESP_DISPLAY_PRESENT_TE_SYNC_DISABLED()},
+-        /* Games redraw continuously.  Submit directly to panel GRAM instead
+-         * of holding complete frames for the TE-synchronised scheduler. */
+-        .fb = {.mode = ESP_DISPLAY_PRESENT_MODE_NONE}};
++            .te_enabled = te_sync,
++            .te_sync = te_sync
++                ? (esp_display_present_te_sync_config_t){
++                      .gpio_num = BSP_LCD_TE,
++                      .bus_freq_hz = 40 * 1000 * 1000,
++                      .data_lines = 4,
++                  }
++                : ESP_DISPLAY_PRESENT_TE_SYNC_DISABLED()},
++        .fb = {.mode = te_sync ? ESP_DISPLAY_PRESENT_MODE_TE_SYNC
++                               : ESP_DISPLAY_PRESENT_MODE_NONE}};
+     if (s_config->drawbuf_lines || s_config->te_compose_buffers) {
+         host.display.drawbuf.lines = s_config->drawbuf_lines;
+         host.display.drawbuf.in_psram = true;
+@@ -122,6 +166,7 @@ esp_err_t mosaico_game_app_run(const mosaico_game_app_config_t *config)
+     if (!config || !config->gsp_bundle || !config->on_render)
+         return ESP_ERR_INVALID_ARG;
+     s_config = config;
++    s_app_task = xTaskGetCurrentTaskHandle();
+     const char *tag = config->tag ? config->tag : "mosaico_game_app";
+     ESP_ERROR_CHECK(nvs_flash_init());
+     iris_ota_support_start();
+@@ -161,6 +206,12 @@ esp_err_t mosaico_game_app_run(const mosaico_game_app_config_t *config)
+     uint32_t frames = 0;
+     uint32_t stats_interval = config->stats_interval ? config->stats_interval : 100;
+     while (!WindowShouldClose()) {
++        /* A failed resume keeps its token. Retry before any game work even
++         * when operation-driven rendering would otherwise remain idle. */
++        if (resume_brightness_display() != ESP_OK) {
++            vTaskDelayUntil(&wake, pdMS_TO_TICKS(1000 / game_config.target_fps));
++            continue;
++        }
+         int64_t input_started = esp_timer_get_time();
+         mosaico_device_event_t event;
+         while (MosaicoGamePollDeviceEvent(&event)) {
+@@ -174,6 +225,12 @@ esp_err_t mosaico_game_app_run(const mosaico_game_app_config_t *config)
+             mosaico_action_apply_event(&event);
+             if (config->on_event) config->on_event(&event);
+         }
++        /* Closing settings can issue a panel command from on_event. A failed
++         * resume must be recovered before this iteration advances or draws. */
++        if (resume_brightness_display() != ESP_OK) {
++            vTaskDelayUntil(&wake, pdMS_TO_TICKS(1000 / game_config.target_fps));
++            continue;
++        }
+         mosaico_action_begin_frame();
+         uint32_t input_us = (uint32_t)(esp_timer_get_time() - input_started);
+         if (config->idle && config->idle()) {
+@@ -182,6 +239,12 @@ esp_err_t mosaico_game_app_run(const mosaico_game_app_config_t *config)
+         }
+         int64_t started = esp_timer_get_time();
+         if (config->on_update) config->on_update();
++        /* Live brightness applies during on_update; never submit a frame
++         * while its display pause token is still awaiting recovery. */
++        if (resume_brightness_display() != ESP_OK) {
++            vTaskDelayUntil(&wake, pdMS_TO_TICKS(1000 / game_config.target_fps));
++            continue;
++        }
+         uint32_t update_us = (uint32_t)(esp_timer_get_time() - started);
+         MosaicoGameRecordLogic(input_us, update_us);
+         started = esp_timer_get_time();

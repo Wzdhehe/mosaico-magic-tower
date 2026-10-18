@@ -31,7 +31,7 @@ static esp_err_t pointer_rpc(const esp_iris_rpc_request_t *request,
     if(y<0)y=0; else if(y>=MOSAICO_GAME_HEIGHT)y=MOSAICO_GAME_HEIGHT-1;
     mosaico_device_event_t event={.type=MOSAICO_DEVICE_EVENT_POINTER,
         .x=x,.y=y,.pressed=request->payload[0]!=2};
-    (void)MosaicoGamePostDeviceEvent(&event);
+    if (!MosaicoGamePostDeviceEvent(&event)) return ESP_ERR_TIMEOUT;
     *response_size=POINTER_MESSAGE_SIZE;
     return ESP_OK;
 }

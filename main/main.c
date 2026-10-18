@@ -5,6 +5,8 @@
 #include "game.h"
 #include "game_audio.h"
 #include "game_config.h"
+#include "game_device_render.h"
+#include "game_preferences.h"
 #include "mosaico_game_app.h"
 #include "raylib_screen_mirror.h"
 #include "esp_log.h"
@@ -14,6 +16,41 @@
 /* Owned by app_main for the application lifetime. Engine callbacks execute on
  * that same task; touch samples reach it through the engine event queue. */
 static game_handle_t s_game;
+
+static bool apply_brightness(int percent)
+{
+    const esp_err_t result=mosaico_game_app_set_brightness(percent);
+    if (result!=ESP_OK) ESP_LOGW(GAME_NAME,"Brightness unavailable: %s",esp_err_to_name(result));
+    return result==ESP_OK;
+}
+static bool load_preferences(void *context,game_preferences_t *out)
+{
+    (void)context;
+    nvs_handle_t nvs;
+    if (nvs_open("magic_tower",NVS_READONLY,&nvs)!=ESP_OK) return false;
+    uint32_t packed=0;
+    const esp_err_t result=nvs_get_u32(nvs,"prefs1",&packed);
+    nvs_close(nvs);
+    if (result!=ESP_OK) return false;
+    uint8_t bytes[GAME_PREFERENCES_BYTES];
+    for(unsigned i=0;i<GAME_PREFERENCES_BYTES;++i) bytes[i]=(uint8_t)(packed>>(8u*i));
+    return game_preferences_decode(bytes,out);
+}
+static bool save_preferences(void *context,const game_preferences_t *value)
+{
+    (void)context;
+    uint8_t bytes[GAME_PREFERENCES_BYTES];
+    if (!game_preferences_encode(value,bytes)) return false;
+    uint32_t packed=0;
+    for(unsigned i=0;i<GAME_PREFERENCES_BYTES;++i) packed|=(uint32_t)bytes[i]<<(8u*i);
+    nvs_handle_t nvs;
+    if (nvs_open("magic_tower",NVS_READWRITE,&nvs)!=ESP_OK) return false;
+    esp_err_t result=nvs_set_u32(nvs,"prefs1",packed);
+    if (result==ESP_OK) result=nvs_commit(nvs);
+    nvs_close(nvs);
+    if (result!=ESP_OK) ESP_LOGW(GAME_NAME,"Settings save failed: %s",esp_err_to_name(result));
+    return result==ESP_OK;
+}
 
 static bool save_nvs(void *context, const uint8_t *bytes, size_t size)
 {
@@ -54,15 +91,30 @@ static void on_update(void)
 
 static void on_render(void)
 {
-    (void)game_render(s_game);
+    (void)game_render_device_pending(s_game);
+}
+
+static esp_err_t after_healthy(void)
+{
+    /* The first physical frame and startup flush have completed. A retained
+     * resume token can now be retried by the normal engine loop. */
+    const game_snapshot_t *state=game_read(s_game);
+    if (state) (void)apply_brightness(state->brightness);
+    return ESP_OK;
+}
+
+static bool on_idle(void)
+{
+    return game_is_idle(s_game);
 }
 
 static esp_err_t on_start(void)
 {
-    game_audio_init();
     const game_snapshot_t *state=game_read(s_game);
     game_audio_set_volume(state?state->volume:45);
     game_audio_set_track(state?state->music:0);
+    /* Publish saved controls before the higher-priority audio task can run. */
+    game_audio_init();
     return ESP_OK;
 }
 
@@ -78,7 +130,9 @@ static const mosaico_game_app_config_t s_config = {
     .gsp_bundle = gsp_bundle_config,
     .register_mirror = raylib_screen_mirror_register,
     .on_start = on_start,
+    .after_healthy = after_healthy,
     .on_event = on_event,
+    .idle = on_idle,
     .on_update = on_update,
     .on_render = on_render,
 };
@@ -91,6 +145,9 @@ void app_main(void)
     const game_config_t config = {.width = GAME_WIDTH, .height = GAME_HEIGHT,
         .save = storage == ESP_OK ? save_nvs : NULL,
         .load = storage == ESP_OK ? load_nvs : NULL,
+        .load_preferences = storage == ESP_OK ? load_preferences : NULL,
+        .save_preferences = storage == ESP_OK ? save_preferences : NULL,
+        .set_brightness = apply_brightness,
         .set_volume = game_audio_set_volume,
         .set_music = game_audio_set_track};
     ESP_ERROR_CHECK(game_create(&config, &s_game) ? ESP_OK : ESP_ERR_NO_MEM);
