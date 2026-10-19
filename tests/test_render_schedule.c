@@ -226,6 +226,9 @@ int main(int argc,char **argv)
     for(unsigned i=0;i<sizeof(fill_levels)/sizeof(fill_levels[0]);++i) {
         game_set_battery(game,fill_levels[i],GAME_BATTERY_CHARGING);paint_once(game);
         assert_battery_fill(fill_levels[i],(uint16_t)((127u>>3)<<11 | (216u>>2)<<5 | (180u>>3)));
+        /* Charging is indicated only by color: no lightning in the gap. */
+        for(unsigned y=15;y<30;++y) for(unsigned x=40;x<42;++x)
+            assert(pixels[y*GAME_WIDTH+x]==(uint16_t)((14u>>3)<<11 | (19u>>2)<<5 | (28u>>3)));
     }
     game_set_battery(game,67,GAME_BATTERY_DISCHARGING);paint_once(game);
     assert_battery_fill(67,(uint16_t)((234u>>3)<<11 | (230u>>2)<<5 | (215u>>3)));
