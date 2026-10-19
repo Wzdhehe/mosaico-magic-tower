@@ -548,7 +548,7 @@
         ],
         "en": [
           "Full moons will no longer leak air.",
-          "The dark wall is below the altar, east."
+          "Below the altar, east: a dark wall."
         ]
       }
     },
@@ -859,6 +859,40 @@
           ]
         }
       ]
+    },
+    {
+      "floor": 50,
+      "position": [
+        6,
+        1
+      ],
+      "name_zh": "公主",
+      "name_en": "PRINCESS",
+      "pages": [
+        {
+          "zh": [
+            "你来了。封印终于可以放下了。",
+            "我守着的，是城里每个等归人的家。"
+          ],
+          "en": [
+            "You came. I can let the seal go.",
+            "I held it for everyone waiting below."
+          ]
+        }
+      ],
+      "post_clear": true,
+      "extra_pages": [
+        {
+          "zh": [
+            "谢谢你，也谢谢那些等你回去的人。",
+            "走吧。这一次，我们一起下楼。"
+          ],
+          "en": [
+            "Thank you. Others are waiting for you.",
+            "Come. This time, we go down together."
+          ]
+        }
+      ]
     }
   ],
   "regions": [
@@ -1075,16 +1109,16 @@
     "fallen": {
       "bpm": 56,
       "key": "D minor",
-      "lead": "D4:8 F4:4 E4:4 D4:8 R:8",
-      "bass": "D2:16 R:8 A2:8",
+      "lead": "D5:8 F5:4 E5:4 D5:8 R:8",
+      "bass": "D3:16 R:8 A3:8",
       "chords": [
         "Dm",
         "Bb",
         "Gm",
         "A"
       ],
-      "wave": "quiet sine lament, no percussion",
-      "answer": "C4:8 E4:4 D4:4 Cs4:8 R:8",
+      "wave": "audible triangle lament, light bass, no percussion",
+      "answer": "C5:8 E5:4 D5:4 Cs5:8 R:8",
       "form": [
         "lead",
         "lead",

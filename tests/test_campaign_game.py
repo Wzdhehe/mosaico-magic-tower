@@ -36,6 +36,7 @@ unsigned variant(void){const game_snapshot_t*s=game_read(g);(void)s; VARIANT}
 unsigned pages(void){return campaign_dialogue_pages((uint16_t)dialog(),variant());}
 unsigned screen_dialog(void){return GAME_DIALOG;} unsigned screen_shop(void){return GAME_SHOP;}
 unsigned screen_dungeon(void){return GAME_DUNGEON;} unsigned screen_victory(void){return GAME_VICTORY;}
+unsigned princess_dialog(void){return campaign_dialogue_at(49,6,1);}
 '''.replace('META',meta).replace('PAGE',page).replace('VARIANT',variant)
     (OUT/'bridge.c').write_text(bridge,encoding='utf-8')
     binary=OUT/('game.dll' if os.name=='nt' else'game.so')
@@ -49,7 +50,9 @@ unsigned screen_dungeon(void){return GAME_DUNGEON;} unsigned screen_victory(void
     assert lib.begin();assert lib.val(15)==0;lib.key(6);assert lib.val(11)==1
     trace=json.loads((ROOT/'artifacts/campaign-production/secrets_and_errands.json').read_text(encoding='utf-8'))
     dialog_screen,shop,dungeon,victory=[getattr(lib,'screen_'+n)() for n in ('dialog','shop','dungeon','victory')]
-    turns_written=1;diags=set();deliveries=set();gpt_pages=[];teaching=False;modal_checked=set();tracks={0}
+    princess=lib.princess_dialog()
+    assert princess!=65535,'The rescued princess has no authored conversation'
+    turns_written=1;diags=set();deliveries=set();gpt_pages=[];princess_pages=[];teaching=False;modal_checked=set();tracks={0}
     def restart_cancel():
         screen=lib.val(0)
         if screen in modal_checked:return
@@ -77,8 +80,10 @@ unsigned screen_dungeon(void){return GAME_DUNGEON;} unsigned screen_victory(void
                     if (f,x,y)==(46,12,14):gpt_pages.append(lib.page())
                     if (f,x,y) in ((10,1,9),(20,3,10),(32,9,5)) and lib.variant()==1:deliveries.add((f,x,y))
                     prior=lib.page();total=lib.pages();lib.key(6)
+                    ending=lib.dialog()==princess or (f==49 and lib.val(10) and prior+1==total and lib.val(0)==victory)
+                    if ending:princess_pages.append(prior)
                     if prior+1<total:assert lib.val(0)==dialog_screen and lib.page()==prior+1
-                    else:assert lib.val(0)==dungeon
+                    else:assert lib.val(0)==(victory if ending else dungeon)
                 else:lib.key(6)
             if lib.val(0) in (victory,shop):restart_cancel()
             if lib.val(0)==victory:lib.key(6)
@@ -95,7 +100,10 @@ unsigned screen_dungeon(void){return GAME_DUNGEON;} unsigned screen_victory(void
                 index=action[1];lib.click(78+(index%2)*174+75,152+(index//2)*70+28)
             else:raise AssertionError(action)
             after=a['after']
-            expected_music=8 if lib.val(0)==victory else (7 if after['cleared'] else (6 if after['floor']==49 else 1+after['floor']//10))
+            ending=lib.val(0)==dialog_screen and lib.dialog()==princess
+            if after['cleared'] and not a['before']['cleared']:
+                assert ending,'Defeating the king must introduce the princess before the victory page'
+            expected_music=8 if lib.val(0)==victory or ending else (7 if after['cleared'] else (6 if after['floor']==49 else 1+after['floor']//10))
             assert lib.val(15)==expected_music,('music routing',after['floor'],lib.val(15),expected_music)
             tracks.add(lib.val(15))
             for index,name in ((1,'floor'),(2,'x'),(3,'y'),(4,'hp'),(5,'attack'),(6,'defence'),(7,'gold'),(8,'turns')):
@@ -104,12 +112,22 @@ unsigned screen_dungeon(void){return GAME_DUNGEON;} unsigned screen_victory(void
             assert lib.val(11)==turns_written,('unexpected save count',action,lib.val(11),turns_written)
         assert teaching and len(deliveries)==3
         assert gpt_pages==[0,1,2],('GPT pages were not visited',gpt_pages)
+        assert princess_pages==[0,1],('The ending must show both princess pages exactly once',princess_pages)
         if lib.val(0)==victory:
             lib.key(6)
             assert lib.val(15)==7,'Continued exploration must restore Home'
             tracks.add(lib.val(15))
         assert tracks==set(range(9)),('Not all region/boss/victory/exploration tracks were routed',tracks)
         assert lib.val(10) and lib.val(14)==31 and (lib.val(12),lib.val(13))==(0,0)
+        # All-anchor route ends on the 50F entrance. Her map interaction is
+        # repeatable, returns to exploration and never replays the victory page.
+        for _ in range(8):
+            lib.key(2)
+            while lib.val(0)==dialog_screen:lib.key(6)
+        assert (lib.val(2),lib.val(3))==(5,1)
+        lib.key(1);assert lib.val(0)==dialog_screen and lib.dialog()==princess and lib.val(15)==7
+        while lib.val(0)==dialog_screen:lib.key(6)
+        assert lib.val(0)==dungeon and lib.val(15)==7 and lib.val(11)==turns_written
         print('PASS: actual game input reaches 50F; teaching pages, three deliveries, autosave counts, final11x11 camera')
         print('Dialogs encountered:',len(diags),'checkpoint writes:',turns_written)
     finally:lib.end()

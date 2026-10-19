@@ -16,6 +16,8 @@ extern "C" {
 #define TOWER_FLOOR_W 20
 #define TOWER_FLOOR_H 20
 #define TOWER_FLOORS 50
+#define TOWER_PRINCESS_X 6u
+#define TOWER_PRINCESS_Y 1u
 
 #define TOWER_CELLS (TOWER_FLOOR_W * TOWER_FLOOR_H)
 #define TOWER_FLAG_BYTES ((TOWER_CELLS + 7) / 8)

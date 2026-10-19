@@ -1,12 +1,12 @@
 {
   "revision": "tower50-authored-v8",
-  "status": "production model and Host verified; device QA pending",
+  "status": "RC4 production model and Host verified; raw battery hardware QA pending",
   "files": {
-    "campaign_content.json": "9e81cf044ff0d2d147f3a49b25d234416663fafae5dc096735bbace21a7af0be",
-    "campaign_content.py": "92b198561a2817409c7bf4822c61bad6f2b4843412fe3f42467adfff15595ef2",
+    "campaign_content.json": "57be357754afb9067b3713013d6040f0d6d9ac79dd20a0e273763732eb043511",
+    "campaign_content.py": "0b7a9fb84e7965f28f429292df42992f846ebcc3e7ded656eccee540d1015718",
     "campaign_edge_camera_robot.patch": "4aba802b75833605ce8af97d99ef79facd06bc70d98a8f26d275f7753d1477b4",
-    "campaign_floors.c": "64ce83ce9452b125433ef76fca06d442ca5e958505c255ab5d7156478feccde9",
-    "campaign_maps.json": "861111136323a76159800a0ada893a85155bcf3db16cff8e6ebc7894346ac998",
+    "campaign_floors.c": "2d48d49b991e4046faae8a985a0e03b5b5f127bc2c6fb186f7638106fa45bf5e",
+    "campaign_maps.json": "7792f0c7f1cace0b9efa7e84d5253f3c22a373d19ef874faa5b23ac7c10bc837",
     "campaign_model.patch": "b79b9670189de4075e91b9e11dd50245f450a04bb119ad539b14faf6d7157202",
     "campaign_presentation.py": "82652f1659f8862ce86241edd153132689d08614d9763b3dd13d8708f457c9ba",
     "campaign_rules.py": "09ba310083a4a61732a345573a78166f90fba9acb9775721deac39fdfd9b3c26",
@@ -15,13 +15,13 @@
     "region2_blueprint.py": "e57e06936c48833259d3c693a9a3f435ab1312fe9ffa4dafd74692d0b8f95e37",
     "region3_blueprint.py": "c42fa468c9f5e5034e0d3f5d993f27c29c5e3e1cfdddcf17ec5cda8b3817c5f6",
     "region4_blueprint.py": "d0a855db65a505498ad1d833670b4738df3e3a2a7a1a805c2916b72bc272d70a",
-    "region5_blueprint.py": "90d068b5928a9e0dee1b78c41b333079e07ef0ba5c3158daa50c13466d8496fd"
+    "region5_blueprint.py": "505774d82f5fe4dc17b4979d62c5bacf39144f8b2d5edf3c5de9b90e4a18aacb"
   },
   "model": {
-    "tower.c": "2f71e1bb5c502d40dec1d2ac693735ae528da598a43e1bac8a1fb852b7e51344",
-    "tower.h": "d0dcacd4d58035901f43e12eb89ee6af777b548ea3ccb4c8239403c723cd5243",
+    "tower.c": "222569c59a4a8e45433e4d679b9832ab9ec6fc3bcbc155a7abda0f14a483c470",
+    "tower.h": "3b3962f7b91365cf535a6c0a987c933ebf5a95e88660c83abc6057fb3f33dbb8",
     "tower_floors.h": "df76786202a2ad5c2eaf5563ddec96af187ac05de35e54f1b12eb1d5e9b562be",
-    "compiled_source_sha256": "2f71e1bb5c502d40dec1d2ac693735ae528da598a43e1bac8a1fb852b7e51344",
+    "compiled_source_sha256": "222569c59a4a8e45433e4d679b9832ab9ec6fc3bcbc155a7abda0f14a483c470",
     "designed_floors": 50,
     "fixture_floors": 0,
     "transformed": false,

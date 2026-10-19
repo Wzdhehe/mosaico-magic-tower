@@ -79,7 +79,7 @@ static const campaign_page_t campaign_pages_21[] = {
     {{"月亮背面破了一个洞。","四十三层镜子里有那块补丁。"},{"The back of the moon has a hole.","Its patch is in the mirrors on 43."}},
 };
 static const campaign_page_t campaign_carrying_21 = {{"这块补丁，摸起来像夜色。","祭坛东南的旧室就送给你。"},{"This patch feels like night itself.","The southeast room is yours."}};
-static const campaign_page_t campaign_done_21 = {{"以后满月就不会漏风了。","暗墙在祭坛下面，向东走。"},{"Full moons will no longer leak air.","The dark wall is below the altar, east."}};
+static const campaign_page_t campaign_done_21 = {{"以后满月就不会漏风了。","暗墙在祭坛下面，向东走。"},{"Full moons will no longer leak air.","Below the altar, east: a dark wall."}};
 static const campaign_page_t campaign_pages_22[] = {
     {{"水纹、炉火、王冠。","三枚星记开四十七层旧室。"},{"Water, furnace, crown. Three marks.","They open the old room on 47."}},
     {{"水纹在十二层泵房。","炉火在二十七层账房。"},{"Water: the pump room on 12.","Furnace: the ledger room on 27."}},
@@ -123,25 +123,29 @@ static const campaign_page_t campaign_pages_34[] = {
     {{"我在魔王身后维持最后的封印。","看清伤害，不够就再回去准备。"},{"I hold the last seal behind the king.","Check the cost. Return if needed."}},
 };
 static const campaign_page_t campaign_pages_35[] = {
-    {{"记下了泵房的水纹。","四十七层旧室还在等待。"},{"You record the water mark.","An old room waits on floor 47."}},
+    {{"你来了。封印终于可以放下了。","我守着的，是城里每个等归人的家。"},{"You came. I can let the seal go.","I held it for everyone waiting below."}},
+    {{"谢谢你，也谢谢那些等你回去的人。","走吧。这一次，我们一起下楼。"},{"Thank you. Others are waiting for you.","Come. This time, we go down together."}},
 };
 static const campaign_page_t campaign_pages_36[] = {
+    {{"记下了泵房的水纹。","四十七层旧室还在等待。"},{"You record the water mark.","An old room waits on floor 47."}},
+};
+static const campaign_page_t campaign_pages_37[] = {
     {{"北库露出，南库还在水下。","再来拨动，可交换两座库房。"},{"North is dry; south is underwater.","Turn again to swap the two vaults."}},
 };
-static const campaign_page_t campaign_carrying_36 = {{"南库露出，北库还在水下。","再来拨动，可交换两座库房。"},{"South is dry; north is underwater.","Turn again to swap the two vaults."}};
-static const campaign_page_t campaign_pages_37[] = {
+static const campaign_page_t campaign_carrying_37 = {{"南库露出，北库还在水下。","再来拨动，可交换两座库房。"},{"South is dry; north is underwater.","Turn again to swap the two vaults."}};
+static const campaign_page_t campaign_pages_38[] = {
     {{"找到了听水用的铜耳朵。","带回十一层，老人还在等。"},{"You found the copper ear.","Return it to the old man on 11."}},
 };
-static const campaign_page_t campaign_pages_38[] = {
+static const campaign_page_t campaign_pages_39[] = {
     {{"记下了账房的炉火星记。","水纹、炉火、王冠缺一不可。"},{"You record the furnace mark.","Water, furnace and crown: all three."}},
 };
-static const campaign_page_t campaign_pages_39[] = {
+static const campaign_page_t campaign_pages_40[] = {
     {{"找到了一块带焦味的影子。","二十一层的炉匠会认识它。"},{"You find a shadow smelling of ash.","The smith on 21 will recognise it."}},
 };
-static const campaign_page_t campaign_pages_40[] = {
+static const campaign_page_t campaign_pages_41[] = {
     {{"记下了禁书室的王冠星记。","星记齐全后，去四十七层。"},{"You record the crown mark.","Take all three to floor 47."}},
 };
-static const campaign_page_t campaign_pages_41[] = {
+static const campaign_page_t campaign_pages_42[] = {
     {{"这块布像月亮背面的夜色。","带回三十三层，交给裁缝。"},{"This patch feels like the moon.","Bring it to the tailor on 33."}},
 };
 static const campaign_dialogue_t campaign_dialogues[] = {
@@ -180,13 +184,14 @@ static const campaign_dialogue_t campaign_dialogues[] = {
     {46,12,14,0,3,-1,"gpt6.1sol","gpt6.1sol",campaign_pages_32,NULL,NULL},
     {48,11,2,0,1,-1,"最后的封印","LAST SEAL",campaign_pages_33,NULL,NULL},
     {49,5,7,0,1,-1,"王座前的声音","VOICE AT THE THRONE",campaign_pages_34,NULL,NULL},
-    {11,4,3,1,1,-1,"水纹星记","WATER MARK",campaign_pages_35,NULL,NULL},
-    {13,3,4,1,1,-1,"水闸","SLUICE",campaign_pages_36,&campaign_carrying_36,NULL},
-    {17,7,7,1,1,-1,"铜耳朵","COPPER EAR",campaign_pages_37,NULL,NULL},
-    {26,5,6,1,1,-1,"炉火星记","FURNACE MARK",campaign_pages_38,NULL,NULL},
-    {33,3,5,1,1,-1,"炉子的影子","FURNACE SHADOW",campaign_pages_39,NULL,NULL},
-    {34,11,9,1,1,-1,"王冠星记","CROWN MARK",campaign_pages_40,NULL,NULL},
-    {42,13,11,1,1,-1,"月亮的补丁","MOON PATCH",campaign_pages_41,NULL,NULL},
+    {49,6,1,0,2,-1,"公主","PRINCESS",campaign_pages_35,NULL,NULL},
+    {11,4,3,1,1,-1,"水纹星记","WATER MARK",campaign_pages_36,NULL,NULL},
+    {13,3,4,1,1,-1,"水闸","SLUICE",campaign_pages_37,&campaign_carrying_37,NULL},
+    {17,7,7,1,1,-1,"铜耳朵","COPPER EAR",campaign_pages_38,NULL,NULL},
+    {26,5,6,1,1,-1,"炉火星记","FURNACE MARK",campaign_pages_39,NULL,NULL},
+    {33,3,5,1,1,-1,"炉子的影子","FURNACE SHADOW",campaign_pages_40,NULL,NULL},
+    {34,11,9,1,1,-1,"王冠星记","CROWN MARK",campaign_pages_41,NULL,NULL},
+    {42,13,11,1,1,-1,"月亮的补丁","MOON PATCH",campaign_pages_42,NULL,NULL},
 };
 #define CAMPAIGN_DIALOGUE_COUNT (sizeof(campaign_dialogues)/sizeof(campaign_dialogues[0]))
 static inline uint16_t campaign_dialogue_at(unsigned floor,unsigned x,unsigned y) {

@@ -16,6 +16,7 @@ void *game_music_test_calloc(size_t count, size_t size) {
 }
 static int16_t output[24000], other[24000];
 static unsigned hashes[GAME_MUSIC_TRACKS];
+static long long speaker_mean_square[GAME_MUSIC_TRACKS];
 static unsigned hash(unsigned h, const int16_t *p, size_t n) {
     for (size_t i=0;i<n;++i) h=(h^(unsigned)(uint16_t)p[i])*16777619U;
     return h;
@@ -56,7 +57,7 @@ static void check_authored_scores(void) {
         "D5:2 E5:2 F5:4 A5:2 G5:2 E5:4 F5:2 E5:2 D5:4 Cs5:4 R:4",
         "D5:4 A4:2 R:2 Fs5:4 E5:4 D5:6 E5:2 Fs5:4 R:4",
         "D5:3 Fs5:1 A5:4 D6:8 Cs6:4 B5:4 A5:4 R:4",
-        "D4:8 F4:4 E4:4 D4:8 R:8"};
+        "D5:8 F5:4 E5:4 D5:8 R:8"};
     static const char *const answer[9]={
         "F5:4 G5:2 A5:2 G5:4 E5:4 F5:6 E5:2 D5:4 R:4",
         "G5:2 R:2 E5:4 D5:2 R:2 B4:4 C5:4 E5:4 D5:4 R:4",
@@ -66,12 +67,12 @@ static void check_authored_scores(void) {
         "A5:2 Bb5:2 A5:4 F5:2 E5:2 D5:4 E5:2 F5:2 E5:4 Cs5:4 R:4",
         "Fs5:4 G5:2 A5:2 B5:4 A5:4 G5:6 Fs5:2 E5:4 R:4",
         "G5:4 B5:4 D6:8 Cs6:4 A5:4 D6:4 R:4",
-        "C4:8 E4:4 D4:4 Cs4:8 R:8"};
+        "C5:8 E5:4 D5:4 Cs5:8 R:8"};
     static const char *const bass[9]={
         "D3:8 R:8 C3:8 A2:8", "D3:8 R:8 G2:8 A2:8",
         "A2:6 E3:2 A2:8 F2:6 C3:2 E2:8", "F2:16 Bb2:8 C3:8",
         "D3:8 A2:8 Bb2:8 C3:8", "D3:4 A2:4 D3:8 Bb2:8 A2:8", "D3:16 G2:8 A2:8",
-        "D3:8 A2:8 G2:8 A2:8", "D2:16 R:8 A2:8"};
+        "D3:8 A2:8 G2:8 A2:8", "D3:16 R:8 A3:8"};
     static const uint8_t expected_chords[9][4][3]={
         {{50,53,57},{58,62,65},{48,52,55},{57,60,64}},
         {{50,53,57},{55,59,62},{48,52,55},{50,53,57}},
@@ -162,7 +163,8 @@ int main(void) {
         uint32_t frames=game_music_loop_samples(track);
         static const unsigned unit_frames[10]={7500,4286,5000,3750,5294,4091,3462,5000,3750,6429};
         CHECK(frames==128U*unit_frames[track]);
-        long long sum=0,energy=0; int peak=0,max_jump=0,last=0;
+        long long sum=0,energy=0,speaker_energy=0;
+        int peak=0,max_jump=0,last=0,hp=0,previous=0;
         hashes[track]=2166136261U;
         for(uint32_t offset=0;offset<frames;) {
             size_t n=frames-offset>24000?24000:frames-offset;
@@ -173,6 +175,10 @@ int main(void) {
                 if(jump>max_jump) max_jump=jump;
                 if(magnitude>peak) peak=magnitude;
                 sum+=v; energy+=(long long)v*v; last=v;
+                /* Offline test weighting: one-pole 400Hz high pass. An
+                 * inaudible sub-bass-heavy score must not pass on RMS alone. */
+                hp=(int)(((long long)hp+v-previous)*29510/32768);previous=v;
+                speaker_energy+=(long long)hp*hp;
                 CHECK(v>-30000 && v<30000);
             }
             hashes[track]=hash(hashes[track],output,n); offset+=(uint32_t)n;
@@ -183,6 +189,7 @@ int main(void) {
          * bound so a click would still be caught. */
         CHECK(max_jump < peak/3 + 200);
         CHECK(game_music_position(a)==0);
+        speaker_mean_square[track]=speaker_energy/frames;
         printf("PASS: track %u %s %.3fs peak=%d mean=%.3f mean_square=%.0f max_jump=%d hash=%08x\n",
             track,game_music_track_name(track),(double)frames/24000,peak,(double)sum/frames,
             (double)energy/frames,max_jump,hashes[track]);
@@ -190,6 +197,8 @@ int main(void) {
         CHECK(game_music_render(a,output,1));
         int seam=output[0]-last; if(seam<0) seam=-seam; CHECK(seam < peak/3 + 200);
     }
+    CHECK(speaker_mean_square[9]*4 >= speaker_mean_square[7]*3);
+    puts("PASS: fallen speaker-band energy stays comparable to exploration at the same volume");
     for(unsigned left=0;left<GAME_MUSIC_TRACKS;++left)
         for(unsigned right=left+1;right<GAME_MUSIC_TRACKS;++right) CHECK(hashes[left]!=hashes[right]);
     CHECK(game_music_memory_bytes()<=6400);

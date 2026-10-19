@@ -33,7 +33,7 @@ npc(30,(7,3),'炉心回声','HEART ECHO',['公主借走了炉心的光。','她�
 npc(31,(8,9),'王城门吏','COURT USHER',['两翼守卫，习惯各不相同。','也有人一直替王城交钥匙。'],['The two wings fight differently.','Some visitors pay the key toll.'])
 npc(33,(9,5),'补月裁缝','MOON MENDER',['月亮背面破了一个洞。','四十三层镜子里有那块补丁。'],['The back of the moon has a hole.','Its patch is in the mirrors on 43.'],quest=2,
     carrying=page(['这块补丁，摸起来像夜色。','祭坛东南的旧室就送给你。'],['This patch feels like night itself.','The southeast room is yours.']),
-    done=page(['以后满月就不会漏风了。','暗墙在祭坛下面，向东走。'],['Full moons will no longer leak air.','The dark wall is below the altar, east.']))
+    done=page(['以后满月就不会漏风了。','暗墙在祭坛下面，向东走。'],['Full moons will no longer leak air.','Below the altar, east: a dark wall.']))
 npc(35,(11,7),'禁书抄写员','SCRIBE',['水纹、炉火、王冠。','三枚星记开四十七层旧室。'],['Water, furnace, crown. Three marks.','They open the old room on 47.'],extra_pages=[page(['水纹在十二层泵房。','炉火在二十七层账房。'],['Water: the pump room on 12.','Furnace: the ledger room on 27.'])])
 npc(37,(5,4),'床头遗书','BEDSIDE NOTE',['王冠缺口总朝南。','床脚正中的墙砖颜色较暗。'],['The broken crown points south.','A darker wall lies below the bed.'])
 npc(39,(3,5),'守誓书','OATH',['守誓者没有背叛公主。','他只是不肯让封印被误开。'],['The oathkeeper never betrayed her.','He will not risk opening the seal.'])
@@ -48,6 +48,8 @@ npc(47,(12,14),'gpt6.1sol','gpt6.1sol',['我是这个游戏的真正开发者，
     extra_pages=[page(['这座塔的代码，','都是我一行一行写出来的。'],['The code of this tower:','I wrote it, one line at a time.']),page(['不过隐藏房间里的宝物，','你得自己找。'],['The hidden treasures, though?','You will have to find those yourself.'])])
 npc(49,(11,2),'最后的封印','LAST SEAL',['再向上，就是王座。','传送回去准备，门不会重关。'],['The next stair leads to the throne.','Return to prepare. Doors stay open.'])
 npc(50,(5,7),'王座前的声音','VOICE AT THE THRONE',['我在魔王身后维持最后的封印。','看清伤害，不够就再回去准备。'],['I hold the last seal behind the king.','Check the cost. Return if needed.'])
+npc(50,(6,1),'公主','PRINCESS',['你来了。封印终于可以放下了。','我守着的，是城里每个等归人的家。'],['You came. I can let the seal go.','I held it for everyone waiting below.'],post_clear=True,
+    extra_pages=[page(['谢谢你，也谢谢那些等你回去的人。','走吧。这一次，我们一起下楼。'],['Thank you. Others are waiting for you.','Come. This time, we go down together.'])])
 
 REGIONS=[
  dict(name_zh='断门城塞',name_en='BROKEN GATE',style='SCENE_GATE',base='warm grey stone',accent='#d7bd8d',music='gate'),
@@ -68,7 +70,7 @@ SCORES={
  'king':dict(bpm=104,key='D harmonic minor',lead='D5:2 E5:2 F5:4 A5:2 G5:2 E5:4 F5:2 E5:2 D5:4 Cs5:4 R:4',bass='D3:4 A2:4 D3:8 Bb2:8 A2:8',chords=['Dm','Bb','Gm','A'],wave='restrained pulse, sparse noise'),
  'home':dict(bpm=72,key='D major',lead='D5:4 A4:2 R:2 Fs5:4 E5:4 D5:6 E5:2 Fs5:4 R:4',bass='D3:16 G2:8 A2:8',chords=['D','G','Bm','A'],wave='triangle, no percussion'),
  'victory':dict(bpm=96,key='D major',lead='D5:3 Fs5:1 A5:4 D6:8 Cs6:4 B5:4 A5:4 R:4',bass='D3:8 A2:8 G2:8 A2:8',chords=['D','G','Bm','A'],wave='bright triangle fanfare, no percussion'),
- 'fallen':dict(bpm=56,key='D minor',lead='D4:8 F4:4 E4:4 D4:8 R:8',bass='D2:16 R:8 A2:8',chords=['Dm','Bb','Gm','A'],wave='quiet sine lament, no percussion'),
+ 'fallen':dict(bpm=56,key='D minor',lead='D5:8 F5:4 E5:4 D5:8 R:8',bass='D3:16 R:8 A3:8',chords=['Dm','Bb','Gm','A'],wave='audible triangle lament, light bass, no percussion'),
 }
 # B is an authored two-bar answer, never a transposition invented by a generator.
 for key,answer in {
@@ -80,7 +82,7 @@ for key,answer in {
  'king':'A5:2 Bb5:2 A5:4 F5:2 E5:2 D5:4 E5:2 F5:2 E5:4 Cs5:4 R:4',
  'home':'Fs5:4 G5:2 A5:2 B5:4 A5:4 G5:6 Fs5:2 E5:4 R:4',
  'victory':'G5:4 B5:4 D6:8 Cs6:4 A5:4 D6:4 R:4',
- 'fallen':'C4:8 E4:4 D4:4 Cs4:8 R:8',
+ 'fallen':'C5:8 E5:4 D5:4 Cs5:8 R:8',
 }.items():
     SCORES[key]['answer']=answer
     SCORES[key]['form']=['lead','lead','answer','lead']

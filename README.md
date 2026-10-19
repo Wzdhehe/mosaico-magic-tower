@@ -2,13 +2,13 @@
 
 An original fifty-floor Magic Tower for **ESP-Mosaico** (ESP32-S31, 480×480), built in C with the official Raylib Lite Engine / GSP stack. Author: **Ponkan**.
 
-Current source candidate: **v1.8.0-rc.3**. Adds a persistent battery percentage and charging icon plus dedicated victory/death music. RC2 dark-wall concealed doors, quest item icons and open viewport edges are preserved. Extended hardware playtesting remains open. See [integration status](docs/level-design/PRODUCTION_INTEGRATION.md).
+Current source candidate: **v1.8.0-rc.4**. Repairs the demon-king preview layout, adds a princess conversation, removes a redundant 49F door, rebalances the death score and initializes/validates the battery gauge through the official BSP. RC2 dark-wall concealed doors, quest item icons and open viewport edges are preserved. Extended hardware playtesting remains open. See [integration status](docs/level-design/PRODUCTION_INTEGRATION.md).
 
 | Title | Chinese dialogue | Throne hall |
 |---|---|---|
 | ![Title](docs/images/title.png) | ![Dialogue](docs/images/npc-dialogue.png) | ![Throne](docs/images/throne50.png) |
 
-[Published RC2 firmware](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.2). RC3 is the next candidate; its new battery UI and music still require device acceptance.
+[Published RC2 firmware](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.2). RC4 source validation includes genuine RC3 v8 checkpoint compatibility; battery charge/discharge accuracy still requires hardware acceptance. See [battery acquisition](docs/level-design/BATTERY_ACQUISITION.md).
 
 ## Campaign
 
@@ -21,7 +21,7 @@ Current source candidate: **v1.8.0-rc.3**. Adds a persistent battery percentage 
 - Deterministic combat previews, confirmation/cancellation, coloured keys, guarded resource choices and shared shop prices of 15/25/35/... gold (+3 per purchase).
 - Ten original music loops: title, five regions, final battle, exploration after victory, victory screen and death screen. Four integer voices, bounded echo and no rendering allocations or streamed samples.
 - Volume zero fades/drains playback, closes the codec output and parks the audio task until a changed control arrives. Restoring volume primes silence and fades in; muted track time catches up without continuous PCM writes. The BSP's separate receive channel is unchanged; board power savings and speaker artifacts still need hardware measurement.
-- A persistent upper-left battery percentage: white on battery power, green while charging (including full at 100%), with no lightning symbol. Read-only gauge samples every five seconds; only changed values request a frame. A failed/unavailable reading shows `--`.
+- A persistent upper-left battery percentage: white on battery power, green while charging (including full at 100%), with no lightning symbol. Checked gauge samples every five seconds; only changed values request a frame. Rejected samples retry once. Brief failures retain the last validated reading for less than 15 seconds; without one, or once it expires, the HUD shows `--`. Valid SOC values are displayed directly, without percentage clamps or voltage-based guesses.
 - One settings button: language, volume, brightness and the readable GitHub address. Preferences are separate from journey data.
 
 ## Checkpoints and controls
@@ -43,7 +43,7 @@ python tools/verify_campaign_release.py
 python tools/render_music.py
 ```
 
-The suite retains logs in `artifacts/campaign-validation/`: five production routes with every-action save roundtrips; 2632 byte-corruption checks; semantic forgeries; actual input/dialogue/errand/checkpoint replay; restart, camera, settings, brightness and idle regressions; 108 real C bilingual page renders; all-track audio bounds; complete official Host ABI replay and screenshots. The four authored ordinary/alternative routes plus the secret/errand route prove specific winning paths, not every possible strategy or final balance. The attack-first witness ends with only 10 HP.
+The suite retains logs in `artifacts/campaign-validation/`: five production routes with every-action save roundtrips; 2632 byte-corruption checks; semantic forgeries; actual input/dialogue/errand/checkpoint replay; restart, camera, settings, brightness and idle regressions; 112 real C bilingual page renders; all-track audio bounds; complete official Host ABI replay and screenshots. The four authored ordinary/alternative routes plus the secret/errand route prove specific winning paths, not every possible strategy or final balance. The attack-first witness ends with only 10 HP.
 
 `tests/run_tests.py` runs the current portable model/campaign checks. Historical ten-floor `test_tower.c`, `test_level_design.py`, `test_integration.py`, `test_guarded_forks.py`, old strategy planners and `capture_screens.py` describe v1.6 and are not current acceptance commands. Use `tools/capture_campaign_host.py` for actual production gameplay screenshots; `capture_campaign_design.py` is a camera-only map QA facade.
 

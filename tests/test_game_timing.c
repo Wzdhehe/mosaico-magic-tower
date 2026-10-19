@@ -365,6 +365,12 @@ static void test_victory_returns_to_anchor(void)
     while (game_read(game)->tower.floor < 49u) step_up(game);
     assert(game_read(game)->tower.chapters == 0x0Fu);
     take_goal_x(game, 17u);
+    assert(game_read(game)->screen == GAME_DIALOG);
+    settle(game);
+    assert(game_read(game)->music == 8u);
+    press(game,GAME_ACTION_START);
+    assert(game_read(game)->screen == GAME_DIALOG && game_read(game)->dialogue_page == 1u);
+    press(game,GAME_ACTION_START);
     assert(game_read(game)->screen == GAME_VICTORY);
     assert(game_read(game)->tower.cleared);
     assert(game_read(game)->tower.chapters == 0x1Fu);
