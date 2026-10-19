@@ -13,15 +13,40 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def main():
+def find_engine() -> Path:
+    """Resolve the pinned engine without silently accepting a wrong path.
+
+    MOSAICO_ENGINE_ROOT is authoritative when set. Otherwise try the official
+    workspace layout next to this worktree, then the classic project layout.
+    """
+    marker = Path("host/include/raylib.h")
     configured = os.environ.get("MOSAICO_ENGINE_ROOT")
-    engine = Path(configured) if configured else ROOT.parents[1] / "submodule/raylib-lite-engine"
-    if not (engine / "host/include/raylib.h").is_file():
-        raise SystemExit("Set MOSAICO_ENGINE_ROOT to the pinned Raylib Lite engine checkout")
-    engine = engine.resolve()
+    if configured:
+        engine = Path(configured)
+        if not (engine / marker).is_file():
+            raise SystemExit(
+                f"MOSAICO_ENGINE_ROOT does not look like a Raylib Lite checkout: {engine}")
+        return engine.resolve()
+    candidates = [
+        ROOT.parents[1] / "esp-mosaico-vibe/submodule/raylib-lite-engine",
+        ROOT.parents[1] / "submodule/raylib-lite-engine",
+        ROOT.parents[2] / "esp-mosaico-vibe/submodule/raylib-lite-engine",
+        ROOT.parents[2] / "submodule/raylib-lite-engine",
+    ]
+    for candidate in candidates:
+        if (candidate / marker).is_file():
+            return candidate.resolve()
+    raise SystemExit(
+        "Raylib Lite engine not found; set MOSAICO_ENGINE_ROOT to the pinned checkout "
+        f"(tried {', '.join(str(c) for c in candidates)})")
+
+
+def main():
+    engine = find_engine()
     cc = os.environ.get("CC") or shutil.which("gcc") or "gcc"
     sources = [ROOT / "tests/test_render_schedule.c",
-               ROOT / "main/game.c", ROOT / "main/tower.c", ROOT / "main/game_view.c",
+               ROOT / "main/game.c", ROOT / "main/tower.c", ROOT / "main/tower_floors.c",
+               ROOT / "main/game_view.c",
                ROOT / "main/game_device_render.c",
                engine / "host/host_asset_runtime.c",
                engine / "components/mosaico_game_2d/mosaico_game_2d.c",

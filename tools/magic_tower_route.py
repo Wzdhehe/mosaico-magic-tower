@@ -55,6 +55,13 @@ class Route:
         return self.maps[self.floor if f is None else f][
             self.y if y is None else y][self.x if x is None else x]
 
+    def find_tile(self, f, want):
+        for y in range(H):
+            for x in range(W):
+                if self.maps[f][y][x] == want:
+                    return x, y
+        return None
+
     def block_reason(self, t, x=None, y=None):
         if t == '#':
             return 'wall'
@@ -87,6 +94,10 @@ class Route:
                     continue
                 t = self.maps[self.floor][ny][nx]
                 if t == '#':
+                    continue
+                # Stairs change floors as soon as they are entered. Never
+                # cross one while routing to ordinary loot or to a fight.
+                if t in 'UD' and (nx, ny) not in goals:
                     continue
                 blocked = self.block_reason(t, nx, ny)
                 if blocked == 'shop':
@@ -151,11 +162,15 @@ class Route:
         if t == 'U':
             assert self.floor + 1 < len(self.maps)
             self.floor += 1
-            self.x, self.y = 5, 9
+            landing = self.find_tile(self.floor, 'D')
+            assert landing is not None, f"F{self.floor + 1} has no down stair"
+            self.x, self.y = landing
         elif t == 'D':
             assert self.floor > 0
             self.floor -= 1
-            self.x, self.y = 5, 1
+            landing = self.find_tile(self.floor, 'U')
+            assert landing is not None, f"F{self.floor + 1} has no up stair"
+            self.x, self.y = landing
         elif t == 'G':
             self.cleared = True
         self.turns += 1
@@ -187,6 +202,7 @@ class Route:
     def collect_floor(self, verbose=True):
         """Clear every reachable reward and fight gates until the up stairs
         are reachable. Returns 'up', 'goal', or 'stuck'."""
+        previous_floor = self.floor
         while True:
             loot = self.loot_goals()
             path = self.bfs(loot) if loot else None
@@ -197,16 +213,18 @@ class Route:
                           f" at {target} from ({self.x},{self.y})")
                 self.walk(path)
                 continue
-            up = self.bfs({(5, 1)})
-            if up:
-                if self.maps[self.floor][1][5] == 'U':
-                    if verbose:
-                        print(f"  F{self.floor + 1} stairs at {(5, 1)}")
-                    self.walk(up)
+            stair = self.find_tile(self.floor, 'U')
+            goal = self.find_tile(self.floor, 'G')
+            destination = stair if stair is not None else goal
+            path = self.bfs({destination}) if destination is not None else None
+            if path is not None:
+                if verbose:
+                    print(f"  F{self.floor + 1} stairs at {destination}")
+                self.walk(path)
+                if self.cleared:
+                    return 'goal'
+                if self.floor != previous_floor:
                     return 'up'
-                if self.maps[self.floor][1][5] == 'G':
-                    self.walk(up)
-                    return 'goal' if self.cleared else 'stuck'
             enemies = self.enemy_goals()
             desired = self.guard_choices.get(self.floor + 1)
             if desired:
@@ -230,9 +248,13 @@ class Route:
     def descend(self):
         # The player spawns ON the down stair after entering a floor.
         # Move to an adjacent tile and step back onto D to descend.
-        neighbours = {(5 + dx, 9 + dy) for dx, dy in MOVE.values()
-                      if 0 <= 5 + dx < W and 0 <= 9 + dy < H
-                      and self.maps[self.floor][9 + dy][5 + dx] != '#'}
+        down = self.find_tile(self.floor, 'D')
+        if down is None:
+            return False
+        dx0, dy0 = down
+        neighbours = {(dx0 + dx, dy0 + dy) for dx, dy in MOVE.values()
+                      if 0 <= dx0 + dx < W and 0 <= dy0 + dy < H
+                      and self.maps[self.floor][dy0 + dy][dx0 + dx] != '#'}
         path = self.bfs(neighbours)
         if path is None:
             return False
@@ -241,7 +263,7 @@ class Route:
         if self.floor != previous_floor:
             return True
         direction = next((name for name, (dx, dy) in MOVE.items()
-                          if (self.x + dx, self.y + dy) == (5, 9)), None)
+                          if (self.x + dx, self.y + dy) == down), None)
         if direction is None:
             return False
         self.step(direction)

@@ -1,0 +1,476 @@
+--- a/main/game.c
++++ b/main/game.c
+@@ -5,8 +5,6 @@
+ #include "game.h"
+ #include "game_config.h"
+ #include "tower_floors.h"
+-/* Camera pan arrows encode their direction in a small byte. */
+-enum { CAM_PAN_NONE = 0, CAM_PAN_LEFT, CAM_PAN_RIGHT, CAM_PAN_UP, CAM_PAN_DOWN };
+ struct game_t {
+     game_config_t config;
+     game_snapshot_t state;
+@@ -24,8 +22,6 @@
+     enum { POINTER_NONE, POINTER_VOLUME, POINTER_BRIGHTNESS } pointer_control;
+     game_screen_t press_screen;
+     tower_phase_t press_phase;
+-    uint8_t cam_pan;
+-    uint8_t cam_repeat;
+ };
+ static bool inside(int x, int y, int bx, int by, int w, int h)
+ { return x >= bx && x < bx + w && y >= by && y < by + h; }
+@@ -57,93 +53,48 @@
+     if (max_y <= 0) g->state.camera_y = 0;
+     else if (g->state.camera_y > max_y) g->state.camera_y = (uint16_t)max_y;
+ }
+-/* Slide the camera by one tile when the player reaches the viewport edge.
+- * A one-tile look-ahead margin keeps the tile the player may step onto
+- * visible on floors larger than the viewport. */
++/* Edge paging overlaps three tiles. The overlap gives a stable return band:
++ * reversing one step after a page change cannot immediately flip it back. */
+ static void follow_camera(game_handle_t g)
+ {
+     const int max_x = camera_max_x(&g->state), max_y = camera_max_y(&g->state);
+     int cx = (int)g->state.camera_x, cy = (int)g->state.camera_y;
+     if (max_x > 0) {
+         const int px = (int)g->state.tower.x;
+-        if (px < cx + 1) cx = px - 1;
+-        else if (px > cx + TOWER_VIEW_W - 2) cx = px - (TOWER_VIEW_W - 2);
++        if (px <= cx && cx > 0) cx -= TOWER_VIEW_W - GAME_CAMERA_EDGE_OVERLAP;
++        else if (px >= cx + TOWER_VIEW_W - 1 && cx < max_x) cx += TOWER_VIEW_W - GAME_CAMERA_EDGE_OVERLAP;
+         if (cx < 0) cx = 0;
+         if (cx > max_x) cx = max_x;
+     } else cx = 0;
+     if (max_y > 0) {
+         const int py = (int)g->state.tower.y;
+-        if (py < cy + 1) cy = py - 1;
+-        else if (py > cy + TOWER_VIEW_H - 2) cy = py - (TOWER_VIEW_H - 2);
++        if (py <= cy && cy > 0) cy -= TOWER_VIEW_H - GAME_CAMERA_EDGE_OVERLAP;
++        else if (py >= cy + TOWER_VIEW_H - 1 && cy < max_y) cy += TOWER_VIEW_H - GAME_CAMERA_EDGE_OVERLAP;
+         if (cy < 0) cy = 0;
+         if (cy > max_y) cy = max_y;
+     } else cy = 0;
+     g->state.camera_x = (uint16_t)cx;
+     g->state.camera_y = (uint16_t)cy;
+ }
+-/* Panning may reveal more of the floor, but never scrolls the player out of
+- * the viewport: the camera stays within the player's inclusive 11x11 window. */
+-static void pan_camera(game_handle_t g, int dx, int dy)
+-{
+-    const int max_x = camera_max_x(&g->state), max_y = camera_max_y(&g->state);
+-    int cx = (int)g->state.camera_x + dx, cy = (int)g->state.camera_y + dy;
+-    if (max_x > 0) {
+-        int low = (int)g->state.tower.x - (TOWER_VIEW_W - 1);
+-        int high = (int)g->state.tower.x;
+-        if (low < 0) low = 0;
+-        if (low > max_x) low = max_x;
+-        if (high > max_x) high = max_x;
+-        if (cx < low) cx = low;
+-        if (cx > high) cx = high;
+-    } else cx = 0;
+-    if (max_y > 0) {
+-        int low = (int)g->state.tower.y - (TOWER_VIEW_H - 1);
+-        int high = (int)g->state.tower.y;
+-        if (low < 0) low = 0;
+-        if (low > max_y) low = max_y;
+-        if (high > max_y) high = max_y;
+-        if (cy < low) cy = low;
+-        if (cy > high) cy = high;
+-    } else cy = 0;
+-    if (cx != (int)g->state.camera_x || cy != (int)g->state.camera_y) {
+-        g->state.camera_x = (uint16_t)cx;
+-        g->state.camera_y = (uint16_t)cy;
+-        g->frame_pending = true;
+-    }
+-}
+-static void pan_camera_by_arrow(game_handle_t g)
+-{
+-    switch (g->cam_pan) {
+-    case CAM_PAN_LEFT: pan_camera(g, -1, 0); break;
+-    case CAM_PAN_RIGHT: pan_camera(g, 1, 0); break;
+-    case CAM_PAN_UP: pan_camera(g, 0, -1); break;
+-    case CAM_PAN_DOWN: pan_camera(g, 0, 1); break;
+-    default: break;
+-    }
+-}
+-/* Arrows only exist when the floor is larger than the viewport on that axis. */
+-static int camera_arrow_at(const game_snapshot_t *s, int x, int y)
+-{
+-    if (s->floor_w > TOWER_VIEW_W) {
+-        if (inside(x, y, GAME_CAM_LEFT_X, GAME_CAM_LEFT_Y,
+-                   GAME_CAM_ARROW, GAME_CAM_ARROW)) return CAM_PAN_LEFT;
+-        if (inside(x, y, GAME_CAM_RIGHT_X, GAME_CAM_RIGHT_Y,
+-                   GAME_CAM_ARROW, GAME_CAM_ARROW)) return CAM_PAN_RIGHT;
+-    }
+-    if (s->floor_h > TOWER_VIEW_H) {
+-        if (inside(x, y, GAME_CAM_UP_X, GAME_CAM_UP_Y,
+-                   GAME_CAM_ARROW, GAME_CAM_ARROW)) return CAM_PAN_UP;
+-        if (inside(x, y, GAME_CAM_DOWN_X, GAME_CAM_DOWN_Y,
+-                   GAME_CAM_ARROW, GAME_CAM_ARROW)) return CAM_PAN_DOWN;
+-    }
+-    return CAM_PAN_NONE;
++static void center_camera(game_handle_t g)
++{
++    int cx=(int)g->state.tower.x-TOWER_VIEW_W/2;
++    int cy=(int)g->state.tower.y-TOWER_VIEW_H/2;
++    if(cx<0) cx=0;
++    if(cy<0) cy=0;
++    g->state.camera_x=(uint16_t)cx;
++    g->state.camera_y=(uint16_t)cy;
++    clamp_camera(g);
+ }
+ static void refresh(game_handle_t g)
+ {
++    const uint32_t floor=g->state.tower.floor;
++    const uint32_t x=g->state.tower.x,y=g->state.tower.y;
+     (void)tower_read(g->model, &g->state.tower);
+     update_floor_shape(g);
+     clamp_camera(g);
+-    follow_camera(g);
++    if(floor!=g->state.tower.floor) center_camera(g);
++    else if(x!=g->state.tower.x || y!=g->state.tower.y) follow_camera(g);
+ }
+ static void set_screen(game_handle_t g, game_screen_t screen)
+ {
+@@ -235,8 +186,8 @@
+     g->state.anchor_cursor = 0;
+     g->state.camera_x = 0;
+     g->state.camera_y = 0;
+-    g->cam_pan = CAM_PAN_NONE;
+-    g->cam_repeat = 0;
++
++
+     clear_gain(g);
+     /* A new run starts from a checkpoint. Without storage there is nothing to
+      * checkpoint, so the run simply carries on un-saved. */
+@@ -249,6 +200,7 @@
+         notice(g, GAME_NOTICE_START);
+     }
+     refresh(g);
++    center_camera(g);
+     suppress_directions(g);
+ }
+ /* Floor changes auto-save; a same-floor action, the teleport menu itself and a
+@@ -286,26 +238,27 @@
+     g->state.paused = false;
+     g->state.camera_x = 0;
+     g->state.camera_y = 0;
+-    g->cam_pan = CAM_PAN_NONE;
++
+     clear_gain(g);
+     notice(g, GAME_NOTICE_RESTORED);
+     refresh(g);
++    center_camera(g);
+     g->state.anchor_cursor = anchor_cursor_for(g->state.tower.floor);
+     return true;
+ }
+ static void enter_game_over(game_handle_t g)
+ {
+     clear_feedback(g);
+-    g->cam_pan = CAM_PAN_NONE;
+-    g->cam_repeat = 0;
++
++
+     suppress_directions(g);
+     set_screen(g, GAME_OVER);
+ }
+ static void enter_victory(game_handle_t g)
+ {
+     clear_feedback(g);
+-    g->cam_pan = CAM_PAN_NONE;
+-    g->cam_repeat = 0;
++
++
+     suppress_directions(g);
+     set_screen(g, GAME_VICTORY);
+ }
+@@ -386,8 +339,8 @@
+         g->state.tower.phase != TOWER_PHASE_PLAY) return;
+     clear_feedback(g);
+     g->state.anchor_cursor = anchor_cursor_for(g->state.tower.floor);
+-    g->cam_pan = CAM_PAN_NONE;
+-    g->cam_repeat = 0;
++
++
+     suppress_directions(g);
+     set_screen(g, GAME_TELEPORT);
+     g->frame_pending = true;
+@@ -435,8 +388,8 @@
+ static void leave_victory(game_handle_t g)
+ {
+     clear_feedback(g);
+-    g->cam_pan = CAM_PAN_NONE;
+-    g->cam_repeat = 0;
++
++
+     suppress_directions(g);
+     g->state.anchor_cursor = anchor_cursor_for(g->state.tower.floor);
+     notice(g, GAME_NOTICE_SUMMIT);
+@@ -477,6 +430,7 @@
+         g->state.has_save = tower_import(g->model, g->save_bytes, sizeof(g->save_bytes)) == TOWER_OK;
+     tower_new(g->model);
+     refresh(g);
++    center_camera(g);
+     *out = g;
+     return true;
+ }
+@@ -485,8 +439,8 @@
+ {
+     if (!g) return;
+     suppress_directions(g);
+-    g->cam_pan = CAM_PAN_NONE;
+-    g->cam_repeat = 0;
++
++
+     clear_feedback(g);
+     g->frame_pending = true;
+     set_settings_open(g,false);
+@@ -497,7 +451,7 @@
+ {
+     if (g) {
+         suppress_directions(g);
+-        g->cam_pan = CAM_PAN_NONE;
++
+         if (g->state.paused != paused) { g->state.paused=paused; g->frame_pending=true; }
+     }
+ }
+@@ -636,21 +590,14 @@
+         suppress_directions(g);
+         g->press_settings=g->state.settings_open;
+         g->pointer_control=POINTER_NONE;
+-        g->cam_pan=CAM_PAN_NONE;
+-        g->cam_repeat=0;
++
++
+         if (g->press_settings) {
+             if (!g->brightness_pending) g->brightness_requested=g->state.brightness;
+             if (in_slider(x,y,GAME_SETTINGS_VOLUME_X,GAME_SETTINGS_VOLUME_Y,GAME_SETTINGS_VOLUME_W,GAME_SETTINGS_VOLUME_H))
+                 g->pointer_control=POINTER_VOLUME;
+             else if (in_slider(x,y,GAME_SETTINGS_BRIGHTNESS_X,GAME_SETTINGS_BRIGHTNESS_Y,GAME_SETTINGS_BRIGHTNESS_W,GAME_SETTINGS_BRIGHTNESS_H))
+                 g->pointer_control=POINTER_BRIGHTNESS;
+-        } else if (!g->state.paused && g->state.screen==GAME_DUNGEON &&
+-                   g->state.tower.phase==TOWER_PHASE_PLAY) {
+-            const int pan = camera_arrow_at(&g->state,x,y);
+-            if (pan) {
+-                g->cam_pan=(uint8_t)pan;
+-                pan_camera_by_arrow(g);
+-            }
+         }
+     }
+     g->state.pointer_x=x; g->state.pointer_y=y; g->state.pointer_down=pressed;
+@@ -661,12 +608,6 @@
+             abs(release_x-g->press_x)<10 && abs(release_y-g->press_y)<10)
+             tap(g,release_x,release_y);
+         g->pointer_control=POINTER_NONE;
+-        return;
+-    }
+-    /* A pan arrow consumes the press; releasing over it must not walk. */
+-    if (g->cam_pan != CAM_PAN_NONE) {
+-        g->cam_pan=CAM_PAN_NONE;
+-        g->cam_repeat=0;
+         return;
+     }
+     if (g->state.settings_open) return;
+@@ -777,20 +718,12 @@
+             return true;
+     return false;
+ }
+-/* Holding a pan arrow repeats at the same cadence as a held direction key. */
+-static bool repeating_camera(game_handle_t g)
+-{
+-    return g->cam_pan!=CAM_PAN_NONE && g->state.pointer_down && !g->state.paused &&
+-        !g->state.settings_open && g->state.screen==GAME_DUNGEON &&
+-        g->state.tower.phase==TOWER_PHASE_PLAY &&
+-        (g->state.floor_w>TOWER_VIEW_W || g->state.floor_h>TOWER_VIEW_H);
+-}
+ bool game_needs_redraw(game_handle_t g) { return g && g->frame_pending; }
+ void game_render_complete(game_handle_t g) { if (g) g->frame_pending=false; }
+ void game_request_redraw(game_handle_t g) { if (g) g->frame_pending=true; }
+ bool game_is_idle(game_handle_t g)
+ { return !g || (!g->frame_pending && !g->brightness_pending && expected_music(g)==g->state.music &&
+-                !repeating_direction(g) && !repeating_camera(g)); }
++                !repeating_direction(g)); }
+ void game_update(game_handle_t g)
+ {
+     if (!g) return;
+@@ -801,13 +734,8 @@
+         if (g->config.set_music) g->config.set_music(music);
+     }
+     const bool direction = repeating_direction(g);
+-    const bool camera = repeating_camera(g);
+-    if (!direction && !camera) return;
++    if (!direction) return;
+     ++g->state.tick;
+-    if (camera && ++g->cam_repeat>=GAME_KEY_REPEAT) {
+-        g->cam_repeat=0;
+-        pan_camera_by_arrow(g);
+-    }
+     if (direction && ++g->repeat>=GAME_KEY_REPEAT) {
+         g->repeat=0;
+         if (!g->state.pointer_down && g->state.screen==GAME_DUNGEON && g->state.tower.phase==TOWER_PHASE_PLAY)
+--- a/main/game_config.h
++++ b/main/game_config.h
+@@ -35,20 +35,9 @@
+     GAME_SETTINGS_BRIGHTNESS_W = 320, GAME_SETTINGS_BRIGHTNESS_H = 18,
+     GAME_SETTINGS_SLIDER_MARGIN = 12,
+     GAME_BRIGHTNESS_MIN = 10, GAME_BRIGHTNESS_MAX = 100, GAME_BRIGHTNESS_DEFAULT = 40,
+-    /* Camera pan arrows sit on the viewport edges. They pan only; movement
+-     * stays on tap-adjacent-tile and swipe so the control surface is unchanged
+-     * on floors that fit the viewport (the arrows are hidden there). */
+-    GAME_CAM_ARROW = 34,
+-    GAME_CAM_LEFT_X = GAME_MAP_X,
+-    GAME_CAM_RIGHT_X = GAME_MAP_X + GAME_TILE * 11 - GAME_CAM_ARROW,
+-    GAME_CAM_UP_Y = GAME_MAP_Y,
+-    GAME_CAM_DOWN_Y = GAME_MAP_Y + GAME_TILE * 11 - GAME_CAM_ARROW,
+-    /* The left/right arrows are vertically centred and the up/down arrows are
+-     * horizontally centred, so all four hug the middle of their edge. */
+-    GAME_CAM_LEFT_Y = GAME_MAP_Y + (GAME_TILE * 11 - GAME_CAM_ARROW) / 2,
+-    GAME_CAM_RIGHT_Y = GAME_MAP_Y + (GAME_TILE * 11 - GAME_CAM_ARROW) / 2,
+-    GAME_CAM_UP_X = GAME_MAP_X + (GAME_TILE * 11 - GAME_CAM_ARROW) / 2,
+-    GAME_CAM_DOWN_X = GAME_MAP_X + (GAME_TILE * 11 - GAME_CAM_ARROW) / 2,
++    /* Camera pages at an entered edge with a three-tile overlap. No camera
++     * touch controls overlay the map; the visible extension hint is paint only. */
++    GAME_CAMERA_EDGE_OVERLAP = 3, GAME_CAMERA_EDGE_HINT = 8,
+     /* Teleport panel: the six chapter anchors in a fixed 2x3 grid. There is
+      * no paging because there is nothing else to list. */
+     GAME_TELEPORT_PANEL_X = 48, GAME_TELEPORT_PANEL_Y = 96,
+--- a/main/game_view.c
++++ b/main/game_view.c
+@@ -353,66 +353,22 @@
+ { return s->floor_w>TOWER_VIEW_W?(int)s->floor_w-TOWER_VIEW_W:0; }
+ static int camera_max_y(const game_snapshot_t *s)
+ { return s->floor_h>TOWER_VIEW_H?(int)s->floor_h-TOWER_VIEW_H:0; }
+-static bool can_pan_left(const game_snapshot_t *s)
+-{
+-    int low=(int)s->tower.x-(TOWER_VIEW_W-1);
+-    if(low<0) low=0;
+-    return s->camera_x>(uint16_t)low;
+-}
+-static bool can_pan_right(const game_snapshot_t *s)
+-{
+-    int high=(int)s->tower.x;
+-    const int maximum=camera_max_x(s);
+-    if(high>maximum) high=maximum;
+-    return s->camera_x<(uint16_t)high;
+-}
+-static bool can_pan_up(const game_snapshot_t *s)
+-{
+-    int low=(int)s->tower.y-(TOWER_VIEW_H-1);
+-    if(low<0) low=0;
+-    return s->camera_y>(uint16_t)low;
+-}
+-static bool can_pan_down(const game_snapshot_t *s)
+-{
+-    int high=(int)s->tower.y;
+-    const int maximum=camera_max_y(s);
+-    if(high>maximum) high=maximum;
+-    return s->camera_y<(uint16_t)high;
+-}
+-enum { ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ARROW_DOWN };
+-/* Four translucent pan arrows sit on the viewport edges; each is dimmed when
+- * the camera cannot move further in that direction without hiding the player. */
+-static void camera_arrow(int x,int y,int direction,bool enabled,Color accent)
+-{
+-    const int a=GAME_CAM_ARROW;
+-    const int cx=x+a/2, cy=y+a/2;
+-    const Color ink=Fade(WHITE_INK,enabled?.78f:.22f);
+-    DrawRectangle(x,y,a,a,Fade(INK,.42f));
+-    DrawRectangleLines(x,y,a,a,Fade(accent,enabled?.55f:.18f));
+-    switch(direction){
+-    case ARROW_LEFT:
+-        DrawTriangle((Vector2){cx-8,cy},(Vector2){cx+6,cy-9},(Vector2){cx+6,cy+9},ink);
+-        break;
+-    case ARROW_RIGHT:
+-        DrawTriangle((Vector2){cx+8,cy},(Vector2){cx-6,cy-9},(Vector2){cx-6,cy+9},ink);
+-        break;
+-    case ARROW_UP:
+-        DrawTriangle((Vector2){cx,cy-8},(Vector2){cx-9,cy+6},(Vector2){cx+9,cy+6},ink);
+-        break;
+-    default:
+-        DrawTriangle((Vector2){cx,cy+8},(Vector2){cx-9,cy-6},(Vector2){cx+9,cy-6},ink);
+-        break;
+-    }
+-}
+-static void camera_arrows(const game_snapshot_t *s,Color accent)
+-{
+-    if(s->floor_w>TOWER_VIEW_W){
+-        camera_arrow(GAME_CAM_LEFT_X,GAME_CAM_LEFT_Y,ARROW_LEFT,can_pan_left(s),accent);
+-        camera_arrow(GAME_CAM_RIGHT_X,GAME_CAM_RIGHT_Y,ARROW_RIGHT,can_pan_right(s),accent);
+-    }
+-    if(s->floor_h>TOWER_VIEW_H){
+-        camera_arrow(GAME_CAM_UP_X,GAME_CAM_UP_Y,ARROW_UP,can_pan_up(s),accent);
+-        camera_arrow(GAME_CAM_DOWN_X,GAME_CAM_DOWN_Y,ARROW_DOWN,can_pan_down(s),accent);
++/* A hint is paint only: no hit rectangles, held controls or idle work. */
++static void camera_edges(const game_snapshot_t *s,Color background)
++{
++    const int extent=GAME_TILE*TOWER_VIEW_W;
++    for(int band=0;band<2;++band) {
++        const int inset=band*GAME_CAMERA_EDGE_HINT/2;
++        const int width=GAME_CAMERA_EDGE_HINT/2;
++        const Color tint=Fade(background,band==0?.62f:.28f);
++        if(s->camera_x>0)
++            DrawRectangle(GAME_MAP_X+inset,GAME_MAP_Y,width,extent,tint);
++        if(s->camera_x<(unsigned)camera_max_x(s))
++            DrawRectangle(GAME_MAP_X+extent-inset-width,GAME_MAP_Y,width,extent,tint);
++        if(s->camera_y>0)
++            DrawRectangle(GAME_MAP_X,GAME_MAP_Y+inset,extent,width,tint);
++        if(s->camera_y<(unsigned)camera_max_y(s))
++            DrawRectangle(GAME_MAP_X,GAME_MAP_Y+extent-inset-width,extent,width,tint);
+     }
+ }
+ static void ascii_center(const char *text,int y,int size,Color color)
+@@ -852,6 +808,26 @@
+     default: return false;
+     }
+ }
++/* A terminal-bodied tower builder, not the robed village NPC. Map and dialog
++ * use the same original pixel drawing at integer scales, without animation. */
++static void gpt_robot(int x,int y,int scale)
++{
++    const Color shell={151,200,183,255},screen={24,48,45,255};
++    DrawRectangle(x+15*scale,y+1*scale,2*scale,4*scale,MINT);
++    DrawRectangle(x+7*scale,y+5*scale,18*scale,12*scale,shell);
++    DrawRectangle(x+9*scale,y+7*scale,14*scale,7*scale,screen);
++    DrawRectangle(x+11*scale,y+9*scale,3*scale,2*scale,MINT);
++    DrawRectangle(x+18*scale,y+9*scale,3*scale,2*scale,MINT);
++    DrawRectangle(x+10*scale,y+18*scale,12*scale,10*scale,EDGE);
++    DrawRectangle(x+13*scale,y+20*scale,6*scale,5*scale,MINT);
++    DrawRectangle(x+15*scale,y+21*scale,2*scale,3*scale,screen);
++    DrawRectangle(x+5*scale,y+19*scale,4*scale,7*scale,shell);
++    DrawRectangle(x+23*scale,y+19*scale,4*scale,7*scale,shell);
++    DrawRectangle(x+9*scale,y+28*scale,5*scale,3*scale,BRASS);
++    DrawRectangle(x+18*scale,y+28*scale,5*scale,3*scale,BRASS);
++}
++static bool is_gpt(const game_snapshot_t *s,int x,int y)
++{ return s->tower.floor==46u && x==12 && y==14; }
+ static void story_modal(const game_snapshot_t *s)
+ {
+     const unsigned slot=floor_slot(s);
+@@ -863,7 +839,8 @@
+     ui_draw_cjk15(tx(s,name),48,138,BRASS);
+     DrawRectangle(38,160,96,150,INK);
+     DrawRectangleLines(38,160,96,150,EDGE);
+-    npc_portrait(38,160,s->tick);
++    if(is_gpt(s,(int)s->tower.x,(int)s->tower.y)) gpt_robot(38,185,3);
++    else npc_portrait(38,160,s->tick);
+     DrawLine(142,160,142,316,EDGE);
+     if(s->lang==GAME_LANG_EN){
+         char paragraph[220];
+@@ -962,7 +939,8 @@
+         else {
+             scene_floor(sc,sx,sy,x,y);
+             /* No time-driven animation: an unchanged scene stays pixel-identical. */
+-            tile_sprite(tile,sx,sy,0,sc->accent);
++            if(tile==TOWER_TILE_NPC && is_gpt(s,x,y)) gpt_robot(sx,sy,1);
++            else tile_sprite(tile,sx,sy,0,sc->accent);
+         }
+     }
+     if(s->tower.cleared && s->tower.floor+1>=TOWER_FLOORS) {
+@@ -975,7 +953,7 @@
+     const int hy=GAME_MAP_Y+((int)s->tower.y-(int)s->camera_y)*GAME_TILE;
+     DrawRectangleLines(hx,hy,GAME_TILE,GAME_TILE,sc->accent);
+     knight(hx+3,hy+3,true);
+-    camera_arrows(s,sc->accent);
++    camera_edges(s,sc->bg);
+     const text_t *msg=NULL;
+     char gain_text[64];
+     Color gain_color=MINT;

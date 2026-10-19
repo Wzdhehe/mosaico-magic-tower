@@ -8,13 +8,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class UIGlyphs(unittest.TestCase):
     def test_authored_text_is_renderable(self):
-        source = (ROOT / "main/game_view.c").read_text(encoding="utf-8")
+        source = '\n'.join((ROOT / 'main' / name).read_text(encoding='utf-8')
+                           for name in ('game_view.c','game.c','campaign_dialogue.h'))
         strings = re.findall(r'"(?:\\.|[^"\\])*"', source)
         required = {ord(ch) for value in strings for ch in value if ord(ch) > 127}
         header = (ROOT / "main/ui_font.h").read_text(encoding="utf-8")
         glyphs = [int(cp, 16) for cp in re.findall(r'\{0x([0-9a-fA-F]+),\s*\{', header)]
         self.assertTrue(required)
-        self.assertEqual(glyphs, sorted(set(glyphs)), "binary lookup needs sorted unique glyphs")
+        self.assertEqual(glyphs, sorted(set(glyphs)), "generated glyphs must remain sorted and unique")
         missing = required - set(glyphs)
         self.assertFalse(missing, "Missing UI glyphs: " + "".join(map(chr, sorted(missing))))
 

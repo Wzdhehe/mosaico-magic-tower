@@ -4,6 +4,7 @@
 #include <string.h>
 #include "game.h"
 #include "game_config.h"
+#include "campaign_dialogue.h"
 #include "mosaico_raylib_fast.h"
 #include "ui_font.h"
 
@@ -15,9 +16,36 @@ static const Color RED_INK={225,110,111,255};
 static const Color KEY_BLUE={107,179,232,255};
 static const Color ROBE={156,126,196,255}, GOLEM_STONE={154,148,136,255};
 
+enum {
+    SCENE_GATE, SCENE_ARMORY, SCENE_ARCHIVE, SCENE_GARDEN, SCENE_CISTERN,
+    SCENE_BARRACKS, SCENE_CRYPT, SCENE_SAND, SCENE_ASTRAL, SCENE_THRONE
+};
+typedef struct {
+    Color bg, floor_a, floor_b, wall, wall_hi, wall_lo, accent, carpet;
+    unsigned char style;
+} scene_t;
+/* Each floor gets its own quiet palette; the four-quadrant plans keep the
+ * scene readable behind bright pickups and enemies. */
+/* Both floor sizes and the scene roster grow by region of ten floors, so the
+ * ten authored themes and stories repeat every ten floors (floor 50 is the
+ * tenth theme, the throne). */
+enum { FLOOR_THEMES = 10 };
+static const scene_t SCENES[FLOOR_THEMES]={
+ {{12,17,24,255},{29,38,50,255},{25,33,44,255},{58,68,84,255},{88,99,114,255},{39,47,59,255},{226,188,112,255},{60,40,34,255},SCENE_GATE},
+ {{20,16,13,255},{42,35,27,255},{37,31,24,255},{76,61,45,255},{112,90,64,255},{49,39,30,255},{218,166,102,255},{54,40,27,255},SCENE_ARMORY},
+ {{16,13,24,255},{38,30,51,255},{33,26,45,255},{62,50,80,255},{94,78,118,255},{42,33,56,255},{177,147,224,255},{44,30,50,255},SCENE_ARCHIVE},
+ {{8,20,17,255},{31,50,38,255},{27,44,34,255},{54,72,59,255},{84,106,85,255},{35,49,40,255},{140,220,170,255},{40,58,38,255},SCENE_GARDEN},
+ {{7,17,23,255},{25,45,51,255},{22,39,45,255},{45,72,80,255},{72,106,112,255},{30,48,54,255},{107,190,232,255},{26,46,48,255},SCENE_CISTERN},
+ {{22,14,14,255},{47,32,29,255},{41,28,26,255},{80,52,46,255},{118,78,66,255},{51,33,31,255},{230,120,110,255},{70,35,30,255},SCENE_BARRACKS},
+ {{17,12,22,255},{39,29,45,255},{34,25,40,255},{62,48,68,255},{94,74,98,255},{41,32,47,255},{198,154,216,255},{52,32,50,255},SCENE_CRYPT},
+ {{27,22,13,255},{64,51,33,255},{57,46,30,255},{98,78,48,255},{138,110,68,255},{64,51,34,255},{232,194,116,255},{72,50,32,255},SCENE_SAND},
+ {{8,11,25,255},{26,30,56,255},{22,26,49,255},{44,50,86,255},{73,83,128,255},{29,34,60,255},{132,222,224,255},{34,36,66,255},SCENE_ASTRAL},
+ {{18,9,12,255},{47,27,29,255},{40,23,25,255},{68,39,39,255},{106,60,52,255},{44,26,28,255},{232,192,112,255},{92,28,34,255},SCENE_THRONE},
+};
+
 typedef struct { const char *zh, *en; } text_t;
 static const text_t T_TITLE={"魔塔","MAGIC TOWER"};
-static const text_t T_SUBTITLE={"十层试炼","TEN FLOORS"};
+static const text_t T_SUBTITLE={"五十层试炼","FIFTY FLOORS"};
 static const text_t T_NEW={"新的旅程","NEW JOURNEY"};
 static const text_t T_CONTINUE={"继续旅程","CONTINUE"};
 static const text_t T_NO_SAVE={"暂无存档","NO SAVE YET"};
@@ -27,8 +55,6 @@ static const text_t T_FLOOR={"第 %u 层","FLOOR %02u"};
 static const text_t T_SUMMIT={"塔顶","SUMMIT"};
 static const text_t T_KEY={"钥匙","KEY"};
 static const text_t T_GOLD={"金币","GOLD"};
-static const text_t T_SAVE={"存档","SAVE"};
-static const text_t T_LOAD={"读取","LOAD"};
 static const text_t T_NEW_GAME={"新游戏","NEW"};
 static const text_t T_DAMAGE={"伤害","DAMAGE"};
 static const text_t T_VOLUME={"音量","VOLUME"};
@@ -42,9 +68,9 @@ static const text_t T_PREFERENCES_FAILED={"设置保存失败，请重试","Sett
 static const text_t T_BACK={"返回","BACK"};
 static const text_t T_FIGHT={"战斗","FIGHT"};
 static const text_t T_RESTART={"重新开始？","RESTART?"};
-static const text_t T_UNSAVED={"未保存的进度将丢失","Progress will be lost"};
+static const text_t T_UNSAVED={"未保存的进度将丢失","All progress is lost"};
 static const text_t T_PAUSED={"暂停","PAUSED"};
-static const text_t T_SUMMIT_REACHED={"魔王陨落，公主获救","DEMON KING FALLS - PRINCESS SAVED"};
+static const text_t T_SUMMIT_REACHED={"魔王陨落，公主获救","The king falls. You win."};
 static const text_t T_SHOP={"商店","SHOP"};
 static const text_t T_SHOP_ATK={"攻击 +3","ATK +3"};
 static const text_t T_SHOP_DEF={"防御 +3","DEF +3"};
@@ -52,45 +78,79 @@ static const text_t T_LEAVE={"离开","LEAVE"};
 static const text_t T_BOUGHT={"已购买","BOUGHT"};
 static const text_t T_NO_GOLD={"金币不足","NOT ENOUGH GOLD"};
 static const text_t T_TALK_CONTINUE={"继续","CONTINUE"};
+static const text_t T_TELEPORT={"传送","WARP"};
+static const text_t T_TELEPORT_TITLE={"传送 · 章节锚点","WARP · CHAPTER ANCHORS"};
+static const text_t T_ANCHOR_LOCKED={"未解锁","LOCKED"};
+static const text_t T_ANCHOR_HERE={"当前","HERE"};
+static const text_t T_ANCHOR_HINT={"通关一章，点亮下一个传送点","Clear chapters. Unlock anchors"};
+static const text_t T_RESTART_GAME={"重开","RESTART"};
+static const text_t T_RESTART_HINT={"本层未保存的操作将丢失","Unsaved steps are lost"};
+static const text_t T_RETRY_FAILED={"读取失败，当前旅程未变","Load failed. No changes"};
+static const text_t T_CANCEL={"取消","CANCEL"};
+static const text_t T_LOAD_CHECKPOINT={"从检查点重试","RETRY CHECKPOINT"};
+static const text_t T_DEAD={"你战败了","DEFEATED"};
+static const text_t T_VICTORY={"通关","VICTORY"};
+static const text_t T_EXPLORE={"继续探索","EXPLORE"};
+static const text_t T_TURNS={"移动","MOVES"};
 
-typedef struct { const char *zh[2], *en[2]; } story_t;
-/* One short two-line conversation per floor. These carry the original
- * Magic Tower premise: the princess is held at the summit, and the tower's
- * coloured keys are the only way through its seals. */
-static const story_t STORY[TOWER_FLOORS]={
-    {{"魔王掳走了公主，囚禁在塔顶。","钥匙颜色对应门。别硬闯。"},
-     {"The Demon King holds the princess at the summit.","Keys match doors. Do not rush in."}},
-    {{"购买攻击或防御。","金币不足就离开。"},
-     {"Buying power or defence costs gold.","Each purchase raises the next price."}},
-    {{"西侧蓝门后藏着红钥匙。","四层有第二把蓝钥匙。"},
-     {"The west vault hides a red key.","Find another blue key on floor four."}},
-    {{"先开右侧蓝门继续前进。","左边红门藏着备用资源。"},
-     {"The right blue gate is the way onward.","The left red vault holds spare supplies."}},
-    {{"旧书库只认红钥匙。","没有就回三层的密室找。"},
-     {"The archive seal needs a red key.","Search the sealed room on floor three."}},
-    {{"法师守着防御宝石。","石魔守着攻击宝石。"},
-     {"The mage guards defence.","The golem guards attack. Choose a path."}},
-    {{"东侧怨灵守着红钥匙。","八层的封印也在等它。"},
-     {"A wraith guards the eastern red key.","Floor eight has a matching seal."}},
-    {{"牢房上方的红门封住出口。","资源不足就返回下层。"},
-     {"A red lock seals the upper exit.","Go below if you need more supplies."}},
-    {{"石魔守防御，怨灵守攻击。","先选择，再看伤害。"},
-     {"Golem guards defence; wraith guards attack.","Each choice changes the final battle."}},
-    {{"魔王就挡在最后的门前。","算清伤害，再决定是否开战。"},
-     {"The Demon King blocks the final way.","Check the damage before you commit."}},
+static const text_t SCENE_NAME[TOWER_FLOORS]={
+    {"破门","Broken Gate"},
+    {"偏院","Side Court"},
+    {"旧库","Old Archive"},
+    {"哨楼","Watchtower"},
+    {"军械库","Armory"},
+    {"军需站","Supply Post"},
+    {"守望台","Lookout"},
+    {"旧营房","Old Camp"},
+    {"封门前厅","Sealed Hall"},
+    {"队长之门","Captain"},
+    {"双岸","Two Banks"},
+    {"泵房","Pump Room"},
+    {"外堤","Outer Levee"},
+    {"阀厅","Valve Hall"},
+    {"沉库","Sunken Stores"},
+    {"渡守庭","Ferry Court"},
+    {"旧宿舍","Old Dormitory"},
+    {"回流渠","Return Channel"},
+    {"双岸合流","Joined Banks"},
+    {"渡守","Ferryman"},
+    {"运料场","Loading Yard"},
+    {"废炉","Cold Furnace"},
+    {"分货库","Warehouse"},
+    {"精铸室","Fine Casting"},
+    {"交易所","Exchange"},
+    {"灰烬回道","Ash Return"},
+    {"账房","Ledger Room"},
+    {"封存炉","Sealed Furnace"},
+    {"熄火桥","Cold Bridge"},
+    {"炉心","Furnace Heart"},
+    {"王城前庭","Court Gates"},
+    {"王室税库","Royal Treasury"},
+    {"礼拜堂","Chapel"},
+    {"双翼兵营","Two Barracks"},
+    {"禁书室","Forbidden Books"},
+    {"长廊","Long Gallery"},
+    {"旧王寝","Royal Bed"},
+    {"王城侧库","Side Stores"},
+    {"守誓门","Oath Gate"},
+    {"守誓者","Oathkeeper"},
+    {"裂阶","Broken Stairs"},
+    {"旧观测室","Observatory"},
+    {"镜廊","Mirror Gallery"},
+    {"星钥仓","Star Stores"},
+    {"冠冕厅","Crown Hall"},
+    {"回响阶","Echo Stairs"},
+    {"归还之室","Return Room"},
+    {"封印庭","Seal Court"},
+    {"王座前室","Antechamber"},
+    {"星冠王座","Crown Throne"},
 };
-
-static const text_t NPC_NAME[TOWER_FLOORS]={
-    {"守夜人","WATCHMAN"},
-    {"吟游诗人","BARD"},
-    {"侍女幽魂","GHOST MAID"},
-    {"守卫亡魂","FALLEN GUARD"},
-    {"老学者","SCHOLAR"},
-    {"伤兵","WOUNDED SOLDIER"},
-    {"黑祭司","DARK PRIESTESS"},
-    {"骑士团长","KNIGHT COMMANDER"},
-    {"公主回声","PRINCESS ECHO"},
-    {"公主","PRINCESS"},
+/* The five regions named by docs/TOWER50_DESIGN_SPINE.md; one per pair of
+ * chapter anchors (10, 20, 30, 40, 50). */
+static const text_t REGION_NAME[5]={
+    {"断门城塞","BROKEN GATE"}, {"沉水回廊","SUNKEN HALL"},
+    {"灰烬工坊","ASH WORKS"}, {"静默王城","STILL COURT"},
+    {"星冠高塔","STAR CROWN"},
 };
 
 static const char *tx(const game_snapshot_t *s, const text_t *t)
@@ -111,7 +171,12 @@ static const text_t STATUS_TEXT[]={
     {"塔顶信标已点亮！","Beacon lit! Tower cleared"},
     {"商店：购买或离开","Merchant: buy or leave"},
     {"金币不足","Not enough gold"},
-    {"有人想和你说话","Someone wants to talk"}
+    {"有人想和你说话","Someone wants to talk"},
+    {"你战败了","You have fallen"},
+    {"密室开了","A secret chamber opened"},
+    {"有变动","Something changed"},
+    {"传送点尚未解锁","This anchor is still locked"},
+    {"本章已通，传送点已解锁","Chapter cleared: anchor lit"}
 };
 static const text_t NOTICE_TEXT[]={
     {"",""},
@@ -121,7 +186,8 @@ static const text_t NOTICE_TEXT[]={
     {"存档已损坏，旅程未变","Save damaged. Journey unchanged."},
     {"旅程已恢复","Journey restored."},
     {"保存失败，请重试","Save failed. Try again."},
-    {"塔顶到达！可返回或探索","SUMMIT REACHED! Return or explore."}
+    {"塔顶到达！可返回或探索","SUMMIT REACHED! Return or explore."},
+    {"本章已通，传送点已解锁","Chapter cleared - anchor unlocked."}
 };
 
 static const ui_glyph_t *glyph_for(uint32_t cp)
@@ -229,65 +295,40 @@ static void ui_draw_cjk15(const char *text,int x,int y,Color color)
         x+=25;
     }
 }
-static void ui_draw_cjk16(const char *text,int x,int y,Color color)
-{ ui_draw(text,x,y,1,color); }
-static int cjk_line_count(const char *text,int max_chars)
-{
-    int count=0; uint32_t cp;
-    if(!text||!max_chars) return 0;
-    while(*text){ utf8_next(&text,&cp); ++count; }
-    return (count+max_chars-1)/max_chars;
-}
-static bool closing_punctuation(uint32_t cp)
-{
-    switch(cp){
-    case 0x3002: case 0xFF0C: case 0xFF01: case 0xFF1F:
-    case 0xFF1B: case 0xFF1A: case 0x3001: case 0xFF09:
-    case 0x3011: case 0x300B: case 0x300D: case 0x300F:
-    case 0x2026:
-        return true;
-    default:
-        return false;
-    }
-}
-static int ui_draw_wrap_cjk(const char *text,int x,int y,int max_chars,
-                            int line_height,Color color,int max_lines,bool large)
-{
-    const char *start=text,*p=text;
-    char line[128];
-    int count=0,lines=0;
-    while(*p&&lines<max_lines){
-        if(count>=max_chars){
-            const char *peek=p; uint32_t cp=0;
-            utf8_next(&peek,&cp);
-            if(!closing_punctuation(cp)){
-                size_t n=(size_t)(p-start);
-                if(n>=sizeof(line)) n=sizeof(line)-1;
-                memcpy(line,start,n); line[n]=0;
-                large?ui_draw_cjk15(line,x,y,color):ui_draw_cjk16(line,x,y,color);
-                y+=line_height; ++lines; start=p; count=0;
-                if(lines>=max_lines) break;
-            }
-        }
-        const char *next=p; uint32_t cp;
-        utf8_next(&next,&cp);
-        p=next; ++count;
-    }
-    if(start<p&&lines<max_lines){
-        size_t n=(size_t)(p-start);
-        if(n>=sizeof(line)) n=sizeof(line)-1;
-        memcpy(line,start,n); line[n]=0;
-        large?ui_draw_cjk15(line,x,y,color):ui_draw_cjk16(line,x,y,color);
-        ++lines;
-    }
-    return lines;
-}
+
+
+
+
 static void button(const game_snapshot_t *s,const text_t *label,int x,int y,int w,int h,bool active)
 {
     const char *text=label?tx(s,label):"";
     DrawRectangle(x,y,w,h,active?BRASS:PANEL);
     DrawRectangleLines(x,y,w,h,active?BRASS:EDGE);
     if(text[0]) ui_draw(text,x+(w-ui_width(text,1))/2,y+(h-16)/2,1,active?INK:WHITE_INK);
+}
+static int footer_button_x(int index)
+{ return GAME_FOOTER_X + index*(GAME_BUTTON_W+GAME_BUTTON_GAP); }
+static int camera_max_x(const game_snapshot_t *s)
+{ return s->floor_w>TOWER_VIEW_W?(int)s->floor_w-TOWER_VIEW_W:0; }
+static int camera_max_y(const game_snapshot_t *s)
+{ return s->floor_h>TOWER_VIEW_H?(int)s->floor_h-TOWER_VIEW_H:0; }
+/* A hint is paint only: no hit rectangles, held controls or idle work. */
+static void camera_edges(const game_snapshot_t *s,Color background)
+{
+    const int extent=GAME_TILE*TOWER_VIEW_W;
+    for(int band=0;band<2;++band) {
+        const int inset=band*GAME_CAMERA_EDGE_HINT/2;
+        const int width=GAME_CAMERA_EDGE_HINT/2;
+        const Color tint=Fade(background,band==0?.62f:.28f);
+        if(s->camera_x>0)
+            DrawRectangle(GAME_MAP_X+inset,GAME_MAP_Y,width,extent,tint);
+        if(s->camera_x<(unsigned)camera_max_x(s))
+            DrawRectangle(GAME_MAP_X+extent-inset-width,GAME_MAP_Y,width,extent,tint);
+        if(s->camera_y>0)
+            DrawRectangle(GAME_MAP_X,GAME_MAP_Y+inset,extent,width,tint);
+        if(s->camera_y<(unsigned)camera_max_y(s))
+            DrawRectangle(GAME_MAP_X,GAME_MAP_Y+extent-inset-width,extent,width,tint);
+    }
 }
 static void ascii_center(const char *text,int y,int size,Color color)
 { MosaicoFastDrawText(text,(GAME_WIDTH-MosaicoFastMeasureText(text,size))/2,y,size,color); }
@@ -428,7 +469,7 @@ static void shop_sprite(int x,int y)
     DrawRectangle(x+12,y+14,4,3,BRASS);
     DrawRectangle(x+4,y+20,3,3,STONE); DrawRectangle(x+20,y+20,3,3,STONE);
 }
-static void tile_sprite(tower_tile_t tile,int x,int y,uint32_t tick)
+static void tile_sprite(tower_tile_t tile,int x,int y,uint32_t tick,Color accent)
 {
     if(tile==TOWER_TILE_WALL) {
         DrawRectangle(x+1,y+1,GAME_TILE-2,GAME_TILE-2,STONE);
@@ -481,7 +522,7 @@ static void tile_sprite(tower_tile_t tile,int x,int y,uint32_t tick)
     else if(tile==TOWER_TILE_UP || tile==TOWER_TILE_DOWN) {
         for(int i=0;i<4;++i) {
             int row=tile==TOWER_TILE_UP?i:3-i;
-            DrawRectangle(x+4+i*3,y+5+row*4,19-i*3,3,MUTED);
+            DrawRectangle(x+4+i*3,y+5+row*4,19-i*3,3,accent);
         }
     } else if(tile==TOWER_TILE_GOAL) {
         DrawRectangle(x+8,y+11,11,11,BRASS); DrawRectangle(x+5,y+6,4,8,BRASS);
@@ -489,6 +530,115 @@ static void tile_sprite(tower_tile_t tile,int x,int y,uint32_t tick)
         DrawRectangle(x+9,y+14,10,3,RED_INK);
     }
 }
+
+static void scene_floor(const scene_t *sc,int sx,int sy,int x,int y)
+{
+    Color base=((x+y)&1)?sc->floor_a:sc->floor_b;
+    if(sc->style==SCENE_THRONE && x==5) base=sc->carpet;
+    DrawRectangle(sx,sy,GAME_TILE,GAME_TILE,base);
+    switch(sc->style) {
+    case SCENE_GATE:
+        DrawLine(sx+2,sy+16,sx+15,sy+16,sc->wall_lo);
+        DrawLine(sx+17,sy+16,sx+29,sy+16,sc->wall_lo);
+        break;
+    case SCENE_ARMORY:
+        DrawLine(sx+3,sy+24,sx+28,sy+24,sc->wall_lo);
+        DrawRectangle(sx+6,sy+7,2,2,sc->wall_hi);
+        DrawRectangle(sx+24,sy+7,2,2,sc->wall_hi);
+        break;
+    case SCENE_ARCHIVE:
+        DrawLine(sx+4,sy+3,sx+4,sy+14,sc->wall_lo);
+        DrawLine(sx+27,sy+18,sx+27,sy+29,sc->wall_lo);
+        if(((x*3+y)&7)==0) DrawRectangle(sx+14,sy+25,4,2,sc->accent);
+        break;
+    case SCENE_GARDEN:
+        DrawRectangle(sx+4+((x*3+y*5)%12),sy+23,2,3,sc->accent);
+        DrawRectangle(sx+20-((x+y*3)%10),sy+26,3,2,sc->wall_hi);
+        break;
+    case SCENE_CISTERN:
+        DrawLine(sx+3,sy+24,sx+12+((x+y)%8),sy+24,sc->wall_hi);
+        DrawPixel(sx+22,sy+22,sc->accent);
+        break;
+    case SCENE_BARRACKS:
+        DrawLine(sx+2,sy+12,sx+29,sy+12,sc->wall_lo);
+        DrawRectangle(sx+23,sy+22,4,3,sc->accent);
+        break;
+    case SCENE_CRYPT:
+        DrawLine(sx+5,sy+25,sx+10,sy+20,sc->wall_lo);
+        DrawLine(sx+19,sy+5,sx+25,sy+11,sc->wall_lo);
+        break;
+    case SCENE_SAND:
+        DrawLine(sx+3,sy+22,sx+14,sy+22,sc->wall_hi);
+        DrawLine(sx+16,sy+26,sx+29,sy+26,sc->wall_hi);
+        DrawPixel(sx+8,sy+7,sc->accent);
+        break;
+    case SCENE_ASTRAL:
+        DrawPixel(sx+4+((x*7+y*3)%24),sy+4+((x*5+y*11)%24),sc->accent);
+        DrawPixel(sx+4+((x*11+y*7)%24),sy+4+((x*3+y*5)%24),sc->wall_hi);
+        break;
+    case SCENE_THRONE:
+        if(x==5) {
+            DrawLine(sx+2,sy,sx+2,sy+31,sc->accent);
+            DrawLine(sx+29,sy,sx+29,sy+31,sc->accent);
+        } else if(((x+y)&3)==0) DrawPixel(sx+16,sy+16,sc->accent);
+        break;
+    default: break;
+    }
+}
+static void scene_wall(const scene_t *sc,int sx,int sy,int x,int y)
+{
+    DrawRectangle(sx+1,sy+1,30,30,sc->wall);
+    DrawRectangle(sx+1,sy+1,30,2,sc->wall_hi);
+    DrawLine(sx+1,sy+16,sx+30,sy+16,sc->wall_lo);
+    DrawLine(sx+16,sy+3,sx+16,sy+15,sc->wall_lo);
+    DrawLine(sx+9,sy+17,sx+9,sy+30,sc->wall_lo);
+    switch(sc->style) {
+    case SCENE_GATE:
+        if(((x+y)&1)==0) DrawLine(sx+21,sy+21,sx+25,sy+26,sc->wall_lo);
+        break;
+    case SCENE_ARMORY:
+        DrawRectangle(sx+4,sy+4,2,2,sc->accent);
+        DrawRectangle(sx+26,sy+4,2,2,sc->accent);
+        DrawRectangle(sx+4,sy+26,2,2,sc->accent);
+        DrawRectangle(sx+26,sy+26,2,2,sc->accent);
+        break;
+    case SCENE_ARCHIVE:
+        DrawRectangle(sx+3,sy+4,2,10,sc->wall_hi);
+        DrawRectangle(sx+27,sy+18,2,10,sc->wall_hi);
+        break;
+    case SCENE_GARDEN:
+        DrawRectangle(sx+1,sy+27,30,3,sc->wall_lo);
+        DrawRectangle(sx+4+((x*5+y)%18),sy+4,2,5,sc->accent);
+        break;
+    case SCENE_CISTERN:
+        DrawLine(sx+2,sy+25,sx+29,sy+25,sc->wall_hi);
+        DrawPixel(sx+8+((x+y)%16),sy+6,sc->accent);
+        break;
+    case SCENE_BARRACKS:
+        if(((x*3+y)&3)==0) DrawRectangle(sx+14,sy+2,4,14,sc->accent);
+        else DrawLine(sx+2,sy+23,sx+29,sy+23,sc->wall_lo);
+        break;
+    case SCENE_CRYPT:
+        DrawPixel(sx+10,sy+10,sc->wall_hi);
+        DrawPixel(sx+21,sy+10,sc->wall_hi);
+        break;
+    case SCENE_SAND:
+        DrawLine(sx+3,sy+8,sx+29,sy+8,sc->wall_lo);
+        DrawLine(sx+3,sy+24,sx+24,sy+24,sc->wall_lo);
+        if(((x*7+y)&3)==0) DrawRectangle(sx+15,sy+14,2,3,sc->accent);
+        break;
+    case SCENE_ASTRAL:
+        DrawPixel(sx+5+((x*7+y*3)%22),sy+5+((x*5+y*11)%22),sc->accent);
+        DrawPixel(sx+5+((x*11+y*7)%22),sy+5+((x*3+y*5)%22),sc->wall_hi);
+        break;
+    case SCENE_THRONE:
+        DrawRectangle(sx+1,sy+28,30,2,sc->accent);
+        DrawPixel(sx+6,sy+6,sc->wall_hi);
+        break;
+    default: break;
+    }
+}
+
 static void castle(int cy)
 {
     for(int k=0;k<3;++k) {
@@ -617,67 +767,96 @@ static bool gain_message(const game_snapshot_t *s,char *out,size_t size,Color *c
     default: return false;
     }
 }
+/* A terminal-bodied tower builder, not the robed village NPC. Map and dialog
+ * use the same original pixel drawing at integer scales, without animation. */
+static void gpt_robot(int x,int y,int scale)
+{
+    const Color shell={151,200,183,255},screen={24,48,45,255};
+    DrawRectangle(x+15*scale,y+1*scale,2*scale,4*scale,MINT);
+    DrawRectangle(x+7*scale,y+5*scale,18*scale,12*scale,shell);
+    DrawRectangle(x+9*scale,y+7*scale,14*scale,7*scale,screen);
+    DrawRectangle(x+11*scale,y+9*scale,3*scale,2*scale,MINT);
+    DrawRectangle(x+18*scale,y+9*scale,3*scale,2*scale,MINT);
+    DrawRectangle(x+10*scale,y+18*scale,12*scale,10*scale,EDGE);
+    DrawRectangle(x+13*scale,y+20*scale,6*scale,5*scale,MINT);
+    DrawRectangle(x+15*scale,y+21*scale,2*scale,3*scale,screen);
+    DrawRectangle(x+5*scale,y+19*scale,4*scale,7*scale,shell);
+    DrawRectangle(x+23*scale,y+19*scale,4*scale,7*scale,shell);
+    DrawRectangle(x+9*scale,y+28*scale,5*scale,3*scale,BRASS);
+    DrawRectangle(x+18*scale,y+28*scale,5*scale,3*scale,BRASS);
+}
+static bool is_gpt(const game_snapshot_t *s,int x,int y)
+{ return s->tower.floor==46u && x==12 && y==14; }
+/* Chinese uses the readable 24px bitmap path; English keeps 16px text.
+ * Wrap by actual advances; complete authored pages must fit without clipping. */
+static int campaign_draw_paragraph(const char *text,int x,int y,int width,int lines,bool large)
+{
+    int used=0;
+    while(text && *text) {
+        const char *start=text,*end=text,*last_space=NULL;
+        int pixels=0;
+        while(*end) {
+            const char *next=end; uint32_t cp;
+            utf8_next(&next,&cp);
+            const int step=cp<0x80?(large?18:12):(large?25:17);
+            if(pixels+step-1>width || next-start>=94) break;
+            if(cp==' ') last_space=end;
+            pixels+=step; end=next;
+        }
+        if(used>=lines || end==start) return -1;
+        if(*end && last_space && last_space>start) end=last_space;
+        char line[96]; const size_t bytes=(size_t)(end-start);
+        memcpy(line,start,bytes);line[bytes]=0;
+        if(large) ui_draw_cjk15(line,x,y+used*28,WHITE_INK);
+        else ui_draw(line,x,y+used*22,1,WHITE_INK);
+        ++used;
+        text=end;while(*text==' ')++text;
+    }
+    return used;
+}
+
 static void story_modal(const game_snapshot_t *s)
 {
-    const story_t *story=&STORY[s->tower.floor<TOWER_FLOORS?s->tower.floor:0];
-    const text_t *name=&NPC_NAME[s->tower.floor<TOWER_FLOORS?s->tower.floor:0];
+    const campaign_page_t *story=campaign_dialogue_page(s->dialogue_id,s->dialogue_variant,s->dialogue_page);
+    if(!story || s->dialogue_id>=CAMPAIGN_DIALOGUE_COUNT) return;
+    const campaign_dialogue_t *entry=&campaign_dialogues[s->dialogue_id];
+    const char *name=s->lang==GAME_LANG_EN?entry->name_en:entry->name_zh;
     DrawRectangle(0,0,480,480,Fade(INK,.82f));
     DrawRectangle(30,120,420,260,PANEL);
     DrawRectangleLines(30,120,420,260,BRASS);
-    ui_draw_cjk15(tx(s,name),48,138,BRASS);
+    ui_draw_cjk15(name,48,138,BRASS);
     DrawRectangle(38,160,96,150,INK);
     DrawRectangleLines(38,160,96,150,EDGE);
-    npc_portrait(38,160,s->tick);
+    if(is_gpt(s,(int)s->tower.x,(int)s->tower.y)) gpt_robot(38,185,3);
+    else npc_portrait(38,160,s->tick);
     DrawLine(142,160,142,316,EDGE);
-    if(s->lang==GAME_LANG_EN){
-        char paragraph[220];
-        snprintf(paragraph,sizeof(paragraph),"%s %s",story->en[0],story->en[1]);
-        const char *p=paragraph;
-        int y=172;
-        while(*p&&y<284){
-            int take=0,last_space=0;
-            while(p[take]&&take<24){
-                if(p[take]==' ') last_space=take;
-                ++take;
-            }
-            if(p[take]&&last_space) take=last_space;
-            char line[40];
-            int n=take<39?take:39;
-            memcpy(line,p,(size_t)n); line[n]=0;
-            MosaicoFastDrawText(line,150+(290-MosaicoFastMeasureText(line,16))/2,y,16,WHITE_INK);
-            p+=take;
-            while(*p==' ') ++p;
-            y+=22;
-        }
-    } else {
-        const int l0=cjk_line_count(story->zh[0],11);
-        const int l1=cjk_line_count(story->zh[1],11);
-        const int s0=cjk_line_count(story->zh[0],17);
-        const int s1=cjk_line_count(story->zh[1],17);
-        if(l0+l1<=5){
-            const int first=ui_draw_wrap_cjk(story->zh[0],150,174,11,28,WHITE_INK,l0,true);
-            ui_draw_wrap_cjk(story->zh[1],150,174+first*28,11,28,WHITE_INK,l1,true);
-        } else if(s0+s1<=7){
-            const int first=ui_draw_wrap_cjk(story->zh[0],150,174,17,20,WHITE_INK,s0,false);
-            ui_draw_wrap_cjk(story->zh[1],150,174+first*20,17,20,WHITE_INK,s1,false);
-        } else {
-            /* Far too long to rescue: keep the compact font and let the
-             * authored-text layout test fail instead of inventing a tiny UI. */
-            const int first=ui_draw_wrap_cjk(story->zh[0],150,174,17,20,WHITE_INK,3,false);
-            ui_draw_wrap_cjk(story->zh[1],150,174+first*20,17,20,WHITE_INK,3,false);
-        }
-    }
+    const char *const *lines=s->lang==GAME_LANG_EN?story->en:story->zh;
+    const bool large=s->lang!=GAME_LANG_EN;
+    const int budget=large?5:6,line_height=large?28:22;
+    const int first=campaign_draw_paragraph(lines[0],150,174,288,budget,large);
+    if(first>=0) (void)campaign_draw_paragraph(lines[1],150,174+first*line_height,288,budget-first,large);
     button(s,&T_TALK_CONTINUE,180,330,120,32,false);
+}
+static bool view_has(const game_snapshot_t *s,int x,int y)
+{
+    return x>=(int)s->camera_x && x<(int)s->camera_x+TOWER_VIEW_W &&
+           y>=(int)s->camera_y && y<(int)s->camera_y+TOWER_VIEW_H;
 }
 static void dungeon(game_handle_t game,const game_snapshot_t *s)
 {
     char text[96];
+    char label[24];
+    const unsigned slot=s->tower.floor;
+    static const unsigned region_scene[5]={SCENE_GATE,SCENE_CISTERN,SCENE_ARMORY,SCENE_ARCHIVE,SCENE_ASTRAL};
+    const scene_t *sc=&SCENES[slot==49u?SCENE_THRONE:region_scene[slot/10u]];
+    DrawRectangle(0,0,GAME_WIDTH,GAME_HEIGHT,sc->bg);
+    DrawRectangleLines(3,3,GAME_WIDTH-6,GAME_HEIGHT-6,sc->wall_hi);
     if(s->tower.floor+1>=TOWER_FLOORS)
-        ui_center(tx(s,&T_SUMMIT),10,1,BRASS);
-    else {
-        snprintf(text,sizeof(text),tx(s,&T_FLOOR),s->tower.floor+1);
-        ui_center(text,10,1,BRASS);
-    }
+        snprintf(label,sizeof(label),"%s",tx(s,&T_SUMMIT));
+    else
+        snprintf(label,sizeof(label),tx(s,&T_FLOOR),s->tower.floor+1);
+    snprintf(text,sizeof(text),"%s · %s",label,tx(s,&SCENE_NAME[slot]));
+    ui_center_fit(text,10,1,sc->accent,320);
     snprintf(text,sizeof(text),"HP %lu   ATK %lu   DEF %lu",(unsigned long)s->tower.hp,
              (unsigned long)s->tower.attack,(unsigned long)s->tower.defence);
     ascii_center(text,31,20,WHITE_INK);
@@ -694,30 +873,47 @@ static void dungeon(game_handle_t game,const game_snapshot_t *s)
         w+=ui_width(k0,1)+sep+slash_w+sep+ui_width(k1,1)+sep+slash_w+sep+ui_width(k2,1);
         w+=group_gap+ui_width(gold_label,1)+label_gap+ui_width(gold,1);
         int x=(GAME_WIDTH-w)/2;
-        ui_draw(key_label,x,58,1,MUTED); x+=ui_width(key_label,1)+label_gap;
-        ui_draw(k0,x,58,1,BRASS); x+=ui_width(k0,1)+sep;
-        ui_draw("/",x,58,1,MUTED); x+=slash_w+sep;
-        ui_draw(k1,x,58,1,KEY_BLUE); x+=ui_width(k1,1)+sep;
-        ui_draw("/",x,58,1,MUTED); x+=slash_w+sep;
-        ui_draw(k2,x,58,1,RED_INK); x+=ui_width(k2,1)+group_gap;
-        ui_draw(gold_label,x,58,1,MUTED); x+=ui_width(gold_label,1)+label_gap;
-        ui_draw(gold,x,58,1,BRASS);
+        ui_draw(key_label,x,54,1,MUTED); x+=ui_width(key_label,1)+label_gap;
+        ui_draw(k0,x,54,1,BRASS); x+=ui_width(k0,1)+sep;
+        ui_draw("/",x,54,1,MUTED); x+=slash_w+sep;
+        ui_draw(k1,x,54,1,KEY_BLUE); x+=ui_width(k1,1)+sep;
+        ui_draw("/",x,54,1,MUTED); x+=slash_w+sep;
+        ui_draw(k2,x,54,1,RED_INK); x+=ui_width(k2,1)+group_gap;
+        ui_draw(gold_label,x,54,1,MUTED); x+=ui_width(gold_label,1)+label_gap;
+        ui_draw(gold,x,54,1,BRASS);
     }
-    DrawRectangle(GAME_MAP_X-3,GAME_MAP_Y-3,GAME_TILE*TOWER_WIDTH+6,GAME_TILE*TOWER_HEIGHT+6,EDGE);
-    for(int y=0;y<TOWER_HEIGHT;++y) for(int x=0;x<TOWER_WIDTH;++x) {
-        const int sx=GAME_MAP_X+x*GAME_TILE, sy=GAME_MAP_Y+y*GAME_TILE;
-        DrawRectangle(sx,sy,GAME_TILE,GAME_TILE,((x+y)&1)?PANEL:(Color){30,38,50,255});
-        DrawPixel(sx+4,sy+20,STONE);
-        /* No time-driven animation: an unchanged scene stays pixel-identical. */
-        tile_sprite(game_tile(game,x,y),sx,sy,0);
+    DrawRectangle(GAME_MAP_X-4,GAME_MAP_Y-4,
+                  GAME_TILE*TOWER_VIEW_W+8,GAME_TILE*TOWER_VIEW_H+8,sc->wall_hi);
+    DrawRectangleLines(GAME_MAP_X-3,GAME_MAP_Y-3,
+                       GAME_TILE*TOWER_VIEW_W+6,GAME_TILE*TOWER_VIEW_H+6,sc->accent);
+    /* Every map lookup and hit test goes through the camera origin. */
+    for(int vy=0;vy<TOWER_VIEW_H;++vy) for(int vx=0;vx<TOWER_VIEW_W;++vx) {
+        const int x=(int)s->camera_x+vx, y=(int)s->camera_y+vy;
+        const int sx=GAME_MAP_X+vx*GAME_TILE, sy=GAME_MAP_Y+vy*GAME_TILE;
+        const tower_tile_t tile=game_tile(game,x,y);
+        if(tile==TOWER_TILE_WALL) scene_wall(sc,sx,sy,x,y);
+        else {
+            scene_floor(sc,sx,sy,x,y);
+            /* No time-driven animation: an unchanged scene stays pixel-identical. */
+            if(tile==TOWER_TILE_NPC && is_gpt(s,x,y)) gpt_robot(sx,sy,1);
+            else tile_sprite(tile,sx,sy,0,sc->accent);
+            if(tile==TOWER_TILE_SECRET) {
+                DrawRectangle(sx+1,sy+1,30,30,Fade(INK,.20f));
+                DrawLine(sx+4,sy+29,sx+27,sy+29,sc->wall_lo);
+            }
+        }
     }
     if(s->tower.cleared && s->tower.floor+1>=TOWER_FLOORS) {
-        beacon(GAME_MAP_X+5*GAME_TILE,GAME_MAP_Y+1*GAME_TILE,0);
-        princess(GAME_MAP_X+6*GAME_TILE,GAME_MAP_Y+1*GAME_TILE,0);
+        if(view_has(s,5,1)) beacon(GAME_MAP_X+(5-(int)s->camera_x)*GAME_TILE,
+                                   GAME_MAP_Y+(1-(int)s->camera_y)*GAME_TILE,0);
+        if(view_has(s,6,1)) princess(GAME_MAP_X+(6-(int)s->camera_x)*GAME_TILE,
+                                     GAME_MAP_Y+(1-(int)s->camera_y)*GAME_TILE,0);
     }
-    const int hx=GAME_MAP_X+(int)s->tower.x*GAME_TILE, hy=GAME_MAP_Y+(int)s->tower.y*GAME_TILE;
-    DrawRectangleLines(hx,hy,GAME_TILE,GAME_TILE,BRASS);
+    const int hx=GAME_MAP_X+((int)s->tower.x-(int)s->camera_x)*GAME_TILE;
+    const int hy=GAME_MAP_Y+((int)s->tower.y-(int)s->camera_y)*GAME_TILE;
+    DrawRectangleLines(hx,hy,GAME_TILE,GAME_TILE,sc->accent);
     knight(hx+3,hy+3,true);
+    camera_edges(s,sc->bg);
     const text_t *msg=NULL;
     char gain_text[64];
     Color gain_color=MINT;
@@ -727,9 +923,8 @@ static void dungeon(game_handle_t game,const game_snapshot_t *s)
     if(s->tower.cleared&&!s->notice_id) msg=&T_SUMMIT_REACHED;
     if(has_gain) ui_center_fit(gain_text,430,1,gain_color,440);
     else ui_center(tx(s,msg),430,1,s->tower.status==TOWER_STATUS_TOO_STRONG?RED_INK:MINT);
-    button(s,&T_SAVE,GAME_BUTTON_X,GAME_FOOTER_Y,GAME_BUTTON_W,GAME_FOOTER_H,false);
-    button(s,&T_LOAD,GAME_BUTTON_X+105,GAME_FOOTER_Y,GAME_BUTTON_W,GAME_FOOTER_H,false);
-    button(s,&T_NEW_GAME,GAME_BUTTON_X+210,GAME_FOOTER_Y,GAME_BUTTON_W,GAME_FOOTER_H,false);
+    button(s,&T_TELEPORT,footer_button_x(0),GAME_FOOTER_Y,GAME_BUTTON_W,GAME_FOOTER_H,false);
+    button(s,&T_RESTART_GAME,footer_button_x(1),GAME_FOOTER_Y,GAME_BUTTON_W,GAME_FOOTER_H,false);
 }
 static const text_t *enemy_text(tower_tile_t tile)
 {
@@ -789,6 +984,133 @@ static void shop_modal(const game_snapshot_t *s)
     else if(s->tower.status==TOWER_STATUS_NEED_GOLD) ui_center(tx(s,&T_NO_GOLD),302,1,RED_INK);
     button(s,&T_LEAVE,130,326,220,28,false);
 }
+/* The teleport panel lists exactly the six chapter anchors. A locked anchor is
+ * dim and says so; there is no page control and no other floor is listed. */
+static void teleport_cell(const game_snapshot_t *s,unsigned anchor,int x,int y)
+{
+    char label[24];
+    const unsigned floor=tower_anchor_floor(anchor);
+    const bool unlocked=tower_anchor_unlocked(&s->tower,anchor);
+    const bool current=unlocked&&floor==s->tower.floor;
+    const bool selected=anchor==s->anchor_cursor;
+    const Color border=selected?BRASS:(unlocked?EDGE:STONE);
+    const Color label_ink=unlocked?(current?BRASS:WHITE_INK):MUTED;
+    const Color sub_ink=unlocked?MUTED:(Color){72,80,94,255};
+    DrawRectangle(x,y,GAME_TELEPORT_CELL_W,GAME_TELEPORT_CELL_H,
+                  current?Fade(BRASS,.16f):PANEL);
+    if(selected) DrawRectangleLines(x-2,y-2,
+                                    GAME_TELEPORT_CELL_W+4,GAME_TELEPORT_CELL_H+4,BRASS);
+    DrawRectangleLines(x,y,GAME_TELEPORT_CELL_W,GAME_TELEPORT_CELL_H,border);
+    snprintf(label,sizeof(label),s->lang==GAME_LANG_EN?"%02uF":"%u层",floor+1u);
+    ui_draw(label,x+12,y+8,1,label_ink);
+    ui_draw(tx(s,unlocked?&REGION_NAME[anchor?anchor-1u:0u]:&T_ANCHOR_LOCKED),
+            x+12,y+32,1,sub_ink);
+    if(current) {
+        const char *here=tx(s,&T_ANCHOR_HERE);
+        ui_draw(here,x+GAME_TELEPORT_CELL_W-ui_width(here,1)-12,y+8,1,BRASS);
+    }
+}
+static void teleport_modal(const game_snapshot_t *s)
+{
+    DrawRectangle(0,0,480,480,Fade(INK,.82f));
+    DrawRectangle(GAME_TELEPORT_PANEL_X,GAME_TELEPORT_PANEL_Y,
+                  GAME_TELEPORT_PANEL_W,GAME_TELEPORT_PANEL_H,PANEL);
+    DrawRectangleLines(GAME_TELEPORT_PANEL_X,GAME_TELEPORT_PANEL_Y,
+                       GAME_TELEPORT_PANEL_W,GAME_TELEPORT_PANEL_H,BRASS);
+    ui_draw(tx(s,&T_TELEPORT_TITLE),52,112,1,BRASS);
+    DrawRectangle(GAME_TELEPORT_CLOSE_X,GAME_TELEPORT_CLOSE_Y,
+                  GAME_TELEPORT_CLOSE_W,GAME_TELEPORT_CLOSE_H,INK);
+    DrawRectangleLines(GAME_TELEPORT_CLOSE_X,GAME_TELEPORT_CLOSE_Y,
+                       GAME_TELEPORT_CLOSE_W,GAME_TELEPORT_CLOSE_H,EDGE);
+    {
+        const int cx=GAME_TELEPORT_CLOSE_X+GAME_TELEPORT_CLOSE_W/2;
+        const int cy=GAME_TELEPORT_CLOSE_Y+GAME_TELEPORT_CLOSE_H/2;
+        DrawLine(cx-5,cy-5,cx+5,cy+5,WHITE_INK);
+        DrawLine(cx-5,cy+5,cx+5,cy-5,WHITE_INK);
+    }
+    for(int row=0;row<3;++row) for(int col=0;col<2;++col) {
+        const unsigned anchor=(unsigned)(row*2+col);
+        if(anchor>=TOWER_ANCHORS) continue;
+        teleport_cell(s,anchor,
+                      GAME_TELEPORT_CELL_X+col*(GAME_TELEPORT_CELL_W+GAME_TELEPORT_GAP_X),
+                      GAME_TELEPORT_CELL_Y+row*(GAME_TELEPORT_CELL_H+GAME_TELEPORT_GAP_Y));
+    }
+    ui_draw(tx(s,&T_ANCHOR_HINT),52,362,1,MUTED);
+}
+static void over_modal(const game_snapshot_t *s)
+{
+    char text[96];
+    DrawRectangle(0,0,480,480,Fade(INK,.84f));
+    DrawRectangle(GAME_END_PANEL_X,GAME_END_PANEL_Y,
+                  GAME_END_PANEL_W,GAME_END_PANEL_H,PANEL);
+    DrawRectangleLines(GAME_END_PANEL_X,GAME_END_PANEL_Y,
+                       GAME_END_PANEL_W,GAME_END_PANEL_H,RED_INK);
+    ui_center_fit(tx(s,&T_DEAD),126,2,RED_INK,296);
+    snprintf(text,sizeof(text),tx(s,&T_FLOOR),s->tower.floor+1);
+    ui_center(text,172,1,MUTED);
+    snprintf(text,sizeof(text),"HP 0   ATK %lu   DEF %lu",
+             (unsigned long)s->tower.attack,(unsigned long)s->tower.defence);
+    ascii_center(text,200,16,WHITE_INK);
+    snprintf(text,sizeof(text),"%s %lu    %s %lu",tx(s,&T_GOLD),
+             (unsigned long)s->tower.gold,tx(s,&T_TURNS),(unsigned long)s->tower.turns);
+    ui_center(text,228,1,BRASS);
+    if(s->has_checkpoint) {
+        button(s,&T_LOAD_CHECKPOINT,GAME_END_BUTTON_X,GAME_END_BUTTON1_Y,
+               GAME_END_BUTTON_W,GAME_END_BUTTON_H,true);
+        button(s,&T_NEW_GAME,GAME_END_BUTTON_X,GAME_END_BUTTON2_Y,
+               GAME_END_BUTTON_W,GAME_END_BUTTON_H,false);
+    } else {
+        button(s,&T_NEW_GAME,GAME_END_BUTTON_X,GAME_END_BUTTON_Y,
+               GAME_END_BUTTON_W,GAME_END_BUTTON_H,true);
+    }
+}
+static void restart_modal(const game_snapshot_t *s)
+{
+    DrawRectangle(0,0,480,480,Fade(INK,.84f));
+    DrawRectangle(GAME_RESTART_PANEL_X,GAME_RESTART_PANEL_Y,
+                  GAME_RESTART_PANEL_W,GAME_RESTART_PANEL_H,PANEL);
+    DrawRectangleLines(GAME_RESTART_PANEL_X,GAME_RESTART_PANEL_Y,
+                       GAME_RESTART_PANEL_W,GAME_RESTART_PANEL_H,BRASS);
+    ui_center(tx(s,&T_RESTART_GAME),126,2,BRASS);
+    ui_center_fit(tx(s,&T_RESTART_HINT),160,1,MUTED,296);
+    if(s->has_checkpoint)
+        button(s,&T_LOAD_CHECKPOINT,GAME_RESTART_BUTTON_X,GAME_RESTART_RETRY_Y,
+               GAME_RESTART_BUTTON_W,GAME_RESTART_BUTTON_H,true);
+    else {
+        DrawRectangleLines(GAME_RESTART_BUTTON_X,GAME_RESTART_RETRY_Y,
+                           GAME_RESTART_BUTTON_W,GAME_RESTART_BUTTON_H,STONE);
+        ui_center(tx(s,&T_NO_SAVE),GAME_RESTART_RETRY_Y+13,1,MUTED);
+    }
+    button(s,&T_NEW_GAME,GAME_RESTART_BUTTON_X,GAME_RESTART_NEW_Y,
+           GAME_RESTART_BUTTON_W,GAME_RESTART_BUTTON_H,false);
+    button(s,&T_CANCEL,GAME_RESTART_BUTTON_X,GAME_RESTART_CANCEL_Y,
+           GAME_RESTART_BUTTON_W,GAME_RESTART_BUTTON_H,false);
+    if(s->notice_id==GAME_NOTICE_NO_SAVE || s->notice_id==GAME_NOTICE_DAMAGED)
+        ui_center_fit(tx(s,&T_RETRY_FAILED),366,1,RED_INK,296);
+}
+static void victory_modal(const game_snapshot_t *s)
+{
+    char text[96];
+    DrawRectangle(0,0,480,480,Fade(INK,.84f));
+    DrawRectangle(GAME_END_PANEL_X,GAME_END_PANEL_Y,
+                  GAME_END_PANEL_W,GAME_END_PANEL_H,PANEL);
+    DrawRectangleLines(GAME_END_PANEL_X,GAME_END_PANEL_Y,
+                       GAME_END_PANEL_W,GAME_END_PANEL_H,BRASS);
+    ui_center_fit(tx(s,&T_VICTORY),126,2,MINT,296);
+    snprintf(text,sizeof(text),"HP %lu   ATK %lu   DEF %lu",
+             (unsigned long)s->tower.hp,(unsigned long)s->tower.attack,
+             (unsigned long)s->tower.defence);
+    ascii_center(text,172,16,WHITE_INK);
+    snprintf(text,sizeof(text),"%s %lu / %lu / %lu",tx(s,&T_KEY),
+             (unsigned long)s->tower.keys[0],(unsigned long)s->tower.keys[1],
+             (unsigned long)s->tower.keys[2]);
+    ui_center(text,204,1,WHITE_INK);
+    snprintf(text,sizeof(text),"%s %lu    %s %lu",tx(s,&T_GOLD),
+             (unsigned long)s->tower.gold,tx(s,&T_TURNS),(unsigned long)s->tower.turns);
+    ui_center(text,232,1,BRASS);
+    button(s,&T_EXPLORE,GAME_END_BUTTON_X,GAME_END_BUTTON_Y,
+           GAME_END_BUTTON_W,GAME_END_BUTTON_H,true);
+}
 bool game_render(game_handle_t game)
 {
     const game_snapshot_t *s=game_read(game);
@@ -803,6 +1125,10 @@ bool game_render(game_handle_t game)
     if(s->screen==GAME_NEW_CONFIRM || (s->screen==GAME_DUNGEON && s->tower.phase==TOWER_PHASE_COMBAT)) modal(s);
     if(s->screen==GAME_SHOP) shop_modal(s);
     if(s->screen==GAME_DIALOG) story_modal(s);
+    if(s->screen==GAME_TELEPORT) teleport_modal(s);
+    if(s->screen==GAME_RESTART_MENU) restart_modal(s);
+    if(s->screen==GAME_OVER) over_modal(s);
+    if(s->screen==GAME_VICTORY) victory_modal(s);
     if(s->paused) {
         DrawRectangle(110,204,260,60,PANEL); ui_center(tx(s,&T_PAUSED),226,1,BRASS);
     }

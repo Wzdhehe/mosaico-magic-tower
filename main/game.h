@@ -20,11 +20,16 @@ typedef struct {
     void *preferences_context;
     bool (*set_brightness)(int);
 } game_config_t;
-typedef enum { GAME_TITLE, GAME_DUNGEON, GAME_NEW_CONFIRM, GAME_SHOP, GAME_DIALOG } game_screen_t;
+typedef enum {
+    GAME_TITLE, GAME_DUNGEON, GAME_NEW_CONFIRM, GAME_SHOP, GAME_DIALOG,
+    GAME_OVER, GAME_VICTORY, GAME_TELEPORT,
+    /* Appended to preserve the existing screen identities. */
+    GAME_RESTART_MENU
+} game_screen_t;
 typedef enum {
     GAME_NOTICE_NONE = 0, GAME_NOTICE_START, GAME_NOTICE_SAVED,
     GAME_NOTICE_NO_SAVE, GAME_NOTICE_DAMAGED, GAME_NOTICE_RESTORED,
-    GAME_NOTICE_SAVE_FAILED, GAME_NOTICE_SUMMIT
+    GAME_NOTICE_SAVE_FAILED, GAME_NOTICE_SUMMIT, GAME_NOTICE_CHAPTER
 } game_notice_t;
 typedef enum {
     GAME_GAIN_NONE = 0, GAME_GAIN_HP, GAME_GAIN_ATTACK, GAME_GAIN_DEFENCE,
@@ -37,6 +42,9 @@ typedef struct {
     uint32_t tick;
     int32_t pointer_x, pointer_y;
     bool pointer_down, paused, has_save;
+    /* True only when the active run has an auto-save checkpoint: the new run
+     * wrote one, a real floor change wrote one, or the run was loaded from it. */
+    bool has_checkpoint;
     bool settings_open, preferences_save_failed;
     uint8_t lang;
     uint8_t volume, brightness;
@@ -45,6 +53,14 @@ typedef struct {
     uint8_t gain_color;
     uint32_t gain_value;
     uint8_t music;
+    /* Camera origin in floor tiles. Clamped so the viewport never leaves the
+     * floor; both stay 0 on floors no larger than the viewport. */
+    uint16_t camera_x, camera_y;
+    uint16_t floor_w, floor_h;
+    /* Selected anchor in the six-cell teleport panel (0..TOWER_ANCHORS-1). */
+    uint8_t anchor_cursor;
+    uint16_t dialogue_id;
+    uint8_t dialogue_page, dialogue_variant;
 } game_snapshot_t;
 /* Snapshot is borrowed, read-only and owned by the single application task. */
 bool game_create(const game_config_t *, game_handle_t *);

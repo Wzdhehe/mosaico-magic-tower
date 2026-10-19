@@ -1,0 +1,21 @@
+{
+  "status": "designer-authored-model-verified-awaiting-UI-integration",
+  "chapter": 1,
+  "name": "断门城塞",
+  "coordinate_system": "zero-based x/y; 11 by 11",
+  "music": {"track": "lower tower", "intent": "reuse current quiet exploration track for first integration; no new audio runtime"},
+  "anchor": {"floor": 10, "landing": [5, 9], "unlock": "consume chapter gate G at [5,2], after mandatory captain"},
+  "boss": {"floor": 10, "tile": "k", "position": [5, 3], "title_zh": "守门队长", "title_en": "GATE CAPTAIN", "gate": [5, 2], "upstairs": [5, 1], "stats": "existing floor-10 knight: HP133 ATK38 DEF15; do not substitute golem"},
+  "floor_names": ["破门", "偏院", "旧库", "哨楼", "军械库", "军需站", "守望台", "旧营房", "封门前厅", "队长之门"],
+  "palette_direction": "warm grey masonry and muted brass throughout this chapter; local props may vary; bright keys and enemies remain legible",
+  "npcs": [
+    {"floor": 3, "position": [3, 9], "name_zh": "旧库管事", "name_en": "ARCHIVIST", "zh": ["四层北端有蓝钥匙。", "九层红封门的钥匙在这里。"], "en": ["A blue key waits on floor four.", "The ninth seal needs our red key."]},
+    {"floor": 4, "position": [1, 2], "name_zh": "哨兵", "name_en": "SENTRY", "zh": ["这把蓝钥匙先开哪一库？", "旧库给盾，军械库给剑。"], "en": ["Which vault deserves the first key?", "Archive: defence. Armory: attack."]},
+    {"floor": 6, "position": [5, 7], "name_zh": "军需官", "name_en": "QUARTERMASTER", "zh": ["金币不会替你挡刀。", "先算升级后少挨几轮。"], "en": ["Gold alone will not stop a blade.", "Count the hits an upgrade will save."]},
+    {"floor": 8, "position": [3, 6], "name_zh": "伤兵", "name_en": "WOUNDED GUARD", "zh": ["西南小厅，向南看。", "第二块墙砖藏着旧补给。"], "en": ["In the southwest alcove, face south.", "The second brick hides our supplies."]},
+    {"floor": 10, "position": [8, 8], "name_zh": "名册书记", "name_en": "ROLL KEEPER", "zh": ["队长身后是下一段阶梯。", "石印亮起，这里便能传送。"], "en": ["The next stair is behind the captain.", "The lit seal opens this warp anchor."]}
+  ],
+  "secret": {"floor": 8, "position": [2, 8], "approach": [2, 7], "clue_npc": [3, 6], "contents": [{"tile": "P", "position": [2, 9]}, {"tile": "y", "position": [1, 9]}], "mandatory": false},
+  "chapter_gate_text": {"zh": ["名册停在城破那一天。", "守卫却一直没有离开。"], "en": ["The roll ends the day the gate fell.", "The guard has never left his post."]},
+  "integration_prohibitions": ["do not generate replacement layouts", "do not add a secret on every floor", "do not change item or enemy values to hide integration failures", "do not reuse old per-floor key hints", "do not ship floors11-50 as part of this map package"]
+}

@@ -41,7 +41,7 @@ memory ownership, signal metrics, test commands and limitations.
 
 All passed in this session:
 
-- Portable model, level design, guarded forks, font coverage (241 sorted glyphs).
+- Portable model, level design, guarded forks, font coverage (256 sorted glyphs).
 - Four complete strategy routes, with a 2048-byte save round-trip after every
   action (485 / 484 / 480 / 479 actions); generated win route unchanged.
 - Timing/settings/persistence/brightness/held-action regression suite.

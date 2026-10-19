@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #define GAME_NAME "magic_tower"
-#define GAME_VERSION "v1.5"
+#define GAME_VERSION "v1.8.0-rc.1"
 /* Operation-driven rendering; this is the maximum active update cadence.
  * Held-key repetition is expressed relative to this rate. */
 enum { GAME_WIDTH = 480, GAME_HEIGHT = 480, GAME_TICK_HZ = 15 };
@@ -34,5 +34,33 @@ enum {
     GAME_SETTINGS_BRIGHTNESS_X = 80, GAME_SETTINGS_BRIGHTNESS_Y = 300,
     GAME_SETTINGS_BRIGHTNESS_W = 320, GAME_SETTINGS_BRIGHTNESS_H = 18,
     GAME_SETTINGS_SLIDER_MARGIN = 12,
-    GAME_BRIGHTNESS_MIN = 10, GAME_BRIGHTNESS_MAX = 100, GAME_BRIGHTNESS_DEFAULT = 40
+    GAME_BRIGHTNESS_MIN = 10, GAME_BRIGHTNESS_MAX = 100, GAME_BRIGHTNESS_DEFAULT = 40,
+    /* Camera pages at an entered edge with a three-tile overlap. No camera
+     * touch controls overlay the map; the visible extension hint is paint only. */
+    GAME_CAMERA_EDGE_OVERLAP = 3, GAME_CAMERA_EDGE_HINT = 8,
+    /* Teleport panel: the six chapter anchors in a fixed 2x3 grid. There is
+     * no paging because there is nothing else to list. */
+    GAME_TELEPORT_PANEL_X = 48, GAME_TELEPORT_PANEL_Y = 96,
+    GAME_TELEPORT_PANEL_W = 384, GAME_TELEPORT_PANEL_H = 292,
+    GAME_TELEPORT_CELL_W = 150, GAME_TELEPORT_CELL_H = 56,
+    GAME_TELEPORT_GAP_X = 24, GAME_TELEPORT_GAP_Y = 14,
+    GAME_TELEPORT_CELL_X = 78, GAME_TELEPORT_CELL_Y = 152,
+    GAME_TELEPORT_CLOSE_X = 396, GAME_TELEPORT_CLOSE_Y = 102,
+    GAME_TELEPORT_CLOSE_W = 32, GAME_TELEPORT_CLOSE_H = 32,
+    /* End-of-run panels: shared by GAME_OVER and GAME_VICTORY. */
+    GAME_END_PANEL_X = 80, GAME_END_PANEL_Y = 104,
+    GAME_END_PANEL_W = 320, GAME_END_PANEL_H = 286,
+    GAME_END_BUTTON_X = 140, GAME_END_BUTTON_W = 200,
+    GAME_END_BUTTON_H = 42,
+    GAME_END_BUTTON1_Y = 256, GAME_END_BUTTON2_Y = 310,
+    GAME_END_BUTTON_Y = 284,
+    GAME_RESTART_PANEL_X = 80, GAME_RESTART_PANEL_Y = 104,
+    GAME_RESTART_PANEL_W = 320, GAME_RESTART_PANEL_H = 286,
+    GAME_RESTART_BUTTON_X = 120, GAME_RESTART_BUTTON_W = 240,
+    GAME_RESTART_BUTTON_H = 42,
+    GAME_RESTART_RETRY_Y = 196, GAME_RESTART_NEW_Y = 252,
+    GAME_RESTART_CANCEL_Y = 308,
+    /* The dungeon footer now carries two equal buttons: warp and restart. */
+    GAME_FOOTER_BUTTONS = 2,
+    GAME_FOOTER_X = (GAME_WIDTH - (2 * GAME_BUTTON_W + GAME_BUTTON_GAP)) / 2
 };

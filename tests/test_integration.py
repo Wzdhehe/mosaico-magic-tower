@@ -105,43 +105,45 @@ class Integration(unittest.TestCase):
             self.native.step(False, False, False)
         self.assertEqual(self.state()["turns"], 0)
         self.native.pointer(0, 240, 350, False)
-        self.assertEqual((self.state()["y"], self.state()["hp"]), (8, 130))
+        self.assertEqual((self.state()["y"], self.state()["hp"]), (8, 100))
         self.native.pointer(0, 240, 350, False)
         self.assertEqual(self.state()["turns"], 1)
         self.native.pointer(0, 240, 350, True)
-        self.native.pointer(0, 208, 350, True)
-        self.native.pointer(0, 180, 350, False)
-        self.assertEqual((self.state()["x"], self.state()["turns"]), (4, 2))
+        self.native.pointer(0, 272, 350, True)
+        self.native.pointer(0, 304, 350, False)
+        self.assertEqual((self.state()["x"], self.state()["turns"]), (6, 2))
 
     def test_02_combat_separate_confirm_and_cancel(self):
-        for action in ("up", "left", "left", "up"):
+        for action in ("left", "left", "left", "up"):
             self.press(action)
         before = self.state()
-        self.assertEqual((before["phase"], before["hp"], before["damage"]), ("combat", 130, 4))
+        self.assertEqual((before["phase"], before["hp"], before["damage"]),
+                         ("combat", 100, 4))
         self.screenshot("combat.png")
         self.tap(180, 298)
-        self.assertEqual((self.state()["phase"], self.state()["hp"], self.state()["y"]), ("playing", 130, 8))
+        self.assertEqual((self.state()["phase"], self.state()["hp"],
+                          self.state()["x"], self.state()["y"]),
+                         ("playing", 100, 2, 9))
         self.press("up")
         self.tap(290, 298)
-        self.assertEqual((self.state()["phase"], self.state()["hp"], self.state()["y"]), ("playing", 126, 7))
+        self.assertEqual((self.state()["phase"], self.state()["hp"],
+                          self.state()["y"]), ("playing", 96, 8))
         self.tap(290, 298)
-        self.assertEqual(self.state()["hp"], 126)
+        self.assertEqual(self.state()["hp"], 96)
 
     def test_03_refused_fight_and_pause(self):
-        for action in ("up", "left", "left"):
-            self.press(action)
         before = self.state()
         self.press("down")
         after = self.state()
         self.assertEqual({k: before[k] for k in FIELDS}, {k: after[k] for k in FIELDS})
         self.assertEqual(after["phase"], "playing")
-        self.screenshot("too-strong.png")
+        self.screenshot("blocked.png")
         self.native.control(1)
         self.press("right")
         self.assertEqual(self.state()["turns"], before["turns"])
         self.native.control(2)
         self.press("right")
-        self.assertEqual(self.state()["x"], 4)
+        self.assertEqual(self.state()["x"], 6)
 
     def test_04_save_new_confirmation_restore_corruption(self):
         self.press("up")
@@ -181,18 +183,18 @@ class Integration(unittest.TestCase):
             self.assertTrue(0 <= x < 480 and 0 <= y < 480)
 
     def test_07_held_direction_does_not_resume_after_combat(self):
-        for action in ("up", "left", "left"):
+        for action in ("left", "left", "left"):
             self.press(action)
         self.native.action(2, True)
         self.assertEqual(self.state()["phase"], "combat")
         self.press("confirm")
         for _ in range(15):
             self.native.step(False, False, True)
-        self.assertEqual((self.state()["x"], self.state()["y"]), (3, 7))
+        self.assertEqual((self.state()["x"], self.state()["y"]), (2, 8))
         self.assertEqual(self.state()["attack"], 12)
         self.native.action(2, False)
         self.press("up")
-        self.assertEqual((self.state()["y"], self.state()["attack"]), (6, 17))
+        self.assertEqual((self.state()["y"], self.state()["hp"]), (7, 126))
 
     def test_08_failed_staging_keeps_previous_save(self):
         self.press("up")
@@ -342,47 +344,49 @@ class Integration(unittest.TestCase):
             if self.state()["floor"] == 1:
                 break
         state = self.state()
-        self.assertEqual((state["floor"], state["x"], state["y"]), (1, 5, 9))
-        # Yellow key, attack gem, yellow door, blue key, then the merchant stair.
-        for action in (["up"] + ["left"] * 4 + ["up"] +
-                       ["right"] * 4 + ["up", "up"] + ["left"] * 4):
-            self.press(action)
-        state = self.state()
-        self.assertEqual((state["phase"], state["x"], state["y"]), ("playing", 1, 5))
-        self.assertEqual((state["gold"], state["attack"], state["defence"]), (21, 27, 7))
-        # Save before shopping, so either attribute can buy from the same gold.
+        self.assertEqual((state["floor"], state["x"], state["y"]), (1, 1, 9))
+        # Save on the armory entry, then walk to the merchant through the
+        # two small potions on the right-hand aisle.
         self.tap(135, 462)
         self.assertTrue(self.save.exists())
-        self.press("up")
+        for action in (["right"] * 3 + ["up", "right", "up", "up"]):
+            self.press(action)
         state = self.state()
-        self.assertEqual((state["phase"], state["gold"]), ("shop", 21))
+        self.assertEqual((state["phase"], state["x"], state["y"]), ("shop", 5, 6))
+        self.assertEqual((state["gold"], state["attack"], state["defence"]),
+                         (27, 17, 4))
         self.screenshot("shop_zh.png")
         # First purchase costs 15 and raises the shared next price to 25.
         self.tap(240, 240)
         state = self.state()
-        self.assertEqual((state["gold"], state["attack"], state["shop_attack"]), (6, 30, 1))
+        self.assertEqual((state["gold"], state["attack"], state["shop_attack"]),
+                         (12, 20, 1))
         self.screenshot("shop_after_buy_zh.png")
-        # 6 gold is below the new price: the defence purchase must be refused.
+        # 12 gold is below the new price: the defence purchase must be refused.
         before = {k: state[k] for k in
                   ("gold", "attack", "defence", "shop_attack", "shop_defence")}
         self.tap(240, 282)
         state = self.state()
         self.assertEqual({k: state[k] for k in before}, before)
         self.screenshot("shop_no_gold_zh.png")
-        # Leave (standing on the shop tile), restore the pre-shop checkpoint,
-        # and buy the other attribute.
+        # Leave the shop, restore the pre-shop checkpoint, then buy defence.
         self.tap(240, 340)
         state = self.state()
-        self.assertEqual((state["phase"], state["x"], state["y"]), ("playing", 1, 4))
+        self.assertEqual((state["phase"], state["x"], state["y"]),
+                         ("playing", 5, 6))
         self.tap(240, 462)
         state = self.state()
-        self.assertEqual((state["gold"], state["attack"], state["defence"]), (21, 27, 7))
+        self.assertEqual((state["floor"], state["x"], state["y"]), (1, 1, 9))
+        self.assertEqual((state["gold"], state["attack"], state["defence"]),
+                         (27, 17, 4))
         self.assertEqual((state["shop_attack"], state["shop_defence"]), (0, 0))
-        self.press("up")
+        for action in (["right"] * 3 + ["up", "right", "up", "up"]):
+            self.press(action)
         self.assertEqual(self.state()["phase"], "shop")
         self.tap(240, 282)
         state = self.state()
-        self.assertEqual((state["gold"], state["defence"], state["shop_defence"]), (6, 10, 1))
+        self.assertEqual((state["gold"], state["defence"], state["shop_defence"]),
+                         (12, 7, 1))
         self.screenshot("shop_restored_defence_zh.png")
 
     def test_10_new_game_returns_to_floor_one(self):

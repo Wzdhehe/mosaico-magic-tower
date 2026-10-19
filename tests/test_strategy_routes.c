@@ -68,16 +68,10 @@ static void replay(const strategy_t *route)
     assert(state.keys[0] == route->keys[0] && state.keys[1] == route->keys[1] &&
            state.keys[2] == route->keys[2]);
     assert(state.shop_attack == 0 && state.shop_defence == 0);
-    /* Each strategy must actually take its chosen fork and leave the other
-     * guardian standing, rather than silently clearing both routes. */
-    assert(tower_tile(tower, 5, 3, 5) ==
-           (route->mage_on_six ? TOWER_TILE_FLOOR : TOWER_TILE_MAGE));
-    assert(tower_tile(tower, 5, 7, 5) ==
-           (route->mage_on_six ? TOWER_TILE_GOLEM : TOWER_TILE_FLOOR));
-    assert(tower_tile(tower, 8, 3, 5) ==
-           (route->golem_on_nine ? TOWER_TILE_FLOOR : TOWER_TILE_GOLEM));
-    assert(tower_tile(tower, 8, 7, 5) ==
-           (route->golem_on_nine ? TOWER_TILE_WRAITH : TOWER_TILE_FLOOR));
+    /* The F6 key chamber and F9 exit gate must have been used, not bypassed. */
+    assert(tower_tile(tower, 5, 5, 8) == TOWER_TILE_FLOOR);
+    assert(tower_tile(tower, 5, 9, 4) == TOWER_TILE_FLOOR);
+    assert(tower_tile(tower, 8, 1, 8) == TOWER_TILE_FLOOR);
     printf("PASS: %s, %zu actions, HP %lu, save/recovery after every action\n",
            route->name, route->count, (unsigned long)state.hp);
     tower_delete(restored);

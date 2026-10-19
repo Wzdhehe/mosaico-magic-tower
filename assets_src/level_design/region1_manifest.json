@@ -1,0 +1,18 @@
+{
+  "designer": "Codex",
+  "status": "model-verified; renderer and full50 integration pending",
+  "files": {
+    "region1_blueprint.py": "bb052e301409a4a51a73d51f7190dcc1419ebd1a0532e4c52589a2c0882fab93",
+    "region1_content.json": "58899b0e2166716560746644328a00ab85afe2b65125c2c27343fb9ff8cba972",
+    "region1_maps.json": "3e52141bcf2b9f6df38cb0c9a5ea5df076e05e6818f561307e72e4449b77f03f",
+    "region1_floors.inc": "7a86553d2fbdf6cf8131bc98659cbb62edf0012d40df08e97c60a94647af7fc3"
+  },
+  "verified_model_sha256": {
+    "tower.c": "5b7c1d82270a4eaf3216012d9128da1175b754005775542d27eb7bf3242e6003",
+    "tower.h": "faf4666b5df8185c3c2620cc5858d729d219662910d608106a639f5bf285c1d6",
+    "tower_floors.h": "df76786202a2ad5c2eaf5563ddec96af187ac05de35e54f1b12eb1d5e9b562be"
+  },
+  "scope": "floors1-10 only; floors11-50 in lab are inert fixtures",
+  "verification_tool_sha256": "74ebe6aee7860190be9e11324313a7d5037e13b73a599bd19e19cff5a95efde0",
+  "verification": "Five chapter routes + explicit death; every move and pending/confirmed combat state save-roundtrips through actual C model"
+}

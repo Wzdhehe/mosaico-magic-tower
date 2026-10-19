@@ -2,10 +2,11 @@
 
 ## Shipped
 
-- Hand-authored ten-floor campaign with asymmetric stairs, supply alcoves,
-  dead ends and the floor 3 → 4 → 5 key detour (PR #1).
-- Guarded attack/defence forks on floors 6 and 9, the floor 7 → 8 red-key
-  chain, the floor 5 archive seal, and a shared rising merchant price (PR #6).
+- Ten hand-authored 11×11 floors with unique plans, eight stair arrangements,
+  distinct scene palettes and the floor 3 → 4 → 5 key detour.
+- A key-between-guards fork on floor 6, a wraith-blocked exit on floor 9,
+  the floor 7 → 8 red-key chain, the floor 5 cistern seal, and a shared
+  rising merchant price.
 - Replayable route fixtures: one golden route plus four guard combinations
   replayed in the real C model with a save round-trip after every action.
 - Unified settings (language, volume, brightness, repository address) with
@@ -26,7 +27,8 @@ the player, so rooms can span more than one screen:
 
 ## Later
 
-- distinguish the last floors with unique tiles/ambience and more boss phases
+- more boss phases and scene-specific hazards on the summit
+- a second merchant in the upper tower so late gold has a use
 - optional minimap of visited floors
 - more shop choices and consumable inventory
 - additional chiptune tracks for the boss and ending

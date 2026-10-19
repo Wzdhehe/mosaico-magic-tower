@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate main/ui_font.h: a 16x16 1-bit bitmap subset for the UI strings."""
 from pathlib import Path
+import os
 import re
 import sys
 
@@ -9,16 +10,20 @@ from PIL import Image, ImageDraw, ImageFont
 PROJECT = Path(__file__).resolve().parents[1]
 OUT = PROJECT / "main" / "ui_font.h"
 FONT_CANDIDATES = [
+    os.environ.get('MOSAICO_UI_FONT',''),
     r"C:\Windows\Fonts\simhei.ttf",
     r"C:\Windows\Fonts\msyhbd.ttc",
     r"C:\Windows\Fonts\msyh.ttc",
+    '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+    '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
 ]
 CELL = 16
 THRESHOLD = 96
 
 def ui_characters():
     # Read the authored C UI instead of maintaining a second narrative copy.
-    source = (PROJECT / "main" / "game_view.c").read_text(encoding="utf-8")
+    source = '\n'.join((PROJECT/'main'/name).read_text(encoding='utf-8')
+                       for name in ('game_view.c','game.c','campaign_dialogue.h'))
     strings = re.findall(r'"(?:\\.|[^"\\])*"', source)
     return sorted({ch for value in strings for ch in value if ord(ch) > 0x7F})
 
@@ -26,7 +31,7 @@ def ui_characters():
 
 def main():
     chars = ui_characters()
-    font_path = next((p for p in FONT_CANDIDATES if Path(p).exists()), None)
+    font_path = next((p for p in FONT_CANDIDATES if p and Path(p).is_file()), None)
     if not font_path:
         print("no CJK font found", file=sys.stderr)
         return 1

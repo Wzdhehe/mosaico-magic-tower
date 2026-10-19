@@ -33,6 +33,7 @@ def main():
                  str(ROOT/"tests"/"test_game_timing.c"),
                  str(ROOT/"main"/"game.c"),
                  str(ROOT/"main"/"tower.c"),
+                 str(ROOT/"tests"/"tower_floors_stub.c"),
                  "-o",str(binary)]
         subprocess.run(command,check=True)
         subprocess.run([str(binary)],check=True)

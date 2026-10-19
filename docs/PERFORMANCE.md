@@ -9,7 +9,7 @@ The square 480×480 UI draws its first frame, then redraws after gameplay or UI 
 - The engine presents the initial frame before its normal idle loop and keeps its existing Iris health/recovery sequence. No upstream engine change is required for this scheduling feature.
 - Failure to acquire a framebuffer leaves it pending. The device adapter also compares the official dropped-frame counter around submission: a rejected frame requests a retry, including when it was the user's last operation.
 - `game_render()` always draws into an explicitly requested Host screenshot target. The device uses the pending-only adapter. Music track delivery is independent of the pending-frame flag, so a screenshot cannot swallow an audio change.
-- Font lookup uses binary search across 241 sorted glyphs and one full-canvas clear. The map-integration campaign and its v4 save format are included; the partition layout is unchanged.
+- Font lookup uses binary search across 256 sorted glyphs and one full-canvas clear. The themed ten-scene campaign and its v5 save format are included; the partition layout is unchanged.
 
 The audio task remains 24 kHz, now using the bounded original soundtrack core.
 Touch polling, Iris and display services retain their settings. There are no new

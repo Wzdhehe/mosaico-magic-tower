@@ -19,7 +19,7 @@ import time
 import wave
 ROOT = Path(__file__).resolve().parents[1]
 RATE = 24000
-NAMES = ["title-lantern-at-the-gate", "lower-the-stone-remembers", "upper-wind-on-the-stair"]
+NAMES = ["title-lantern-at-the-gate", "gate", "water", "forge", "court", "crown", "king", "home"]
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

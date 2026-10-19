@@ -1,0 +1,1462 @@
+{
+  "revision": "tower50-authored-v8",
+  "coordinate_system": "zero based x/y; human floor numbers",
+  "author": "Ponkan",
+  "npcs": [
+    {
+      "floor": 3,
+      "position": [
+        3,
+        9
+      ],
+      "name_zh": "旧库管事",
+      "name_en": "ARCHIVIST",
+      "pages": [
+        {
+          "zh": [
+            "四层北端有蓝钥匙。",
+            "九层红封门的钥匙在这里。"
+          ],
+          "en": [
+            "A blue key waits on floor four.",
+            "The ninth seal needs our red key."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 4,
+      "position": [
+        1,
+        2
+      ],
+      "name_zh": "哨兵",
+      "name_en": "SENTRY",
+      "pages": [
+        {
+          "zh": [
+            "这把蓝钥匙先开哪一库？",
+            "旧库给盾，军械库给剑。"
+          ],
+          "en": [
+            "Which vault gets the first blue key?",
+            "Archive: defence. Armory: attack."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 6,
+      "position": [
+        5,
+        7
+      ],
+      "name_zh": "军需官",
+      "name_en": "QUARTERMASTER",
+      "pages": [
+        {
+          "zh": [
+            "别只看能不能打赢。",
+            "升级以后，能少挨几轮？"
+          ],
+          "en": [
+            "Do more than ask if you can win.",
+            "How many hits will an upgrade save?"
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 8,
+      "position": [
+        3,
+        6
+      ],
+      "name_zh": "伤兵",
+      "name_en": "WOUNDED GUARD",
+      "pages": [
+        {
+          "zh": [
+            "左脚边有块较暗的地砖。",
+            "走进去，房间才会显现。"
+          ],
+          "en": [
+            "A darker floor lies to your left.",
+            "Step in to reveal the hidden room."
+          ]
+        }
+      ],
+      "extra_pages": [
+        {
+          "zh": [
+            "有些暗砖藏在别的地方。",
+            "找到以后，离开也不会消失。"
+          ],
+          "en": [
+            "More dark floors wait elsewhere.",
+            "Revealed rooms stay discovered."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 10,
+      "position": [
+        8,
+        8
+      ],
+      "name_zh": "名册书记",
+      "name_en": "ROLL KEEPER",
+      "pages": [
+        {
+          "zh": [
+            "名册停在城破那一天。",
+            "队长身后还有很长的阶梯。"
+          ],
+          "en": [
+            "The roll ends when the gate fell.",
+            "A long stair lies past the captain."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 11,
+      "position": [
+        1,
+        9
+      ],
+      "name_zh": "听水老人",
+      "name_en": "WATER LISTENER",
+      "pages": [
+        {
+          "zh": [
+            "我的铜耳朵落在回流渠了。",
+            "十八层旧泵旁，水声最怪。"
+          ],
+          "en": [
+            "I lost my copper ear in the channel.",
+            "The old pump on 18 sounds strange."
+          ]
+        }
+      ],
+      "quest": 0,
+      "carrying": {
+        "zh": [
+          "你真的听见它了！",
+          "我把旧堤入口的淤泥清掉。"
+        ],
+        "en": [
+          "You really heard it calling!",
+          "I will clear the old levee entrance."
+        ]
+      },
+      "done": {
+        "zh": [
+          "沿内岸向东找暗地砖。",
+          "铜耳朵说，谢谢。"
+        ],
+        "en": [
+          "Find a dark floor east of the bank.",
+          "The copper ear says thank you."
+        ]
+      }
+    },
+    {
+      "floor": 12,
+      "position": [
+        5,
+        3
+      ],
+      "name_zh": "泵房学徒",
+      "name_en": "PUMP KEEPER",
+      "pages": [
+        {
+          "zh": [
+            "北刻线是盾，南刻线是剑。",
+            "十四层阀门能反复调整。"
+          ],
+          "en": [
+            "North mark: shield. South: sword.",
+            "The valve on 14 can be turned back."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 14,
+      "position": [
+        3,
+        3
+      ],
+      "name_zh": "阀厅学徒",
+      "name_en": "VALVE KEEPER",
+      "pages": [
+        {
+          "zh": [
+            "北库先露出，南库还在水下。",
+            "拨动脚边阀门，两库会交换。"
+          ],
+          "en": [
+            "North is dry; south is underwater.",
+            "The valve swaps the two vaults."
+          ]
+        }
+      ],
+      "extra_pages": [
+        {
+          "zh": [
+            "十五层外岸始终可以通过。",
+            "拿完一边，可回来再换。"
+          ],
+          "en": [
+            "The outer bank always stays open.",
+            "Return and turn it for the other."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 15,
+      "position": [
+        3,
+        11
+      ],
+      "name_zh": "淤泥中的字迹",
+      "name_en": "SILT NOTE",
+      "pages": [
+        {
+          "zh": [
+            "我们把塔当成了牢房。",
+            "可公主是在里面守住什么？"
+          ],
+          "en": [
+            "We thought the tower was a prison.",
+            "What has the princess been holding?"
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 17,
+      "position": [
+        3,
+        7
+      ],
+      "name_zh": "旧宿舍看守",
+      "name_en": "DORM KEEPER",
+      "pages": [
+        {
+          "zh": [
+            "东侧骑士身后有红钥匙。",
+            "先看看代价，也能回来再拿。"
+          ],
+          "en": [
+            "The east knight guards a red key.",
+            "Check the cost. You can return."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 18,
+      "position": [
+        3,
+        5
+      ],
+      "name_zh": "听水人的纸条",
+      "name_en": "WATER NOTE",
+      "pages": [
+        {
+          "zh": [
+            "右边那块地砖没有积水。",
+            "铜耳朵，大概还躺在里面。"
+          ],
+          "en": [
+            "The floor to the right stayed dry.",
+            "The copper ear may still be inside."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 19,
+      "position": [
+        3,
+        1
+      ],
+      "name_zh": "渡守遗言",
+      "name_en": "FERRY NOTE",
+      "pages": [
+        {
+          "zh": [
+            "渡守只拦住向上的人。",
+            "他说，水下还有没回家的名字。"
+          ],
+          "en": [
+            "The ferryman stops only climbers.",
+            "Below lie names that never went home."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 20,
+      "position": [
+        5,
+        9
+      ],
+      "name_zh": "摆渡人",
+      "name_en": "FERRYMAN",
+      "pages": [
+        {
+          "zh": [
+            "石印亮后，这里就能传送。",
+            "回来时，不必再交一次代价。"
+          ],
+          "en": [
+            "The lit seal becomes a warp anchor.",
+            "Your return will not cost a fight."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 21,
+      "position": [
+        3,
+        10
+      ],
+      "name_zh": "无影炉匠",
+      "name_en": "SHADOWLESS SMITH",
+      "pages": [
+        {
+          "zh": [
+            "炉子还有火，却丢了影子。",
+            "三十四层有人拿它当旗子。"
+          ],
+          "en": [
+            "My furnace lost its own shadow.",
+            "Someone flies it as a flag on 34."
+          ]
+        }
+      ],
+      "quest": 1,
+      "carrying": {
+        "zh": [
+          "是它，还是一股焦味。",
+          "西边旧库，我替你揭开入口。"
+        ],
+        "en": [
+          "That is it. Still smells of ash.",
+          "I will uncover the west store."
+        ]
+      },
+      "done": {
+        "zh": [
+          "影子总算肯跟着火走了。",
+          "旧库的暗砖就在我北边。"
+        ],
+        "en": [
+          "The shadow follows the flame again.",
+          "The dark floor lies north of me."
+        ]
+      }
+    },
+    {
+      "floor": 24,
+      "position": [
+        5,
+        3
+      ],
+      "name_zh": "精铸笔记",
+      "name_en": "CASTING NOTE",
+      "pages": [
+        {
+          "zh": [
+            "有时只差一点攻击。",
+            "多敲一轮，就多挨一次反击。"
+          ],
+          "en": [
+            "One more point can change a fight.",
+            "One extra round means one more hit."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 25,
+      "position": [
+        5,
+        7
+      ],
+      "name_zh": "炉边商人",
+      "name_en": "FORGE MERCHANT",
+      "pages": [
+        {
+          "zh": [
+            "所有商店共用一份账。",
+            "先买什么，要看下一道守卫。"
+          ],
+          "en": [
+            "Every shop shares the same ledger.",
+            "Buy for the guard you face next."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 27,
+      "position": [
+        5,
+        5
+      ],
+      "name_zh": "账房",
+      "name_en": "BOOKKEEPER",
+      "pages": [
+        {
+          "zh": [
+            "东炉守卫身后有块暗地砖。",
+            "炉中星记，记得带上。"
+          ],
+          "en": [
+            "A dark floor waits behind the guard.",
+            "Take the furnace mark with you."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 28,
+      "position": [
+        3,
+        1
+      ],
+      "name_zh": "封炉告示",
+      "name_en": "FURNACE NOTICE",
+      "pages": [
+        {
+          "zh": [
+            "封的是余烬，不是宝石。",
+            "账房知道旧仓的入口。"
+          ],
+          "en": [
+            "The seal holds embers, not jewels.",
+            "The ledger names the hidden mouth."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 29,
+      "position": [
+        1,
+        5
+      ],
+      "name_zh": "最后一页账",
+      "name_en": "LAST LEDGER",
+      "pages": [
+        {
+          "zh": [
+            "钥匙用在门上。",
+            "金币要在还用得着时花掉。"
+          ],
+          "en": [
+            "Keys are meant to open doors.",
+            "Spend gold while it can still help."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 30,
+      "position": [
+        7,
+        3
+      ],
+      "name_zh": "炉心回声",
+      "name_en": "HEART ECHO",
+      "pages": [
+        {
+          "zh": [
+            "公主借走了炉心的光。",
+            "她说，要让塔再撑一夜。"
+          ],
+          "en": [
+            "The princess borrowed its light.",
+            "She needed the tower to last a night."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 31,
+      "position": [
+        8,
+        9
+      ],
+      "name_zh": "王城门吏",
+      "name_en": "COURT USHER",
+      "pages": [
+        {
+          "zh": [
+            "两翼守卫，习惯各不相同。",
+            "也有人一直替王城交钥匙。"
+          ],
+          "en": [
+            "The two wings fight differently.",
+            "Some visitors pay the key toll."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 33,
+      "position": [
+        9,
+        5
+      ],
+      "name_zh": "补月裁缝",
+      "name_en": "MOON MENDER",
+      "pages": [
+        {
+          "zh": [
+            "月亮背面破了一个洞。",
+            "四十三层镜子里有那块补丁。"
+          ],
+          "en": [
+            "The back of the moon has a hole.",
+            "Its patch is in the mirrors on 43."
+          ]
+        }
+      ],
+      "quest": 2,
+      "carrying": {
+        "zh": [
+          "这块补丁，摸起来像夜色。",
+          "祭坛东南的旧室就送给你。"
+        ],
+        "en": [
+          "This patch feels like night itself.",
+          "The southeast room is yours."
+        ]
+      },
+      "done": {
+        "zh": [
+          "以后满月就不会漏风了。",
+          "暗砖在祭坛下面，向东走。"
+        ],
+        "en": [
+          "Full moons will no longer leak air.",
+          "Walk east below the altar."
+        ]
+      }
+    },
+    {
+      "floor": 35,
+      "position": [
+        11,
+        7
+      ],
+      "name_zh": "禁书抄写员",
+      "name_en": "SCRIBE",
+      "pages": [
+        {
+          "zh": [
+            "水纹、炉火、王冠。",
+            "三枚星记开四十七层旧室。"
+          ],
+          "en": [
+            "Water, furnace, crown. Three marks.",
+            "They open the old room on 47."
+          ]
+        }
+      ],
+      "extra_pages": [
+        {
+          "zh": [
+            "水纹在十二层泵房。",
+            "炉火在二十七层账房。"
+          ],
+          "en": [
+            "Water: the pump room on 12.",
+            "Furnace: the ledger room on 27."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 37,
+      "position": [
+        5,
+        4
+      ],
+      "name_zh": "床头遗书",
+      "name_en": "BEDSIDE NOTE",
+      "pages": [
+        {
+          "zh": [
+            "王冠缺口总朝南。",
+            "床脚正中的地砖颜色较暗。"
+          ],
+          "en": [
+            "The broken crown points south.",
+            "A darker floor lies below the bed."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 39,
+      "position": [
+        3,
+        5
+      ],
+      "name_zh": "守誓书",
+      "name_en": "OATH",
+      "pages": [
+        {
+          "zh": [
+            "守誓者没有背叛公主。",
+            "他只是不肯让封印被误开。"
+          ],
+          "en": [
+            "The oathkeeper never betrayed her.",
+            "He will not risk opening the seal."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 40,
+      "position": [
+        11,
+        3
+      ],
+      "name_zh": "公主留声",
+      "name_en": "HER MESSAGE",
+      "pages": [
+        {
+          "zh": [
+            "如果你听见这里，封印快尽了。",
+            "别救一个影子，来救整座城。"
+          ],
+          "en": [
+            "If you hear this, the seal is weak.",
+            "Come save the city, not a shadow."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 41,
+      "position": [
+        1,
+        11
+      ],
+      "name_zh": "封印碑",
+      "name_en": "SEAL PLAQUE",
+      "pages": [
+        {
+          "zh": [
+            "高处卫兵的盔甲难以击穿。",
+            "先看伤害，别向空血量许愿。"
+          ],
+          "en": [
+            "The seal guard wears heavy armour.",
+            "Read the damage before you strike."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 42,
+      "position": [
+        7,
+        7
+      ],
+      "name_zh": "观测日志",
+      "name_en": "OBSERVATORY LOG",
+      "pages": [
+        {
+          "zh": [
+            "水纹不是钥匙，是归路。",
+            "星记没拿齐，也能抵达王座。"
+          ],
+          "en": [
+            "The water mark remembers a way home.",
+            "You need no marks to reach the king."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 43,
+      "position": [
+        13,
+        10
+      ],
+      "name_zh": "镜中的裁缝",
+      "name_en": "MIRROR TAILOR",
+      "pages": [
+        {
+          "zh": [
+            "镜子照不见月亮的背面。",
+            "但脚边那块布，总在发光。"
+          ],
+          "en": [
+            "No mirror sees the back of the moon.",
+            "That patch by my feet keeps glowing."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 45,
+      "position": [
+        5,
+        9
+      ],
+      "name_zh": "最后的商人",
+      "name_en": "LAST MERCHANT",
+      "pages": [
+        {
+          "zh": [
+            "王座上的影子不会追你下楼。",
+            "四十四层蓝库还能换大药。"
+          ],
+          "en": [
+            "The king will not chase you below.",
+            "The blue vault on 44 holds medicine."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 46,
+      "position": [
+        13,
+        5
+      ],
+      "name_zh": "回收清单",
+      "name_en": "RECOVERY LIST",
+      "pages": [
+        {
+          "zh": [
+            "旧营、东炉、旧王寝。",
+            "还有那些一直等你回去的人。"
+          ],
+          "en": [
+            "Old camp. East furnace. Royal bed.",
+            "And everyone waiting for your return."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 47,
+      "position": [
+        1,
+        5
+      ],
+      "name_zh": "归还之碑",
+      "name_en": "RETURN STONE",
+      "pages": [
+        {
+          "zh": [
+            "水纹、炉火、王冠都记下了吗？",
+            "此室不挡通往王座的道路。"
+          ],
+          "en": [
+            "Have you kept water, fire and crown?",
+            "This room never bars the throne."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 47,
+      "position": [
+        12,
+        14
+      ],
+      "name_zh": "gpt6.1sol",
+      "name_en": "gpt6.1sol",
+      "pages": [
+        {
+          "zh": [
+            "我是这个游戏的真正开发者，",
+            "gpt6.1sol。"
+          ],
+          "en": [
+            "I am the true developer of this game,",
+            "gpt6.1sol."
+          ]
+        }
+      ],
+      "easter_egg": true,
+      "extra_pages": [
+        {
+          "zh": [
+            "这座塔的代码，",
+            "都是我一行一行写出来的。"
+          ],
+          "en": [
+            "The code of this tower:",
+            "I wrote it, one line at a time."
+          ]
+        },
+        {
+          "zh": [
+            "不过隐藏房间里的宝物，",
+            "你得自己找。"
+          ],
+          "en": [
+            "The hidden treasures, though?",
+            "You will have to find those yourself."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 49,
+      "position": [
+        11,
+        2
+      ],
+      "name_zh": "最后的封印",
+      "name_en": "LAST SEAL",
+      "pages": [
+        {
+          "zh": [
+            "再向上，就是王座。",
+            "传送回去准备，门不会重关。"
+          ],
+          "en": [
+            "The next stair leads to the throne.",
+            "Return to prepare. Doors stay open."
+          ]
+        }
+      ]
+    },
+    {
+      "floor": 50,
+      "position": [
+        5,
+        7
+      ],
+      "name_zh": "王座前的声音",
+      "name_en": "VOICE AT THE THRONE",
+      "pages": [
+        {
+          "zh": [
+            "我在魔王身后维持最后的封印。",
+            "看清伤害，不够就再回去准备。"
+          ],
+          "en": [
+            "I hold the last seal behind the king.",
+            "Check the cost. Return if needed."
+          ]
+        }
+      ]
+    }
+  ],
+  "regions": [
+    {
+      "name_zh": "断门城塞",
+      "name_en": "BROKEN GATE",
+      "style": "SCENE_GATE",
+      "base": "warm grey stone",
+      "accent": "#d7bd8d",
+      "music": "gate"
+    },
+    {
+      "name_zh": "沉水回廊",
+      "name_en": "SUNKEN HALL",
+      "style": "SCENE_CISTERN",
+      "base": "desaturated teal masonry",
+      "accent": "#83c9ce",
+      "music": "water"
+    },
+    {
+      "name_zh": "灰烬工坊",
+      "name_en": "ASH WORKS",
+      "style": "SCENE_ARMORY",
+      "base": "charcoal and copper",
+      "accent": "#dfaa73",
+      "music": "forge"
+    },
+    {
+      "name_zh": "静默王城",
+      "name_en": "SILENT COURT",
+      "style": "SCENE_ARCHIVE",
+      "base": "cool ivory and faded violet",
+      "accent": "#c5b6dc",
+      "music": "court"
+    },
+    {
+      "name_zh": "星冠高塔",
+      "name_en": "STAR CROWN",
+      "style": "SCENE_ASTRAL",
+      "base": "deep indigo and old gold",
+      "accent": "#dfc28b",
+      "music": "crown"
+    }
+  ],
+  "scores": {
+    "gate": {
+      "bpm": 84,
+      "key": "D minor",
+      "lead": "D5:4 A4:2 R:2 F5:4 E5:4 D5:6 C5:2 A4:4 R:4",
+      "bass": "D3:8 R:8 C3:8 A2:8",
+      "chords": [
+        "Dm",
+        "Bb",
+        "C",
+        "Am"
+      ],
+      "wave": "soft triangle",
+      "answer": "F5:4 G5:2 A5:2 G5:4 E5:4 F5:6 E5:2 D5:4 R:4",
+      "form": [
+        "lead",
+        "lead",
+        "answer",
+        "lead"
+      ],
+      "chord_span_sixteenths": 32
+    },
+    "water": {
+      "bpm": 72,
+      "key": "D dorian",
+      "lead": "A4:2 R:2 D5:4 E5:2 R:2 F5:4 E5:4 D5:4 B4:4 R:4",
+      "bass": "D3:8 R:8 G2:8 A2:8",
+      "chords": [
+        "Dm",
+        "G",
+        "C",
+        "Dm"
+      ],
+      "wave": "short triangle pluck",
+      "answer": "G5:2 R:2 E5:4 D5:2 R:2 B4:4 C5:4 E5:4 D5:4 R:4",
+      "form": [
+        "lead",
+        "lead",
+        "answer",
+        "lead"
+      ],
+      "chord_span_sixteenths": 32
+    },
+    "forge": {
+      "bpm": 96,
+      "key": "A minor",
+      "lead": "E5:3 C5:1 R:2 A4:2 C5:4 E5:4 G5:3 E5:1 D5:4 C5:4 R:4",
+      "bass": "A2:6 E3:2 A2:8 F2:6 C3:2 E2:8",
+      "chords": [
+        "Am",
+        "F",
+        "Dm",
+        "E"
+      ],
+      "wave": "soft pulse 25 percent",
+      "answer": "A5:3 G5:1 E5:4 C5:2 R:2 D5:4 E5:3 C5:1 B4:4 A4:4 R:4",
+      "form": [
+        "lead",
+        "lead",
+        "answer",
+        "lead"
+      ],
+      "chord_span_sixteenths": 32
+    },
+    "court": {
+      "bpm": 68,
+      "key": "F major with borrowed minor",
+      "lead": "A4:6 G4:2 F4:8 C5:6 A4:2 G4:4 R:4",
+      "bass": "F2:16 Bb2:8 C3:8",
+      "chords": [
+        "F",
+        "Bb",
+        "Bbm",
+        "C"
+      ],
+      "wave": "triangle and quiet sustained fifths",
+      "answer": "C5:6 D5:2 A4:8 Bb4:6 A4:2 G4:4 R:4",
+      "form": [
+        "lead",
+        "lead",
+        "answer",
+        "lead"
+      ],
+      "chord_span_sixteenths": 32
+    },
+    "crown": {
+      "bpm": 88,
+      "key": "D minor",
+      "lead": "D5:4 A4:2 C5:2 F5:4 E5:4 D5:2 E5:2 F5:4 A5:4 R:4",
+      "bass": "D3:8 A2:8 Bb2:8 C3:8",
+      "chords": [
+        "Dm",
+        "Bb",
+        "Gm",
+        "A"
+      ],
+      "wave": "triangle lead and soft pulse echo",
+      "answer": "F5:4 G5:2 A5:2 C6:4 A5:4 G5:2 E5:2 D5:4 Cs5:4 R:4",
+      "form": [
+        "lead",
+        "lead",
+        "answer",
+        "lead"
+      ],
+      "chord_span_sixteenths": 32
+    },
+    "king": {
+      "bpm": 104,
+      "key": "D harmonic minor",
+      "lead": "D5:2 E5:2 F5:4 A5:2 G5:2 E5:4 F5:2 E5:2 D5:4 Cs5:4 R:4",
+      "bass": "D3:4 A2:4 D3:8 Bb2:8 A2:8",
+      "chords": [
+        "Dm",
+        "Bb",
+        "Gm",
+        "A"
+      ],
+      "wave": "restrained pulse, sparse noise",
+      "answer": "A5:2 Bb5:2 A5:4 F5:2 E5:2 D5:4 E5:2 F5:2 E5:4 Cs5:4 R:4",
+      "form": [
+        "lead",
+        "lead",
+        "answer",
+        "lead"
+      ],
+      "chord_span_sixteenths": 32
+    },
+    "home": {
+      "bpm": 72,
+      "key": "D major",
+      "lead": "D5:4 A4:2 R:2 Fs5:4 E5:4 D5:6 E5:2 Fs5:4 R:4",
+      "bass": "D3:16 G2:8 A2:8",
+      "chords": [
+        "D",
+        "G",
+        "Bm",
+        "A"
+      ],
+      "wave": "triangle, no percussion",
+      "answer": "Fs5:4 G5:2 A5:2 B5:4 A5:4 G5:6 Fs5:2 E5:4 R:4",
+      "form": [
+        "lead",
+        "lead",
+        "answer",
+        "lead"
+      ],
+      "chord_span_sixteenths": 32
+    }
+  },
+  "ending": {
+    "princess": [
+      6,
+      1
+    ],
+    "beacon": [
+      5,
+      1
+    ],
+    "floor": 50,
+    "zh": [
+      "封印散去，公主终于离开王座。",
+      "那些没有回家的名字，有了归路。"
+    ],
+    "en": [
+      "The seal fades. She leaves the throne.",
+      "The lost names have a road home."
+    ]
+  },
+  "hidden_rooms": [
+    {
+      "floor": 8,
+      "entry": [
+        2,
+        7
+      ],
+      "rectangles": [
+        [
+          1,
+          8,
+          3,
+          9
+        ]
+      ]
+    },
+    {
+      "floor": 11,
+      "entry": [
+        6,
+        9
+      ],
+      "rectangles": [
+        [
+          7,
+          7,
+          11,
+          9
+        ]
+      ]
+    },
+    {
+      "floor": 18,
+      "entry": [
+        4,
+        5
+      ],
+      "rectangles": [
+        [
+          5,
+          5,
+          7,
+          7
+        ]
+      ]
+    },
+    {
+      "floor": 21,
+      "entry": [
+        3,
+        8
+      ],
+      "rectangles": [
+        [
+          1,
+          5,
+          3,
+          7
+        ]
+      ]
+    },
+    {
+      "floor": 28,
+      "entry": [
+        11,
+        8
+      ],
+      "rectangles": [
+        [
+          9,
+          5,
+          13,
+          7
+        ]
+      ]
+    },
+    {
+      "floor": 33,
+      "entry": [
+        10,
+        11
+      ],
+      "rectangles": [
+        [
+          11,
+          11,
+          11,
+          12
+        ],
+        [
+          11,
+          13,
+          13,
+          15
+        ]
+      ]
+    },
+    {
+      "floor": 37,
+      "entry": [
+        5,
+        6
+      ],
+      "rectangles": [
+        [
+          3,
+          7,
+          7,
+          9
+        ]
+      ]
+    },
+    {
+      "floor": 47,
+      "entry": [
+        9,
+        11
+      ],
+      "rectangles": [
+        [
+          10,
+          11,
+          10,
+          11
+        ],
+        [
+          11,
+          11,
+          13,
+          15
+        ]
+      ]
+    }
+  ],
+  "quests": [
+    {
+      "id": 0,
+      "npc": [
+        11,
+        1,
+        9
+      ],
+      "item": [
+        18,
+        7,
+        7
+      ],
+      "reward_entry": [
+        11,
+        6,
+        9
+      ]
+    },
+    {
+      "id": 1,
+      "npc": [
+        21,
+        3,
+        10
+      ],
+      "item": [
+        34,
+        3,
+        5
+      ],
+      "reward_entry": [
+        21,
+        3,
+        8
+      ]
+    },
+    {
+      "id": 2,
+      "npc": [
+        33,
+        9,
+        5
+      ],
+      "item": [
+        43,
+        13,
+        11
+      ],
+      "reward_entry": [
+        33,
+        10,
+        11
+      ]
+    }
+  ],
+  "enemy_profiles": {
+    "region2_to_5": [
+      [
+        [
+          40,
+          13,
+          5
+        ],
+        [
+          60,
+          25,
+          9
+        ],
+        [
+          100,
+          36,
+          14
+        ],
+        [
+          600,
+          120,
+          90
+        ],
+        [
+          160,
+          39,
+          18
+        ],
+        [
+          200,
+          48,
+          28
+        ],
+        [
+          260,
+          52,
+          30
+        ],
+        [
+          700,
+          150,
+          100
+        ]
+      ],
+      [
+        [
+          90,
+          36,
+          16
+        ],
+        [
+          110,
+          49,
+          22
+        ],
+        [
+          190,
+          62,
+          30
+        ],
+        [
+          900,
+          200,
+          140
+        ],
+        [
+          240,
+          63,
+          35
+        ],
+        [
+          300,
+          79,
+          48
+        ],
+        [
+          370,
+          86,
+          55
+        ],
+        [
+          1100,
+          220,
+          150
+        ]
+      ],
+      [
+        [
+          140,
+          60,
+          30
+        ],
+        [
+          200,
+          78,
+          38
+        ],
+        [
+          300,
+          94,
+          50
+        ],
+        [
+          1200,
+          230,
+          190
+        ],
+        [
+          360,
+          103,
+          56
+        ],
+        [
+          450,
+          121,
+          72
+        ],
+        [
+          550,
+          128,
+          78
+        ],
+        [
+          1400,
+          250,
+          180
+        ]
+      ],
+      [
+        [
+          200,
+          88,
+          45
+        ],
+        [
+          280,
+          108,
+          56
+        ],
+        [
+          400,
+          128,
+          70
+        ],
+        [
+          1200,
+          230,
+          160
+        ],
+        [
+          460,
+          139,
+          78
+        ],
+        [
+          560,
+          151,
+          95
+        ],
+        [
+          700,
+          158,
+          100
+        ],
+        [
+          1200,
+          170,
+          110
+        ]
+      ]
+    ],
+    "bosses": {
+      "20": [
+        "g",
+        260,
+        62,
+        24
+      ],
+      "30": [
+        "g",
+        400,
+        90,
+        43
+      ],
+      "40": [
+        "w",
+        650,
+        126,
+        70
+      ],
+      "50": [
+        "M",
+        1200,
+        170,
+        110
+      ]
+    }
+  }
+}
