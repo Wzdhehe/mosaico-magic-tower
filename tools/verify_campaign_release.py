@@ -34,6 +34,7 @@ def main():
             ('timing',['tests/run_game_timing.py']),
             ('preferences',['tests/run_preferences_storage.py']),
             ('music',['tests/run_game_music.py']),
+            ('audio-power',['tests/run_audio_power.py']),
             ('text-layout',['tests/test_ui_layout.py']),
             ('display-control',['tests/run_display_control.py']),
             ('render-schedule',['tests/run_render_schedule.py']),

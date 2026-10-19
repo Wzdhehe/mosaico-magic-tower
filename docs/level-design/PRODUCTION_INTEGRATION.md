@@ -19,7 +19,7 @@
 
 ## 验收
 
-`python tools/verify_campaign_release.py` 的17条命令全部通过，逐项日志位于本地 `artifacts/campaign-validation/`。发布后的同一套命令也进入GitHub CI。
+`python tools/verify_campaign_release.py` 的18条命令全部通过，逐项日志位于本地 `artifacts/campaign-validation/`。发布后的同一套命令也进入GitHub CI。新增音频静音/唤醒故障注入及静音补时验证，范围见 [AUDIO_MUTE_POWER.md](AUDIO_MUTE_POWER.md)。
 
 - 五条生产模型整塔路线，每个动作导出/新实例导入/再导出比对。
 - 全部2632个单字节篡改及12个语义伪造；另38项隐藏区/水闸/交付/星记及原子性契约。
