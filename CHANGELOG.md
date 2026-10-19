@@ -2,6 +2,7 @@
 
 ## v1.8.0-rc.3 — 2026-10-19 (battery HUD and outcome music)
 
+- Volume zero now fades/drains and closes playback, then blocks the audio task until a changed control. Resume primes silence and fades in; current-track time catches up without PCM output. Hardware failures retry with a bounded delay. The BSP receive channel is unchanged; actual power and speaker behavior need device acceptance.
 - Persistent upper-left battery percentage, inset for rounded screen corners. Two icon appearances: white on battery power; green while charging, including full at 100% (no lightning symbol). Unknown readings show `--`.
 - Checked read-only BQ27220 telemetry every five seconds on the owning UI task. Unchanged readings do not redraw, advance turns or write checkpoints. No gauge profile or charger settings are changed.
 - Dedicated original victory fanfare and death lament. Settings and restart confirmations retain the outcome music; continuing exploration restores Home. Ten tracks retain the four-voice integer synth and 6272-byte audio context.

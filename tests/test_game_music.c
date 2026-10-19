@@ -239,6 +239,36 @@ int main(void) {
         fail_allocation=0;
     }
     puts("PASS: all ten tracks chunk deterministic, exact mute with advancing score, no render/setter allocation");
+    CHECK(!game_music_advance_muted(NULL,1));
+    CHECK(!game_music_advance_muted(a,1));
+    for(unsigned track=0;track<GAME_MUSIC_TRACKS;++track) {
+        game_music_delete(a);game_music_delete(b);
+        CHECK(game_music_create(NULL,&a));CHECK(game_music_create(NULL,&b));
+        CHECK(game_music_set_volume(a,0));CHECK(game_music_set_volume(b,0));
+        CHECK(game_music_set_track(a,track));CHECK(game_music_set_track(b,track));
+        /* Enter mute in the middle of a note, as a real slider does. */
+        CHECK(game_music_set_volume(a,100));CHECK(game_music_set_volume(b,100));
+        CHECK(game_music_render(a,output,1379));CHECK(game_music_render(b,other,1379));
+        CHECK(game_music_set_volume(a,0));CHECK(game_music_set_volume(b,0));
+        const uint64_t frames=(uint64_t)game_music_loop_samples(track)*3u+1379u;
+        CHECK(game_music_advance_muted(a,frames));
+        for(uint64_t offset=0;offset<frames;) {
+            size_t n=frames-offset>24000u?24000u:(size_t)(frames-offset);
+            CHECK(game_music_render(b,other,n));offset+=n;
+        }
+        CHECK(game_music_position(a)==game_music_position(b));
+        CHECK(game_music_set_volume(a,100));CHECK(game_music_set_volume(b,100));
+        CHECK(game_music_render(a,output,24000));CHECK(game_music_render(b,other,24000));
+        CHECK(memcmp(output,other,sizeof output)==0);
+        CHECK(game_music_set_volume(a,0));CHECK(game_music_set_volume(b,0));
+        const uint64_t day=UINT64_C(24000)*86400u;
+        CHECK(game_music_advance_muted(a,day));
+        CHECK(game_music_advance_muted(b,day%game_music_loop_samples(track)+game_music_loop_samples(track)));
+        CHECK(game_music_set_volume(a,100));CHECK(game_music_set_volume(b,100));
+        CHECK(game_music_render(a,output,24000));CHECK(game_music_render(b,other,24000));
+        CHECK(memcmp(output,other,sizeof output)==0);
+    }
+    puts("PASS: blocked mute catches up without PCM writes; all tracks and day-long sleeps stay deterministic");
     game_music_delete(a); game_music_delete(b);
     return 0;
 }

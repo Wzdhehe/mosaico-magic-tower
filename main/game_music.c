@@ -117,6 +117,15 @@ static void silent_advance(game_music_handle_t m, size_t frames) {
         advance_clock(m,n); frames-=n;
     }
 }
+bool game_music_advance_muted(game_music_handle_t m, uint64_t frames) {
+    if (!m || m->volume) return false;
+    const uint32_t loop=game_music_loop_samples(m->track);
+    /* Each voice retriggers during a loop. Keep one complete loop to settle
+     * note/oscillator state before skipping further identical repetitions. */
+    if(frames>loop) frames=frames%loop+loop;
+    silent_advance(m,(size_t)frames);
+    return true;
+}
 static int32_t voice_sample(voice_t *v, unsigned wave) {
     if (!v->gain || v->age>=v->duration) return 0;
     uint32_t age=v->age++, remaining=v->duration-age;
