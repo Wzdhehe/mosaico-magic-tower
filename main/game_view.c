@@ -1172,23 +1172,23 @@ static void battery_indicator(const game_snapshot_t *s)
     char text[4];
     const bool known=s->battery_state!=GAME_BATTERY_UNKNOWN;
     const Color color=!known ? MUTED : s->battery_state==GAME_BATTERY_DISCHARGING ? WHITE_INK : MINT;
-    DrawRectangle(16,10,70,24,BG);
+    DrawRectangle(16,10,76,24,BG);
     DrawRectangleLines(18,16,19,14,color);
     DrawRectangle(37,20,3,6,color);
     if(known) DrawRectangle(20,18,(int)(15u*s->battery_percent/100u),10,color);
     if(s->battery_state==GAME_BATTERY_CHARGING) {
         /* Static, high-contrast lightning: no animation or idle frame ticks. */
-        DrawRectangle(23,17,8,12,BG);
-        DrawLine(29,17,24,23,color); DrawLine(24,23,30,23,color);
-        DrawLine(30,23,25,28,color);
+        /* Keep the whole fill bar intact, including at low charge. */
+        DrawLine(45,16,40,23,color); DrawLine(40,23,45,23,color);
+        DrawLine(45,23,40,29,color);
     }
     if(known) snprintf(text,sizeof(text),"%u",s->battery_percent);
     else snprintf(text,sizeof(text),"--");
-    MosaicoFastDrawText(text,42,15,16,color);
+    MosaicoFastDrawText(text,48,15,16,color);
     if(known) {
         /* The pinned fast font has no percent glyph. Keep this mark within
-         * x<86 even for 100, without shrinking the readable digits. */
-        const int x=44+MosaicoFastMeasureText(text,16);
+         * x<92 even for 100, without shrinking the readable digits. */
+        const int x=50+MosaicoFastMeasureText(text,16);
         DrawRectangle(x,16,2,2,color);DrawRectangle(x+4,25,2,2,color);
         DrawLine(x,27,x+6,15,color);
     }

@@ -80,9 +80,16 @@ static void save_preview(const char *directory,const char *name)
 static uint32_t battery_hash(void)
 {
     uint32_t h=2166136261u;
-    for(unsigned y=10;y<34;++y) for(unsigned x=16;x<86;++x)
+    for(unsigned y=10;y<34;++y) for(unsigned x=16;x<92;++x)
         h=(h^pixels[y*GAME_WIDTH+x])*16777619u;
     return h;
+}
+static void assert_battery_fill(unsigned percent,uint16_t color)
+{
+    const unsigned width=15u*percent/100u;
+    const uint16_t bg=(uint16_t)((14u>>3)<<11 | (19u>>2)<<5 | (28u>>3));
+    for(unsigned y=18;y<28;++y) for(unsigned x=0;x<15;++x)
+        assert(pixels[y*GAME_WIDTH+20+x]==(x<width?color:bg));
 }
 int main(int argc,char **argv)
 {
@@ -215,7 +222,13 @@ int main(int argc,char **argv)
     assert(game_read(game)->tower.x == 4u && game_read(game)->tower.y == 4u);
     /* Real production game/view: simulated telemetry is injected through the
      * same public API as the device; no alternate renderer or fake layout. */
+    static const unsigned fill_levels[]={0,25,50,67,100};
+    for(unsigned i=0;i<sizeof(fill_levels)/sizeof(fill_levels[0]);++i) {
+        game_set_battery(game,fill_levels[i],GAME_BATTERY_CHARGING);paint_once(game);
+        assert_battery_fill(fill_levels[i],(uint16_t)((127u>>3)<<11 | (216u>>2)<<5 | (180u>>3)));
+    }
     game_set_battery(game,67,GAME_BATTERY_DISCHARGING);paint_once(game);
+    assert_battery_fill(67,(uint16_t)((234u>>3)<<11 | (230u>>2)<<5 | (215u>>3)));
     assert(pixels[16*GAME_WIDTH+18]==(uint16_t)((234u>>3)<<11 | (230u>>2)<<5 | (215u>>3)));
     const uint32_t normal=battery_hash();
     if(argc>1) save_preview(argv[1],"battery-map-normal");
