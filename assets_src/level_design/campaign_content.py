@@ -67,6 +67,8 @@ SCORES={
  'crown':dict(bpm=88,key='D minor',lead='D5:4 A4:2 C5:2 F5:4 E5:4 D5:2 E5:2 F5:4 A5:4 R:4',bass='D3:8 A2:8 Bb2:8 C3:8',chords=['Dm','Bb','Gm','A'],wave='triangle lead and soft pulse echo'),
  'king':dict(bpm=104,key='D harmonic minor',lead='D5:2 E5:2 F5:4 A5:2 G5:2 E5:4 F5:2 E5:2 D5:4 Cs5:4 R:4',bass='D3:4 A2:4 D3:8 Bb2:8 A2:8',chords=['Dm','Bb','Gm','A'],wave='restrained pulse, sparse noise'),
  'home':dict(bpm=72,key='D major',lead='D5:4 A4:2 R:2 Fs5:4 E5:4 D5:6 E5:2 Fs5:4 R:4',bass='D3:16 G2:8 A2:8',chords=['D','G','Bm','A'],wave='triangle, no percussion'),
+ 'victory':dict(bpm=96,key='D major',lead='D5:3 Fs5:1 A5:4 D6:8 Cs6:4 B5:4 A5:4 R:4',bass='D3:8 A2:8 G2:8 A2:8',chords=['D','G','Bm','A'],wave='bright triangle fanfare, no percussion'),
+ 'fallen':dict(bpm=56,key='D minor',lead='D4:8 F4:4 E4:4 D4:8 R:8',bass='D2:16 R:8 A2:8',chords=['Dm','Bb','Gm','A'],wave='quiet sine lament, no percussion'),
 }
 # B is an authored two-bar answer, never a transposition invented by a generator.
 for key,answer in {
@@ -77,6 +79,8 @@ for key,answer in {
  'crown':'F5:4 G5:2 A5:2 C6:4 A5:4 G5:2 E5:2 D5:4 Cs5:4 R:4',
  'king':'A5:2 Bb5:2 A5:4 F5:2 E5:2 D5:4 E5:2 F5:2 E5:4 Cs5:4 R:4',
  'home':'Fs5:4 G5:2 A5:2 B5:4 A5:4 G5:6 Fs5:2 E5:4 R:4',
+ 'victory':'G5:4 B5:4 D6:8 Cs6:4 A5:4 D6:4 R:4',
+ 'fallen':'C4:8 E4:4 D4:4 Cs4:8 R:8',
 }.items():
     SCORES[key]['answer']=answer
     SCORES[key]['form']=['lead','lead','answer','lead']

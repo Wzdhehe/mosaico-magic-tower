@@ -63,7 +63,28 @@ static void paint_once(game_handle_t game)
     assert(presents == previous + 1);
     assert(!game_needs_redraw(game));
 }
-int main(void)
+static void save_preview(const char *directory,const char *name)
+{
+    char path[512];
+    assert(snprintf(path,sizeof path,"%s/%s.ppm",directory,name)<(int)sizeof path);
+    FILE *file=fopen(path,"wb"); assert(file);
+    fprintf(file,"P6\n480 480\n255\n");
+    for(size_t i=0;i<GAME_WIDTH*GAME_HEIGHT;++i) {
+        const unsigned v=pixels[i];
+        fputc((int)((v>>11)*255u/31u),file);
+        fputc((int)(((v>>5)&63u)*255u/63u),file);
+        fputc((int)((v&31u)*255u/31u),file);
+    }
+    assert(fclose(file)==0);
+}
+static uint32_t battery_hash(void)
+{
+    uint32_t h=2166136261u;
+    for(unsigned y=10;y<34;++y) for(unsigned x=16;x<86;++x)
+        h=(h^pixels[y*GAME_WIDTH+x])*16777619u;
+    return h;
+}
+int main(int argc,char **argv)
 {
     const game_config_t config = {.width=GAME_WIDTH, .height=GAME_HEIGHT};
     game_handle_t game = NULL;
@@ -192,6 +213,35 @@ int main(void)
     press(game, GAME_ACTION_RIGHT);
     paint_once(game);
     assert(game_read(game)->tower.x == 4u && game_read(game)->tower.y == 4u);
+    /* Real production game/view: simulated telemetry is injected through the
+     * same public API as the device; no alternate renderer or fake layout. */
+    game_set_battery(game,67,GAME_BATTERY_DISCHARGING);paint_once(game);
+    assert(pixels[16*GAME_WIDTH+18]==(uint16_t)((234u>>3)<<11 | (230u>>2)<<5 | (215u>>3)));
+    const uint32_t normal=battery_hash();
+    if(argc>1) save_preview(argv[1],"battery-map-normal");
+    game_set_battery(game,67,GAME_BATTERY_CHARGING);paint_once(game);
+    assert(pixels[16*GAME_WIDTH+18]==(uint16_t)((127u>>3)<<11 | (216u>>2)<<5 | (180u>>3)));
+    const uint32_t charging=battery_hash(); assert(charging!=normal);
+    if(argc>1) save_preview(argv[1],"battery-map-charging");
+    tap(game,GAME_SETTINGS_X+20,GAME_SETTINGS_Y+15);paint_once(game);
+    assert(battery_hash()==charging);
+    if(argc>1) save_preview(argv[1],"battery-settings-charging");
+    game_set_battery(game,100,GAME_BATTERY_CHARGING);paint_once(game);
+    assert(battery_hash()!=charging);
+    if(argc>1) save_preview(argv[1],"battery-settings-full");
+    game_set_battery(game,12,GAME_BATTERY_DISCHARGING);paint_once(game);
+    if(argc>1) save_preview(argv[1],"battery-settings-low");
+    idle_acquisitions=acquisitions;idle_presents=presents;
+    for(int i=0;i<300;++i) {
+        game_set_battery(game,12,GAME_BATTERY_DISCHARGING);game_update(game);
+        assert(game_render_device_pending(game) && game_is_idle(game));
+    }
+    assert(acquisitions==idle_acquisitions && presents==idle_presents);
+    game_delete(game);
+    assert(game_create(&config,&game));
+    game_set_battery(game,67,GAME_BATTERY_CHARGING);paint_once(game);
+    if(argc>1) save_preview(argv[1],"battery-title-charging");
+    assert(battery_hash()==charging);
     game_delete(game);
     CloseWindow();
     puts("PASS: real RGB565 acquire/submit retry; 300 idle polls = 0 acquisitions/presents; input, static sprites across active ticks, sticky feedback and fresh-target screenshots");

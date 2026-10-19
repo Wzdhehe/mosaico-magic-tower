@@ -29,6 +29,7 @@ def main():
             ('campaign-contracts',['tools/test_campaign_contract.py']),
             ('actual-game-input',['tests/test_campaign_game.py']),
             ('restart',['tests/run_restart_menu.py']),
+            ('battery',['tests/run_battery.py']),
             ('camera',['tests/run_camera_controls.py']),
             ('timing',['tests/run_game_timing.py']),
             ('preferences',['tests/run_preferences_storage.py']),

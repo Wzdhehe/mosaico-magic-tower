@@ -95,7 +95,7 @@ unsigned screen_dungeon(void){return GAME_DUNGEON;} unsigned screen_victory(void
                 index=action[1];lib.click(78+(index%2)*174+75,152+(index//2)*70+28)
             else:raise AssertionError(action)
             after=a['after']
-            expected_music=7 if after['cleared'] else (6 if after['floor']==49 else 1+after['floor']//10)
+            expected_music=8 if lib.val(0)==victory else (7 if after['cleared'] else (6 if after['floor']==49 else 1+after['floor']//10))
             assert lib.val(15)==expected_music,('music routing',after['floor'],lib.val(15),expected_music)
             tracks.add(lib.val(15))
             for index,name in ((1,'floor'),(2,'x'),(3,'y'),(4,'hp'),(5,'attack'),(6,'defence'),(7,'gold'),(8,'turns')):
@@ -104,7 +104,11 @@ unsigned screen_dungeon(void){return GAME_DUNGEON;} unsigned screen_victory(void
             assert lib.val(11)==turns_written,('unexpected save count',action,lib.val(11),turns_written)
         assert teaching and len(deliveries)==3
         assert gpt_pages==[0,1,2],('GPT pages were not visited',gpt_pages)
-        assert tracks==set(range(8)),('Not all region/boss/ending tracks were routed',tracks)
+        if lib.val(0)==victory:
+            lib.key(6)
+            assert lib.val(15)==7,'Continued exploration must restore Home'
+            tracks.add(lib.val(15))
+        assert tracks==set(range(9)),('Not all region/boss/victory/exploration tracks were routed',tracks)
         assert lib.val(10) and lib.val(14)==31 and (lib.val(12),lib.val(13))==(0,0)
         print('PASS: actual game input reaches 50F; teaching pages, three deliveries, autosave counts, final11x11 camera')
         print('Dialogs encountered:',len(diags),'checkpoint writes:',turns_written)

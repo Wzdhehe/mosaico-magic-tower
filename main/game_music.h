@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #define GAME_MUSIC_RATE 24000U
-#define GAME_MUSIC_TRACKS 8U
+#define GAME_MUSIC_TRACKS 10U
 /* Each handle has one owning thread. Immutable score/wave tables are shared.
  * Create allocates once, render/setters never allocate; delete accepts NULL. */
 typedef struct game_music_t *game_music_handle_t;

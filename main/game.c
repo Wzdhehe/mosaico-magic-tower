@@ -781,9 +781,26 @@ void game_set_action(game_handle_t g, int code, bool pressed)
 static uint8_t expected_music(game_handle_t g)
 {
     if(g->state.screen==GAME_TITLE) return 0;
+    /* End-screen identity survives its restart/confirmation submenus. */
+    game_screen_t source=g->state.screen;
+    if(source==GAME_NEW_CONFIRM) source=g->confirm_source;
+    if(source==GAME_RESTART_MENU) source=g->restart_source;
+    if(source==GAME_OVER) return 9;
+    if(source==GAME_VICTORY) return 8;
     if(g->state.tower.cleared) return 7;
     if(g->state.tower.floor==TOWER_FLOORS-1u) return 6;
     return (uint8_t)(1u+g->state.tower.floor/10u);
+}
+void game_set_battery(game_handle_t g, unsigned percent, game_battery_state_t state)
+{
+    if(!g) return;
+    if(percent>100u || state<GAME_BATTERY_UNKNOWN || state>GAME_BATTERY_CHARGING)
+        state=GAME_BATTERY_UNKNOWN;
+    if(state==GAME_BATTERY_UNKNOWN) percent=0;
+    if(g->state.battery_percent==percent && g->state.battery_state==state) return;
+    g->state.battery_percent=(uint8_t)percent;
+    g->state.battery_state=state;
+    g->frame_pending=true;
 }
 static bool repeating_direction(game_handle_t g)
 {

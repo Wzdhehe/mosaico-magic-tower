@@ -93,6 +93,7 @@ static int state_json(const void *value,char *output,size_t capacity)
         "\"shop_attack\":%lu,\"shop_defence\":%lu,"
         "\"lang\":\"%s\",\"notice\":%d,\"pointer_down\":%s,\"settings_open\":%s,"
         "\"volume\":%u,\"brightness\":%u,\"preferences_save_failed\":%s,"
+        "\"battery_percent\":%u,\"battery_state\":%u,\"music\":%u,"
         "\"camera\":[%u,%u],\"floor_size\":[%u,%u],\"dialogue_id\":%u,\"dialogue_page\":%u,\"dialogue_pages\":%u,\"dialogue_variant\":%u,"
         "\"state_hash\":\"%08lx\"}",phase,screen,
         (unsigned long)s->tick,(unsigned long)s->tower.floor,TOWER_FLOORS,
@@ -109,6 +110,7 @@ static int state_json(const void *value,char *output,size_t capacity)
         s->lang==GAME_LANG_EN?"en":"zh",(int)s->notice_id,
         s->pointer_down?"true":"false",s->settings_open?"true":"false",
         s->volume,s->brightness,s->preferences_save_failed?"true":"false",
+        s->battery_percent,(unsigned)s->battery_state,s->music,
         s->camera_x,s->camera_y,s->floor_w,s->floor_h,s->dialogue_id,s->dialogue_page,
         campaign_dialogue_pages(s->dialogue_id,s->dialogue_variant),s->dialogue_variant,(unsigned long)state_hash(value));
     return size<0 || (size_t)size>=capacity?-1:size;

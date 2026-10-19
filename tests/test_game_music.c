@@ -15,7 +15,7 @@ void *game_music_test_calloc(size_t count, size_t size) {
     void *p=malloc(count*size); if(p) memset(p,0,count*size); return p;
 }
 static int16_t output[24000], other[24000];
-static unsigned hashes[8];
+static unsigned hashes[GAME_MUSIC_TRACKS];
 static unsigned hash(unsigned h, const int16_t *p, size_t n) {
     for (size_t i=0;i<n;++i) h=(h^(unsigned)(uint16_t)p[i])*16777619U;
     return h;
@@ -47,35 +47,42 @@ static void check_phrase(const uint8_t *actual, const char *score) {
     CHECK(cell==32);
 }
 static void check_authored_scores(void) {
-    static const char *const lead[7]={
+    static const char *const lead[9]={
         "D5:4 A4:2 R:2 F5:4 E5:4 D5:6 C5:2 A4:4 R:4",
         "A4:2 R:2 D5:4 E5:2 R:2 F5:4 E5:4 D5:4 B4:4 R:4",
         "E5:3 C5:1 R:2 A4:2 C5:4 E5:4 G5:3 E5:1 D5:4 C5:4 R:4",
         "A4:6 G4:2 F4:8 C5:6 A4:2 G4:4 R:4",
         "D5:4 A4:2 C5:2 F5:4 E5:4 D5:2 E5:2 F5:4 A5:4 R:4",
         "D5:2 E5:2 F5:4 A5:2 G5:2 E5:4 F5:2 E5:2 D5:4 Cs5:4 R:4",
-        "D5:4 A4:2 R:2 Fs5:4 E5:4 D5:6 E5:2 Fs5:4 R:4"};
-    static const char *const answer[7]={
+        "D5:4 A4:2 R:2 Fs5:4 E5:4 D5:6 E5:2 Fs5:4 R:4",
+        "D5:3 Fs5:1 A5:4 D6:8 Cs6:4 B5:4 A5:4 R:4",
+        "D4:8 F4:4 E4:4 D4:8 R:8"};
+    static const char *const answer[9]={
         "F5:4 G5:2 A5:2 G5:4 E5:4 F5:6 E5:2 D5:4 R:4",
         "G5:2 R:2 E5:4 D5:2 R:2 B4:4 C5:4 E5:4 D5:4 R:4",
         "A5:3 G5:1 E5:4 C5:2 R:2 D5:4 E5:3 C5:1 B4:4 A4:4 R:4",
         "C5:6 D5:2 A4:8 Bb4:6 A4:2 G4:4 R:4",
         "F5:4 G5:2 A5:2 C6:4 A5:4 G5:2 E5:2 D5:4 Cs5:4 R:4",
         "A5:2 Bb5:2 A5:4 F5:2 E5:2 D5:4 E5:2 F5:2 E5:4 Cs5:4 R:4",
-        "Fs5:4 G5:2 A5:2 B5:4 A5:4 G5:6 Fs5:2 E5:4 R:4"};
-    static const char *const bass[7]={
+        "Fs5:4 G5:2 A5:2 B5:4 A5:4 G5:6 Fs5:2 E5:4 R:4",
+        "G5:4 B5:4 D6:8 Cs6:4 A5:4 D6:4 R:4",
+        "C4:8 E4:4 D4:4 Cs4:8 R:8"};
+    static const char *const bass[9]={
         "D3:8 R:8 C3:8 A2:8", "D3:8 R:8 G2:8 A2:8",
         "A2:6 E3:2 A2:8 F2:6 C3:2 E2:8", "F2:16 Bb2:8 C3:8",
-        "D3:8 A2:8 Bb2:8 C3:8", "D3:4 A2:4 D3:8 Bb2:8 A2:8", "D3:16 G2:8 A2:8"};
-    static const uint8_t expected_chords[7][4][3]={
+        "D3:8 A2:8 Bb2:8 C3:8", "D3:4 A2:4 D3:8 Bb2:8 A2:8", "D3:16 G2:8 A2:8",
+        "D3:8 A2:8 G2:8 A2:8", "D2:16 R:8 A2:8"};
+    static const uint8_t expected_chords[9][4][3]={
         {{50,53,57},{58,62,65},{48,52,55},{57,60,64}},
         {{50,53,57},{55,59,62},{48,52,55},{50,53,57}},
         {{57,60,64},{53,57,60},{50,53,57},{52,56,59}},
         {{53,57,60},{58,62,65},{58,61,65},{48,52,55}},
         {{50,53,57},{58,62,65},{55,58,62},{57,61,64}},
         {{50,53,57},{58,62,65},{55,58,62},{57,61,64}},
-        {{50,54,57},{55,59,62},{59,62,66},{57,61,64}}};
-    for(unsigned track=1;track<8;++track) {
+        {{50,54,57},{55,59,62},{59,62,66},{57,61,64}},
+        {{50,54,57},{55,59,62},{59,62,66},{57,61,64}},
+        {{50,53,57},{58,62,65},{55,58,62},{57,61,64}}};
+    for(unsigned track=1;track<GAME_MUSIC_TRACKS;++track) {
         for(unsigned section=0;section<4;++section) {
             check_phrase(melody[track]+section*32,section==2?answer[track-1]:lead[track-1]);
             check_phrase(bass_notes[track]+section*32,bass[track-1]);
@@ -89,7 +96,7 @@ static void check_authored_scores(void) {
     puts("PASS: exact authored pitches, sixteenth durations, AABA answers, bass and standard triads");
 }
 int main(void) {
-    CHECK(GAME_MUSIC_TRACKS==8U);
+    CHECK(GAME_MUSIC_TRACKS==10U);
     check_authored_scores();
     game_music_delete(NULL);
     CHECK(!game_music_create(NULL,NULL));
@@ -100,9 +107,9 @@ int main(void) {
     CHECK(!game_music_render(a,NULL,1));
     CHECK(game_music_render(a,NULL,0));
     CHECK(!game_music_set_volume(a,101));
-    CHECK(!game_music_set_track(a,8));
-    CHECK(game_music_loop_samples(8)==0);
-    CHECK(game_music_track_name(8)==NULL);
+    CHECK(!game_music_set_track(a,GAME_MUSIC_TRACKS));
+    CHECK(game_music_loop_samples(GAME_MUSIC_TRACKS)==0);
+    CHECK(game_music_track_name(GAME_MUSIC_TRACKS)==NULL);
     CHECK(game_music_position(NULL)==0);
     game_music_config_t bad_config={1};
     game_music_handle_t failed=NULL;
@@ -147,13 +154,13 @@ int main(void) {
     game_music_delete(a); CHECK(game_music_create(NULL,&a)); CHECK(a);
     CHECK(game_music_set_volume(a,100));
     clock_t start=clock();
-    for(unsigned track=0;track<8;++track) {
+    for(unsigned track=0;track<GAME_MUSIC_TRACKS;++track) {
         game_music_delete(a); CHECK(game_music_create(NULL,&a)); CHECK(a);
         CHECK(game_music_set_volume(a,0));
         CHECK(game_music_set_track(a,track));
         CHECK(game_music_set_volume(a,100));
         uint32_t frames=game_music_loop_samples(track);
-        static const unsigned unit_frames[8]={7500,4286,5000,3750,5294,4091,3462,5000};
+        static const unsigned unit_frames[10]={7500,4286,5000,3750,5294,4091,3462,5000,3750,6429};
         CHECK(frames==128U*unit_frames[track]);
         long long sum=0,energy=0; int peak=0,max_jump=0,last=0;
         hashes[track]=2166136261U;
@@ -183,8 +190,8 @@ int main(void) {
         CHECK(game_music_render(a,output,1));
         int seam=output[0]-last; if(seam<0) seam=-seam; CHECK(seam < peak/3 + 200);
     }
-    for(unsigned left=0;left<8;++left)
-        for(unsigned right=left+1;right<8;++right) CHECK(hashes[left]!=hashes[right]);
+    for(unsigned left=0;left<GAME_MUSIC_TRACKS;++left)
+        for(unsigned right=left+1;right<GAME_MUSIC_TRACKS;++right) CHECK(hashes[left]!=hashes[right]);
     CHECK(game_music_memory_bytes()<=6400);
     printf("PASS: distinct track PCM; context=%zu bytes; host full-volume render CPU=%.3fs\n",
            game_music_memory_bytes(),(double)(clock()-start)/CLOCKS_PER_SEC);
@@ -209,7 +216,7 @@ int main(void) {
     printf("PASS: 120s muted timeline host CPU=%.6fs (not board measurement)\n",
            (double)(clock()-mute_start)/CLOCKS_PER_SEC);
     puts("PASS: track/volume transition is chunk independent");
-    for(unsigned track=0;track<8;++track) {
+    for(unsigned track=0;track<GAME_MUSIC_TRACKS;++track) {
         CHECK(game_music_set_volume(a,0)); CHECK(game_music_set_track(a,track));
         CHECK(game_music_set_volume(b,0)); CHECK(game_music_set_track(b,track));
         CHECK(game_music_set_volume(a,100)); CHECK(game_music_set_volume(b,100));
@@ -231,7 +238,7 @@ int main(void) {
         CHECK(allocation_calls==before);
         fail_allocation=0;
     }
-    puts("PASS: all eight tracks chunk deterministic, exact mute with advancing score, no render/setter allocation");
+    puts("PASS: all ten tracks chunk deterministic, exact mute with advancing score, no render/setter allocation");
     game_music_delete(a); game_music_delete(b);
     return 0;
 }
