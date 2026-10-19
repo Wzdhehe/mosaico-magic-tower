@@ -16,8 +16,8 @@ static const campaign_page_t campaign_pages_2[] = {
     {{"别只看能不能打赢。","升级以后，能少挨几轮？"},{"Do more than ask if you can win.","How many hits will an upgrade save?"}},
 };
 static const campaign_page_t campaign_pages_3[] = {
-    {{"左脚边有块较暗的地砖。","走进去，房间才会显现。"},{"A darker floor lies to your left.","Step in to reveal the hidden room."}},
-    {{"有些暗砖藏在别的地方。","找到以后，离开也不会消失。"},{"More dark floors wait elsewhere.","Revealed rooms stay discovered."}},
+    {{"左脚边有块较暗的墙砖。","走进去，房间才会显现。"},{"A darker wall lies to your left.","Step in to reveal the hidden room."}},
+    {{"有些暗墙藏在别的地方。","找到以后，离开也不会消失。"},{"More dark walls wait elsewhere.","Revealed rooms stay discovered."}},
 };
 static const campaign_page_t campaign_pages_4[] = {
     {{"名册停在城破那一天。","队长身后还有很长的阶梯。"},{"The roll ends when the gate fell.","A long stair lies past the captain."}},
@@ -26,7 +26,7 @@ static const campaign_page_t campaign_pages_5[] = {
     {{"我的铜耳朵落在回流渠了。","十八层旧泵旁，水声最怪。"},{"I lost my copper ear in the channel.","The old pump on 18 sounds strange."}},
 };
 static const campaign_page_t campaign_carrying_5 = {{"你真的听见它了！","我把旧堤入口的淤泥清掉。"},{"You really heard it calling!","I will clear the old levee entrance."}};
-static const campaign_page_t campaign_done_5 = {{"沿内岸向东找暗地砖。","铜耳朵说，谢谢。"},{"Find a dark floor east of the bank.","The copper ear says thank you."}};
+static const campaign_page_t campaign_done_5 = {{"沿内岸向东找暗墙。","铜耳朵说，谢谢。"},{"Find a dark wall east of the bank.","The copper ear says thank you."}};
 static const campaign_page_t campaign_pages_6[] = {
     {{"北刻线是盾，南刻线是剑。","十四层阀门能反复调整。"},{"North mark: shield. South: sword.","The valve on 14 can be turned back."}},
 };
@@ -41,7 +41,7 @@ static const campaign_page_t campaign_pages_9[] = {
     {{"东侧骑士身后有红钥匙。","先看看代价，也能回来再拿。"},{"The east knight guards a red key.","Check the cost. You can return."}},
 };
 static const campaign_page_t campaign_pages_10[] = {
-    {{"右边那块地砖没有积水。","铜耳朵，大概还躺在里面。"},{"The floor to the right stayed dry.","The copper ear may still be inside."}},
+    {{"右边那块墙砖没有积水。","铜耳朵，大概还躺在里面。"},{"The wall to the right stayed dry.","The copper ear may still be inside."}},
 };
 static const campaign_page_t campaign_pages_11[] = {
     {{"渡守只拦住向上的人。","他说，水下还有没回家的名字。"},{"The ferryman stops only climbers.","Below lie names that never went home."}},
@@ -53,7 +53,7 @@ static const campaign_page_t campaign_pages_13[] = {
     {{"炉子还有火，却丢了影子。","三十四层有人拿它当旗子。"},{"My furnace lost its own shadow.","Someone flies it as a flag on 34."}},
 };
 static const campaign_page_t campaign_carrying_13 = {{"是它，还是一股焦味。","西边旧库，我替你揭开入口。"},{"That is it. Still smells of ash.","I will uncover the west store."}};
-static const campaign_page_t campaign_done_13 = {{"影子总算肯跟着火走了。","旧库的暗砖就在我北边。"},{"The shadow follows the flame again.","The dark floor lies north of me."}};
+static const campaign_page_t campaign_done_13 = {{"影子总算肯跟着火走了。","旧库的暗墙就在我北边。"},{"The shadow follows the flame again.","The dark wall lies north of me."}};
 static const campaign_page_t campaign_pages_14[] = {
     {{"有时只差一点攻击。","多敲一轮，就多挨一次反击。"},{"One more point can change a fight.","One extra round means one more hit."}},
 };
@@ -61,7 +61,7 @@ static const campaign_page_t campaign_pages_15[] = {
     {{"所有商店共用一份账。","先买什么，要看下一道守卫。"},{"Every shop shares the same ledger.","Buy for the guard you face next."}},
 };
 static const campaign_page_t campaign_pages_16[] = {
-    {{"东炉守卫身后有块暗地砖。","炉中星记，记得带上。"},{"A dark floor waits behind the guard.","Take the furnace mark with you."}},
+    {{"东炉守卫身后有块暗墙。","炉中星记，记得带上。"},{"A dark wall waits behind the guard.","Take the furnace mark with you."}},
 };
 static const campaign_page_t campaign_pages_17[] = {
     {{"封的是余烬，不是宝石。","账房知道旧仓的入口。"},{"The seal holds embers, not jewels.","The ledger names the hidden mouth."}},
@@ -79,13 +79,13 @@ static const campaign_page_t campaign_pages_21[] = {
     {{"月亮背面破了一个洞。","四十三层镜子里有那块补丁。"},{"The back of the moon has a hole.","Its patch is in the mirrors on 43."}},
 };
 static const campaign_page_t campaign_carrying_21 = {{"这块补丁，摸起来像夜色。","祭坛东南的旧室就送给你。"},{"This patch feels like night itself.","The southeast room is yours."}};
-static const campaign_page_t campaign_done_21 = {{"以后满月就不会漏风了。","暗砖在祭坛下面，向东走。"},{"Full moons will no longer leak air.","Walk east below the altar."}};
+static const campaign_page_t campaign_done_21 = {{"以后满月就不会漏风了。","暗墙在祭坛下面，向东走。"},{"Full moons will no longer leak air.","The dark wall is below the altar, east."}};
 static const campaign_page_t campaign_pages_22[] = {
     {{"水纹、炉火、王冠。","三枚星记开四十七层旧室。"},{"Water, furnace, crown. Three marks.","They open the old room on 47."}},
     {{"水纹在十二层泵房。","炉火在二十七层账房。"},{"Water: the pump room on 12.","Furnace: the ledger room on 27."}},
 };
 static const campaign_page_t campaign_pages_23[] = {
-    {{"王冠缺口总朝南。","床脚正中的地砖颜色较暗。"},{"The broken crown points south.","A darker floor lies below the bed."}},
+    {{"王冠缺口总朝南。","床脚正中的墙砖颜色较暗。"},{"The broken crown points south.","A darker wall lies below the bed."}},
 };
 static const campaign_page_t campaign_pages_24[] = {
     {{"守誓者没有背叛公主。","他只是不肯让封印被误开。"},{"The oathkeeper never betrayed her.","He will not risk opening the seal."}},

@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.8.0-rc.2 — 2026-10-19 (hidden-door readability)
+
+- Concealed doors (`%`) now use the wall masonry and a dark wall-color overlay
+  with a recessed edge, instead of a normal floor tile with a 20% dim. At low
+  AMOLED brightness they read as a darker wall block rather than ordinary path.
+- Viewport framing now stops on any side that has more map beyond it; sides at a
+  real map edge keep the accent frame. The open edge replaces the previous
+  low-contrast translucent-only cue.
+- All hidden-door hints in Chinese and English now say dark wall / 暗墙 or 墙砖
+  instead of dark floor / 地砖. The 8F tutorial, 11F/21F/33F reward hints,
+  18F and 27F clues and 37F note are aligned with the new visual.
+- The font subset was regenerated for the new 墙 glyph (517 glyphs).
+
 ## v1.8.0-rc.1 — 2026-10-19 (fifty-floor production integration)
 
 - Integrated all fifty approved maps, five regional identities, eight concealed rooms, three return errands, reversible sluice and optional three-sigil room. Final floor is an 11×11 symmetric throne hall.

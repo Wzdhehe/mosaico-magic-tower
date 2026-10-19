@@ -842,6 +842,39 @@ static bool view_has(const game_snapshot_t *s,int x,int y)
     return x>=(int)s->camera_x && x<(int)s->camera_x+TOWER_VIEW_W &&
            y>=(int)s->camera_y && y<(int)s->camera_y+TOWER_VIEW_H;
 }
+static void event_sprite(const game_snapshot_t *s,int x,int y,int sx,int sy)
+{
+    const int cx=sx+GAME_TILE/2, cy=sy+GAME_TILE/2;
+    /* 14F water valve: a brass wheel below the valve keeper. */
+    if(s->tower.floor==13u && x==3 && y==4) {
+        DrawCircle(cx,cy,8,BRASS);
+        DrawCircle(cx,cy,3,INK);
+        DrawLine(cx-7,cy,cx+7,cy,INK);
+        DrawLine(cx,cy-7,cx,cy+7,INK);
+        DrawPixel(cx,cy,WHITE_INK);
+        return;
+    }
+    /* 12F / 27F / 35F star marks. */
+    if((s->tower.floor==11u && x==4 && y==3) ||
+       (s->tower.floor==26u && x==5 && y==6) ||
+       (s->tower.floor==34u && x==11 && y==9)) {
+        DrawTriangle((Vector2){cx,cy-8},(Vector2){cx-5,cy},(Vector2){cx+5,cy},MINT);
+        DrawTriangle((Vector2){cx,cy+8},(Vector2){cx-5,cy},(Vector2){cx+5,cy},MINT);
+        DrawCircle(cx,cy,2,INK);
+        return;
+    }
+    /* 18F / 34F / 43F errand objects. */
+    if((s->tower.floor==17u && x==7 && y==7) ||
+       (s->tower.floor==33u && x==3 && y==5) ||
+       (s->tower.floor==42u && x==13 && y==11)) {
+        DrawRectangle(cx-6,cy-4,12,9,(Color){139,103,63,255});
+        DrawRectangle(cx-4,cy-7,8,4,BRASS);
+        DrawLine(cx-6,cy,cx+6,cy,INK);
+        DrawPixel(cx,cy-1,WHITE_INK);
+        return;
+    }
+    DrawRectangle(cx-3,cy-3,6,6,Fade(BRASS,.8f));
+}
 static void dungeon(game_handle_t game,const game_snapshot_t *s)
 {
     char text[96];
@@ -882,25 +915,46 @@ static void dungeon(game_handle_t game,const game_snapshot_t *s)
         ui_draw(gold_label,x,54,1,MUTED); x+=ui_width(gold_label,1)+label_gap;
         ui_draw(gold,x,54,1,BRASS);
     }
-    DrawRectangle(GAME_MAP_X-4,GAME_MAP_Y-4,
-                  GAME_TILE*TOWER_VIEW_W+8,GAME_TILE*TOWER_VIEW_H+8,sc->wall_hi);
-    DrawRectangleLines(GAME_MAP_X-3,GAME_MAP_Y-3,
-                       GAME_TILE*TOWER_VIEW_W+6,GAME_TILE*TOWER_VIEW_H+6,sc->accent);
+    /* Only the sides that end at a real map edge get a frame. A side with more
+     * map beyond it stays open, so the extension is obvious at low brightness
+     * without relying on the translucent band. */
+    {
+        const int x=GAME_MAP_X, y=GAME_MAP_Y;
+        const int w=GAME_TILE*TOWER_VIEW_W, h=GAME_TILE*TOWER_VIEW_H;
+        if(s->camera_y==0) DrawRectangle(x-4,y-4,w+8,4,sc->wall_hi);
+        if(s->camera_y>=(unsigned)camera_max_y(s)) DrawRectangle(x-4,y+h,w+8,4,sc->wall_hi);
+        if(s->camera_x==0) DrawRectangle(x-4,y-4,4,h+8,sc->wall_hi);
+        if(s->camera_x>=(unsigned)camera_max_x(s)) DrawRectangle(x+w,y-4,4,h+8,sc->wall_hi);
+        const int x0=x-3, y0=y-3, x1=x+w+2, y1=y+h+2;
+        if(s->camera_x==0) DrawLine(x0,y0,x0,y1,sc->accent);
+        if(s->camera_x>=(unsigned)camera_max_x(s)) DrawLine(x1,y0,x1,y1,sc->accent);
+        if(s->camera_y==0) DrawLine(x0,y0,x1,y0,sc->accent);
+        if(s->camera_y>=(unsigned)camera_max_y(s)) DrawLine(x0,y1,x1,y1,sc->accent);
+    }
     /* Every map lookup and hit test goes through the camera origin. */
     for(int vy=0;vy<TOWER_VIEW_H;++vy) for(int vx=0;vx<TOWER_VIEW_W;++vx) {
         const int x=(int)s->camera_x+vx, y=(int)s->camera_y+vy;
         const int sx=GAME_MAP_X+vx*GAME_TILE, sy=GAME_MAP_Y+vy*GAME_TILE;
         const tower_tile_t tile=game_tile(game,x,y);
-        if(tile==TOWER_TILE_WALL) scene_wall(sc,sx,sy,x,y);
-        else {
+        if(tile==TOWER_TILE_WALL || tile==TOWER_TILE_SECRET) {
+            scene_wall(sc,sx,sy,x,y);
+            if(tile==TOWER_TILE_SECRET) {
+                /* A concealed door keeps the wall's masonry, then darkens it.
+                 * It must not read as a floor tile: the brick seams and the
+                 * recessed edge are the cue, so low-brightness panels still
+                 * show a darker wall block rather than a normal path. */
+                DrawRectangle(sx+1,sy+1,GAME_TILE-2,GAME_TILE-2,Fade(INK,.36f));
+                DrawRectangleLines(sx+3,sy+3,GAME_TILE-6,GAME_TILE-6,Fade(INK,.55f));
+                DrawLine(sx+5,sy+4,sx+GAME_TILE-6,sy+4,Fade(sc->wall_hi,.35f));
+                DrawLine(sx+5,sy+GAME_TILE-4,sx+GAME_TILE-6,sy+GAME_TILE-4,
+                         Fade(INK,.65f));
+            }
+        } else {
             scene_floor(sc,sx,sy,x,y);
             /* No time-driven animation: an unchanged scene stays pixel-identical. */
             if(tile==TOWER_TILE_NPC && is_gpt(s,x,y)) gpt_robot(sx,sy,1);
             else tile_sprite(tile,sx,sy,0,sc->accent);
-            if(tile==TOWER_TILE_SECRET) {
-                DrawRectangle(sx+1,sy+1,30,30,Fade(INK,.20f));
-                DrawLine(sx+4,sy+29,sx+27,sy+29,sc->wall_lo);
-            }
+            if(tile==TOWER_TILE_EVENT) event_sprite(s,x,y,sx,sy);
         }
     }
     if(s->tower.cleared && s->tower.floor+1>=TOWER_FLOORS) {

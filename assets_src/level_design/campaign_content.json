@@ -77,11 +77,11 @@
       "pages": [
         {
           "zh": [
-            "左脚边有块较暗的地砖。",
+            "左脚边有块较暗的墙砖。",
             "走进去，房间才会显现。"
           ],
           "en": [
-            "A darker floor lies to your left.",
+            "A darker wall lies to your left.",
             "Step in to reveal the hidden room."
           ]
         }
@@ -89,11 +89,11 @@
       "extra_pages": [
         {
           "zh": [
-            "有些暗砖藏在别的地方。",
+            "有些暗墙藏在别的地方。",
             "找到以后，离开也不会消失。"
           ],
           "en": [
-            "More dark floors wait elsewhere.",
+            "More dark walls wait elsewhere.",
             "Revealed rooms stay discovered."
           ]
         }
@@ -153,11 +153,11 @@
       },
       "done": {
         "zh": [
-          "沿内岸向东找暗地砖。",
+          "沿内岸向东找暗墙。",
           "铜耳朵说，谢谢。"
         ],
         "en": [
-          "Find a dark floor east of the bank.",
+          "Find a dark wall east of the bank.",
           "The copper ear says thank you."
         ]
       }
@@ -269,11 +269,11 @@
       "pages": [
         {
           "zh": [
-            "右边那块地砖没有积水。",
+            "右边那块墙砖没有积水。",
             "铜耳朵，大概还躺在里面。"
           ],
           "en": [
-            "The floor to the right stayed dry.",
+            "The wall to the right stayed dry.",
             "The copper ear may still be inside."
           ]
         }
@@ -355,11 +355,11 @@
       "done": {
         "zh": [
           "影子总算肯跟着火走了。",
-          "旧库的暗砖就在我北边。"
+          "旧库的暗墙就在我北边。"
         ],
         "en": [
           "The shadow follows the flame again.",
-          "The dark floor lies north of me."
+          "The dark wall lies north of me."
         ]
       }
     },
@@ -416,11 +416,11 @@
       "pages": [
         {
           "zh": [
-            "东炉守卫身后有块暗地砖。",
+            "东炉守卫身后有块暗墙。",
             "炉中星记，记得带上。"
           ],
           "en": [
-            "A dark floor waits behind the guard.",
+            "A dark wall waits behind the guard.",
             "Take the furnace mark with you."
           ]
         }
@@ -544,11 +544,11 @@
       "done": {
         "zh": [
           "以后满月就不会漏风了。",
-          "暗砖在祭坛下面，向东走。"
+          "暗墙在祭坛下面，向东走。"
         ],
         "en": [
           "Full moons will no longer leak air.",
-          "Walk east below the altar."
+          "The dark wall is below the altar, east."
         ]
       }
     },
@@ -597,11 +597,11 @@
         {
           "zh": [
             "王冠缺口总朝南。",
-            "床脚正中的地砖颜色较暗。"
+            "床脚正中的墙砖颜色较暗。"
           ],
           "en": [
             "The broken crown points south.",
-            "A darker floor lies below the bed."
+            "A darker wall lies below the bed."
           ]
         }
       ]
