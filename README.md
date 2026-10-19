@@ -2,28 +2,25 @@
 
 An original fifty-floor Magic Tower for **ESP-Mosaico** (ESP32-S31, 480×480), built in C with the official Raylib Lite Engine / GSP stack. Author: **Ponkan**.
 
-Current preview: **v1.8.0-rc.2**. Production model and native Host validation pass. This candidate makes concealed doors read as darkened wall blocks, opens the viewport frame on sides with more map, and aligns all hidden-door copy in Chinese and English. Extended hardware playtesting remains open. See [integration status](docs/level-design/PRODUCTION_INTEGRATION.md).
-
-![Concept cover](publish/mosaico-ideas/images/01-cover-concept.png)
-
-*AI-assisted concept cover; actual C-rendered gameplay screenshots below.*
+Current source candidate: **v1.8.0-rc.3**. Adds a persistent battery percentage and charging icon plus dedicated victory/death music. RC2 dark-wall concealed doors, quest item icons and open viewport edges are preserved. Extended hardware playtesting remains open. See [integration status](docs/level-design/PRODUCTION_INTEGRATION.md).
 
 | Title | Chinese dialogue | Throne hall |
 |---|---|---|
-| ![Title](publish/mosaico-ideas/images/03-title.png) | ![Dialogue](publish/mosaico-ideas/images/05-gpt-dialogue.png) | ![Throne](docs/images/throne50.png) |
+| ![Title](docs/images/title.png) | ![Dialogue](docs/images/npc-dialogue.png) | ![Throne](docs/images/throne50.png) |
 
-[Download firmware](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.2) · [Mosaico Ideas publishing kit](publish/mosaico-ideas/FORM_FIELDS.md)
+[Published RC2 firmware](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.2). RC3 is the next candidate; its new battery UI and music still require device acceptance.
 
 ## Campaign
 
 - Fifty authored maps across Broken Gate, Sunken Hall, Ash Works, Silent Court and Star Crown. Resource thresholds, coloured doors, optional guards and return visits determine the route.
 - Floors 1–10 are 11×11; later chapters use 13/15/17/19 tiles. **50F is an 11×11 symmetric throne hall**, visible in one screen.
-- An 11×11 viewport pages automatically when the hero enters a continuing edge. Translucent edges indicate more map; there are no camera buttons or manual panning.
-- Eight hidden rooms: step onto a slightly darker corridor floor to reveal its chamber. The 8F NPC teaches this. Discovery persists in checkpoints.
+- An 11×11 viewport pages automatically when the hero enters a continuing edge. Open edges indicate more map; there are no camera buttons or manual panning.
+- Eight hidden rooms: step into a darker wall block to reveal its chamber. The 8F NPC teaches this. Discovery persists in checkpoints.
 - Three cross-floor errands, a reversible 14F sluice and three optional sigils. None is required by the ordinary winning routes. A distinct terminal robot waits in the optional 47F room.
 - Chinese/English coordinate-specific NPC and event dialogue, with explicit pages, 24px Chinese and 16px English body text.
 - Deterministic combat previews, confirmation/cancellation, coloured keys, guarded resource choices and shared shop prices of 15/25/35/... gold (+3 per purchase).
-- Eight original music loops: title, five regions, final battle and ending. Four integer voices, bounded echo and no rendering allocations or streamed samples.
+- Ten original music loops: title, five regions, final battle, exploration after victory, victory screen and death screen. Four integer voices, bounded echo and no rendering allocations or streamed samples.
+- A persistent upper-left battery percentage: white on battery power, green with a lightning mark while charging (including full at 100%). Read-only gauge samples every five seconds; only changed values request a frame. A failed/unavailable reading shows `--`.
 - One settings button: language, volume, brightness and the readable GitHub address. Preferences are separate from journey data.
 
 ## Checkpoints and controls

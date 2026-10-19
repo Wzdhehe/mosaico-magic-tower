@@ -1050,6 +1050,48 @@
         "lead"
       ],
       "chord_span_sixteenths": 32
+    },
+    "victory": {
+      "bpm": 96,
+      "key": "D major",
+      "lead": "D5:3 Fs5:1 A5:4 D6:8 Cs6:4 B5:4 A5:4 R:4",
+      "bass": "D3:8 A2:8 G2:8 A2:8",
+      "chords": [
+        "D",
+        "G",
+        "Bm",
+        "A"
+      ],
+      "wave": "bright triangle fanfare, no percussion",
+      "answer": "G5:4 B5:4 D6:8 Cs6:4 A5:4 D6:4 R:4",
+      "form": [
+        "lead",
+        "lead",
+        "answer",
+        "lead"
+      ],
+      "chord_span_sixteenths": 32
+    },
+    "fallen": {
+      "bpm": 56,
+      "key": "D minor",
+      "lead": "D4:8 F4:4 E4:4 D4:8 R:8",
+      "bass": "D2:16 R:8 A2:8",
+      "chords": [
+        "Dm",
+        "Bb",
+        "Gm",
+        "A"
+      ],
+      "wave": "quiet sine lament, no percussion",
+      "answer": "C4:8 E4:4 D4:4 Cs4:8 R:8",
+      "form": [
+        "lead",
+        "lead",
+        "answer",
+        "lead"
+      ],
+      "chord_span_sixteenths": 32
     }
   },
   "ending": {

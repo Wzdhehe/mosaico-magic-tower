@@ -174,6 +174,8 @@ static void die(game_handle_t g)
     assert(game_read(g)->tower.phase == TOWER_PHASE_COMBAT);
     key(g, GAME_ACTION_START);
     assert(game_read(g)->screen == GAME_OVER);
+    game_update(g);
+    assert(game_read(g)->music == 9u);
 }
 static void test_death_confirmation_and_menu_source(void)
 {
@@ -184,11 +186,15 @@ static void test_death_confirmation_and_menu_source(void)
         const game_snapshot_t dead=*game_read(g);
         tap(g, 240, checkpoint ? 331 : 305);
         assert(game_read(g)->screen == GAME_NEW_CONFIRM);
+        game_update(g);
+        assert(game_read(g)->music == 9u);
         assert_run_unchanged(g, &dead);
         key(g, GAME_ACTION_RESET);
         assert(game_read(g)->screen == GAME_OVER);
         key(g, GAME_ACTION_RESET);
         assert(game_read(g)->screen == RESTART_SCREEN);
+        game_update(g);
+        assert(game_read(g)->music == 9u);
         if (checkpoint) {
             load_ok=false;
             key(g, GAME_ACTION_START);
@@ -211,8 +217,43 @@ static void test_death_confirmation_and_menu_source(void)
     }
     puts("ok: death-page new game requires confirmation; cancel returns to its source");
 }
+static void test_battery_redraw(void)
+{
+    game_handle_t g=started(true);
+    game_update(g);
+    game_render_complete(g);
+    const uint32_t hash=game_hash(g), turns=game_read(g)->tower.turns;
+    const unsigned writes=saves;
+    assert(game_read(g)->battery_state==GAME_BATTERY_UNKNOWN);
+    game_set_battery(g,67,GAME_BATTERY_CHARGING);
+    assert(game_needs_redraw(g));
+    assert(game_read(g)->battery_percent==67u);
+    game_render_complete(g);
+    for(unsigned i=0;i<300;++i) {
+        game_set_battery(g,67,GAME_BATTERY_CHARGING);
+        game_update(g);
+        assert(game_is_idle(g));
+    }
+    assert(game_hash(g)==hash && game_read(g)->tower.turns==turns && saves==writes);
+    game_set_battery(g,67,GAME_BATTERY_DISCHARGING);
+    assert(game_needs_redraw(g));
+    game_render_complete(g);
+    game_set_battery(g,100,GAME_BATTERY_CHARGING);
+    assert(game_read(g)->battery_state==GAME_BATTERY_CHARGING && game_needs_redraw(g));
+    game_set_battery(g,255,GAME_BATTERY_CHARGING);
+    assert(game_read(g)->battery_state==GAME_BATTERY_UNKNOWN);
+    assert(game_read(g)->battery_percent==0u);
+    game_render_complete(g);
+    game_set_battery(g,44,GAME_BATTERY_UNKNOWN);
+    assert(!game_needs_redraw(g));
+    game_reset(g);
+    assert(game_read(g)->battery_state==GAME_BATTERY_UNKNOWN);
+    game_delete(g);
+    puts("ok: battery redraws on visible changes only; no turns, saves or idle ticks");
+}
 int main(void)
 {
+    test_battery_redraw();
     test_cancel_and_new_confirm();
     test_retry_success_and_failures();
     test_disabled_retry();

@@ -889,7 +889,7 @@ static void dungeon(game_handle_t game,const game_snapshot_t *s)
     else
         snprintf(label,sizeof(label),tx(s,&T_FLOOR),s->tower.floor+1);
     snprintf(text,sizeof(text),"%s · %s",label,tx(s,&SCENE_NAME[slot]));
-    ui_center_fit(text,10,1,sc->accent,320);
+    ui_center_fit(text,10,1,sc->accent,296);
     snprintf(text,sizeof(text),"HP %lu   ATK %lu   DEF %lu",(unsigned long)s->tower.hp,
              (unsigned long)s->tower.attack,(unsigned long)s->tower.defence);
     ascii_center(text,31,20,WHITE_INK);
@@ -1165,6 +1165,34 @@ static void victory_modal(const game_snapshot_t *s)
     button(s,&T_EXPLORE,GAME_END_BUTTON_X,GAME_END_BUTTON_Y,
            GAME_END_BUTTON_W,GAME_END_BUTTON_H,true);
 }
+static void battery_indicator(const game_snapshot_t *s)
+{
+    /* Reserved upper-left strip: header starts at x=92; map starts at y=74.
+     * Draw after all overlays so telemetry stays visible in every screen. */
+    char text[4];
+    const bool known=s->battery_state!=GAME_BATTERY_UNKNOWN;
+    const Color color=!known ? MUTED : s->battery_state==GAME_BATTERY_DISCHARGING ? WHITE_INK : MINT;
+    DrawRectangle(16,10,70,24,BG);
+    DrawRectangleLines(18,16,19,14,color);
+    DrawRectangle(37,20,3,6,color);
+    if(known) DrawRectangle(20,18,(int)(15u*s->battery_percent/100u),10,color);
+    if(s->battery_state==GAME_BATTERY_CHARGING) {
+        /* Static, high-contrast lightning: no animation or idle frame ticks. */
+        DrawRectangle(23,17,8,12,BG);
+        DrawLine(29,17,24,23,color); DrawLine(24,23,30,23,color);
+        DrawLine(30,23,25,28,color);
+    }
+    if(known) snprintf(text,sizeof(text),"%u",s->battery_percent);
+    else snprintf(text,sizeof(text),"--");
+    MosaicoFastDrawText(text,42,15,16,color);
+    if(known) {
+        /* The pinned fast font has no percent glyph. Keep this mark within
+         * x<86 even for 100, without shrinking the readable digits. */
+        const int x=44+MosaicoFastMeasureText(text,16);
+        DrawRectangle(x,16,2,2,color);DrawRectangle(x+4,25,2,2,color);
+        DrawLine(x,27,x+6,15,color);
+    }
+}
 bool game_render(game_handle_t game)
 {
     const game_snapshot_t *s=game_read(game);
@@ -1192,6 +1220,7 @@ bool game_render(game_handle_t game)
         ui_center(tx(s,&T_PREFERENCES_FAILED),428,1,RED_INK);
     }
     settings_button(s);
+    battery_indicator(s);
     EndDrawing();
     game_render_complete(game);
     return true;

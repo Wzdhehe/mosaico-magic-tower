@@ -28,3 +28,6 @@ Thumbs.db
 # Internal handoff notes
 HANDOFF.md
 URGENT_HANDOFF.md
+
+# Local submission copy and marketing art; keep game assets in assets_src
+/publish/

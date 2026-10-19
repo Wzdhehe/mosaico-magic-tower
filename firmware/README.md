@@ -1,6 +1,6 @@
 # Downloadable firmware
 
-The current preview is **1.8.0-rc.2**. Download the official `.irisfw` bundle and checksums from [GitHub Releases](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.2).
+The published preview is **1.8.0-rc.2**. Source candidate **1.8.0-rc.3** adds the battery/charging HUD and dedicated victory/death music; it requires device acceptance before publication. Download the official `.irisfw` bundle and checksums from [GitHub Releases](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.2).
 
 Use the Iris file for Mosaico Ideas / Vibe Mode. A raw application BIN is also attached for compatible official application-update workflows; it is not a whole-flash image and must never be written over the retained factory/Vibe Mode firmware. Do not guess flash offsets.
 

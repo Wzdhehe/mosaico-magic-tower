@@ -79,9 +79,14 @@ def main():
         log = "BUILD:\n" + build.stdout + build.stderr
         result = build.returncode
         if not result:
-            run = subprocess.run([str(binary)], capture_output=True, text=True)
+            previews=artifacts/'battery-preview';previews.mkdir(exist_ok=True)
+            run = subprocess.run([str(binary),str(previews)], capture_output=True, text=True)
             log += "RUN:\n" + run.stdout + run.stderr
             result = run.returncode
+            if not result:
+                from PIL import Image
+                for path in previews.glob('*.ppm'):
+                    with Image.open(path) as im: im.save(path.with_suffix('.png'))
         log += f"EXIT: {result}\n"
         (artifacts / "render-schedule.log").write_text(log, encoding="utf-8")
         print(log)

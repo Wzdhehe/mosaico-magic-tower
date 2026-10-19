@@ -36,6 +36,10 @@ typedef enum {
     GAME_GAIN_KEY, GAME_GAIN_GOLD
 } game_gain_t;
 typedef enum { GAME_LANG_ZH = 0, GAME_LANG_EN = 1 } game_lang_t;
+typedef enum {
+    GAME_BATTERY_UNKNOWN, GAME_BATTERY_DISCHARGING,
+    GAME_BATTERY_CHARGING
+} game_battery_state_t;
 typedef struct {
     tower_snapshot_t tower;
     game_screen_t screen;
@@ -53,6 +57,8 @@ typedef struct {
     uint8_t gain_color;
     uint32_t gain_value;
     uint8_t music;
+    uint8_t battery_percent;
+    game_battery_state_t battery_state;
     /* Camera origin in floor tiles. Clamped so the viewport never leaves the
      * floor; both stay 0 on floors no larger than the viewport. */
     uint16_t camera_x, camera_y;
@@ -67,6 +73,9 @@ bool game_create(const game_config_t *, game_handle_t *);
 void game_delete(game_handle_t);
 void game_reset(game_handle_t);
 void game_set_paused(game_handle_t, bool);
+/* Transient hardware telemetry, never part of the journey or preferences.
+ * Call on the owning UI task. Only a visible change requests a frame. */
+void game_set_battery(game_handle_t, unsigned percent, game_battery_state_t);
 void game_set_pointer(game_handle_t, int32_t, int32_t, bool);
 void game_set_action(game_handle_t, int, bool);
 void game_update(game_handle_t);
