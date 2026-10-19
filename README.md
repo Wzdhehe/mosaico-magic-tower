@@ -2,7 +2,7 @@
 
 An original fifty-floor Magic Tower for **ESP-Mosaico** (ESP32-S31, 480×480), built in C with the official Raylib Lite Engine / GSP stack. Author: **Ponkan**.
 
-Current preview: **v1.8.0-rc.1**. Production model and native Host validation pass. The earlier v1.8-dev build has a verified healthy device boot; this candidate adds larger Chinese dialogue and the “五十层试炼” subtitle. Extended hardware playtesting remains open. See [integration status](docs/level-design/PRODUCTION_INTEGRATION.md).
+Current preview: **v1.8.0-rc.2**. Production model and native Host validation pass. This candidate makes concealed doors read as darkened wall blocks, opens the viewport frame on sides with more map, and aligns all hidden-door copy in Chinese and English. Extended hardware playtesting remains open. See [integration status](docs/level-design/PRODUCTION_INTEGRATION.md).
 
 ![Concept cover](publish/mosaico-ideas/images/01-cover-concept.png)
 
@@ -12,7 +12,7 @@ Current preview: **v1.8.0-rc.1**. Production model and native Host validation pa
 |---|---|---|
 | ![Title](publish/mosaico-ideas/images/03-title.png) | ![Dialogue](publish/mosaico-ideas/images/05-gpt-dialogue.png) | ![Throne](docs/images/throne50.png) |
 
-[Download firmware](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.1) · [Mosaico Ideas publishing kit](publish/mosaico-ideas/FORM_FIELDS.md)
+[Download firmware](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.2) · [Mosaico Ideas publishing kit](publish/mosaico-ideas/FORM_FIELDS.md)
 
 ## Campaign
 
