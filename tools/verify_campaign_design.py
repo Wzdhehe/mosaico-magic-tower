@@ -140,7 +140,7 @@ def chapter5(r,kind,secrets=False,sidequests=False):
     r.stair(True);points(r,(5,15))
     if secrets:
         assert r.lib.tower_sigils(r.handle)==7
-        points(r,(9,11),(11,13),(13,15),(11,15),(13,13))
+        points(r,(9,11),(11,13),(13,15),(11,15),(13,13),(12,14))
     r.go(11,1);r.stair(True)
     points(r,(3,7),(7,7))
     if kind=='defence':r.go(1,9)
@@ -222,7 +222,8 @@ def export():
     (target/'campaign_floors.c').write_text('\n'.join(lines),encoding='utf-8')
     original=(ROOT/'main/tower.c').read_text(encoding='utf-8');changed=transform(original)
     patch=''.join(difflib.unified_diff(original.splitlines(True),changed.splitlines(True),fromfile='a/main/tower.c',tofile='b/main/tower.c'))
-    (target/'campaign_model.patch').write_text(patch,encoding='utf-8')
+    if patch:  # Preserve the archived pre-integration recovery patch.
+        (target/'campaign_model.patch').write_text(patch,encoding='utf-8')
     content=content_data()
     content['hidden_rooms']=[dict(floor=f+1,entry=list(g),rectangles=[list(r) for r in rects]) for f,g,rects in HIDDEN]
     content['quests']=[dict(id=i,npc=[n[0]+1,*n[1:]],item=[item[0]+1,*item[1:]],reward_entry=[gate[0]+1,*gate[1:]]) for i,(n,item,gate) in enumerate(QUESTS)]
@@ -230,7 +231,8 @@ def export():
     (target/'campaign_content.json').write_text(json.dumps(content,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     original=(ROOT/'main/game_view.c').read_text(encoding='utf-8');changed=transform_view(original)
     patch=''.join(difflib.unified_diff(original.splitlines(True),changed.splitlines(True),fromfile='a/main/game_view.c',tofile='b/main/game_view.c'))
-    (target/'campaign_view.patch').write_text(patch,encoding='utf-8')
+    if patch:
+        (target/'campaign_view.patch').write_text(patch,encoding='utf-8')
 
 def run_route(lib,name,kind,early=False,secrets=False,sidequests=False,yellow=False):
     with Replay(lib,FLOORS,OUT,name) as r:

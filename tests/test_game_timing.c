@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 /* Timing, checkpoint and teleport regression coverage.
  *
- * The campaign maps are authored separately from this test, so the fixed
- * tests/tower_floors_stub.c fixture is linked instead: every floor is 11x11
- * with the same spawn (1,1), up stair (4,1) and chapter gate (8,1). */
+ * The campaign maps are authored separately from this test, so the isolated
+ * tests/tower_floors_stub.c fixture is linked instead. It keeps the same spawn
+ * (1,1), dark floor (2,1), up stair (4,1) and chapter gate (8,1, or 17,1 on the
+ * 19x19 final floor); floor 26 is 13x13. Its event tile sits at (5,1), away from
+ * the production dialogue at (3,1) on floors 18 and 27. */
 #include "game.h"
 #include "game_config.h"
 #include <assert.h>
@@ -66,11 +68,22 @@ static game_handle_t new_started_game(void)
     settle(game);
     return game;
 }
-/* One floor of the stub: secret bump, step past it, event tile, up stair. */
+/* One floor of the stub: enter the dark floor, step onto the plain tile, take
+ * the up stair. The fixture keeps its event tile off this path because the
+ * campaign dispatches dialogue by floor+cell and a dialog would consume the
+ * next key press. */
 static void step_up(game_handle_t game)
 {
     const unsigned floor = game_read(game)->tower.floor;
-    for (int i = 0; i < 4; ++i) press(game, GAME_ACTION_RIGHT);
+    for (int i = 0; i < 3; ++i) press(game, GAME_ACTION_RIGHT);
+    if (game_read(game)->tower.floor != floor + 1u ||
+        game_read(game)->tower.x != 1u || game_read(game)->tower.y != 1u) {
+        const game_snapshot_t *s = game_read(game);
+        fprintf(stderr, "step_up failed on floor %u: floor %u pos (%u,%u) "
+                        "status %d screen %d\n",
+                floor, s->tower.floor, s->tower.x, s->tower.y,
+                (int)s->tower.status, (int)s->screen);
+    }
     assert(game_read(game)->tower.floor == floor + 1u);
     assert(game_read(game)->tower.x == 1u && game_read(game)->tower.y == 1u);
 }
@@ -78,12 +91,12 @@ static void climb_to_gate(game_handle_t game)
 {
     while (game_read(game)->tower.floor < 9u) step_up(game);
 }
-/* From the gate floor's spawn, walk to the goal on the top row. */
+/* From the gate floor's spawn, enter the dark floor, step past it, go down and
+ * walk along row 2 to the goal on the top row. */
 static void take_goal_x(game_handle_t game, unsigned x)
 {
-    press(game, GAME_ACTION_RIGHT); /* secret wall */
-    press(game, GAME_ACTION_RIGHT); /* step onto it */
-    press(game, GAME_ACTION_RIGHT); /* event tile */
+    press(game, GAME_ACTION_RIGHT); /* enter dark floor */
+    press(game, GAME_ACTION_RIGHT); /* step onto the plain tile */
     press(game, GAME_ACTION_DOWN);
     while (game_read(game)->tower.x < x) press(game, GAME_ACTION_RIGHT);
     press(game, GAME_ACTION_UP);
@@ -106,7 +119,7 @@ static void test_new_game_checkpoints(void)
     game_handle_t game = new_started_game();
     assert(game_read(game)->notice_id == GAME_NOTICE_START);
     assert(game_read(game)->has_save && game_read(game)->has_checkpoint);
-    assert(saved[4] == 7u); /* save v7 carries the chapter mask */
+    assert(saved[4] == 8u); /* authored campaign save revision */
     assert(game_read(game)->tower.chapters == 0u);
     game_delete(game);
     puts("ok: a new run writes an initial checkpoint and has no manual save step");
@@ -124,8 +137,8 @@ static void test_no_manual_save_or_load_buttons(void)
     tap(game, 396 + 16, 102 + 16); /* close */
     assert(game_read(game)->screen == GAME_DUNGEON);
     tap(game, 292, 462);
-    assert(game_read(game)->screen == GAME_NEW_CONFIRM);
-    tap(game, 135, 265); /* back */
+    assert(game_read(game)->screen == GAME_RESTART_MENU);
+    tap(game, GAME_RESTART_BUTTON_X+8, GAME_RESTART_CANCEL_Y+8);
     assert(game_read(game)->screen == GAME_DUNGEON);
     assert(save_calls == before);
     game_delete(game);
@@ -150,6 +163,40 @@ static void test_floor_change_autosaves(void)
     }
     game_delete(game);
     puts("ok: a real floor change autosaves; same-floor actions leave the save alone");
+}
+
+static void test_restart_menu_retry_restores_checkpoint(void)
+{
+    game_handle_t game = new_started_game();
+    step_up(game); /* checkpoint on floor 1 */
+    /* Spend a fight on the same floor: this must not move the checkpoint. */
+    press(game, GAME_ACTION_DOWN);
+    assert(game_read(game)->tower.phase == TOWER_PHASE_COMBAT);
+    press(game, GAME_ACTION_START);
+    assert(game_read(game)->tower.hp == 96u);
+    const int writes = save_calls;
+
+    tap(game, 292, 462);
+    assert(game_read(game)->screen == GAME_RESTART_MENU);
+    /* New game asks for confirmation and cancelling returns to this menu. */
+    tap(game, GAME_RESTART_BUTTON_X + 8, GAME_RESTART_NEW_Y + 8);
+    assert(game_read(game)->screen == GAME_NEW_CONFIRM);
+    tap(game, 135, 265);
+    assert(game_read(game)->screen == GAME_RESTART_MENU);
+    tap(game, GAME_RESTART_BUTTON_X + 8, GAME_RESTART_CANCEL_Y + 8);
+    assert(game_read(game)->screen == GAME_DUNGEON);
+
+    tap(game, 292, 462);
+    tap(game, GAME_RESTART_BUTTON_X + 8, GAME_RESTART_RETRY_Y + 8);
+    assert(game_read(game)->screen == GAME_DUNGEON);
+    assert(game_read(game)->notice_id == GAME_NOTICE_RESTORED);
+    assert(game_read(game)->tower.floor == 1u);
+    assert(game_read(game)->tower.x == 1u && game_read(game)->tower.y == 1u);
+    assert(game_read(game)->tower.hp == 100u);
+    assert(save_calls == writes); /* restoring a checkpoint does not rewrite it */
+    settle(game);
+    game_delete(game);
+    puts("ok: restart menu retry restores the checkpoint; new game needs confirmation");
 }
 
 static void test_anchor_locks_until_chapter_cleared(void)
@@ -268,6 +315,8 @@ static void test_failed_write_is_reported(void)
     game_handle_t game = new_started_game();
     save_ok = false;
     tap(game, 292, 462);
+    assert(game_read(game)->screen == GAME_RESTART_MENU);
+    tap(game, GAME_RESTART_BUTTON_X+8, GAME_RESTART_NEW_Y+8);
     assert(game_read(game)->screen == GAME_NEW_CONFIRM);
     tap(game, 245, 265);
     assert(game_read(game)->screen == GAME_DUNGEON);
@@ -281,7 +330,7 @@ static void test_failed_write_is_reported(void)
 static void test_title_load_messages(void)
 {
     game_handle_t game = new_started_game();
-    game_delete(game); /* save_ok left a valid v7 record */
+    game_delete(game); /* save_ok left a valid v8 record */
 
     load_ok = true;
     game = new_game();
@@ -351,10 +400,16 @@ static void test_settings_and_idle_scheduling(void)
     tap(game, GAME_SETTINGS_CLOSE_X + 8, GAME_SETTINGS_CLOSE_Y + 8);
     assert(!game_read(game)->settings_open);
     settle(game);
+    /* An idle run neither requests a redraw nor advances the scheduler. */
+    for (int i = 0; i < 300; ++i) {
+        game_update(game);
+        assert(game_is_idle(game));
+        assert(!game_needs_redraw(game));
+    }
     /* A directional press repeats only while held: the rising edge moves once,
      * then one repeat lands after GAME_KEY_REPEAT updates. */
     press(game, GAME_ACTION_RIGHT);
-    assert(game_read(game)->tower.turns == 1u); /* secret wall */
+    assert(game_read(game)->tower.turns == 1u); /* dark floor entry */
     game_set_action(game, GAME_ACTION_RIGHT, true);
     assert(game_read(game)->tower.turns == 2u); /* rising edge */
     for (int i = 0; i < GAME_KEY_REPEAT; ++i) game_update(game);
@@ -371,6 +426,7 @@ int main(void)
     test_new_game_checkpoints();
     test_no_manual_save_or_load_buttons();
     test_floor_change_autosaves();
+    test_restart_menu_retry_restores_checkpoint();
     test_anchor_locks_until_chapter_cleared();
     test_chapter_exit_stair_completes();
     test_death_retries_last_checkpoint();

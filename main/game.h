@@ -22,7 +22,9 @@ typedef struct {
 } game_config_t;
 typedef enum {
     GAME_TITLE, GAME_DUNGEON, GAME_NEW_CONFIRM, GAME_SHOP, GAME_DIALOG,
-    GAME_OVER, GAME_VICTORY, GAME_TELEPORT
+    GAME_OVER, GAME_VICTORY, GAME_TELEPORT,
+    /* Appended to preserve the existing screen identities. */
+    GAME_RESTART_MENU
 } game_screen_t;
 typedef enum {
     GAME_NOTICE_NONE = 0, GAME_NOTICE_START, GAME_NOTICE_SAVED,
@@ -57,6 +59,8 @@ typedef struct {
     uint16_t floor_w, floor_h;
     /* Selected anchor in the six-cell teleport panel (0..TOWER_ANCHORS-1). */
     uint8_t anchor_cursor;
+    uint16_t dialogue_id;
+    uint8_t dialogue_page, dialogue_variant;
 } game_snapshot_t;
 /* Snapshot is borrowed, read-only and owned by the single application task. */
 bool game_create(const game_config_t *, game_handle_t *);

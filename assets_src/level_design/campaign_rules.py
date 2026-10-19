@@ -26,6 +26,9 @@ def replace_once(source, old, new):
     return source.replace(old,new,1)
 
 def transform(source):
+    if '#define SAVE_VERSION 8u /* authored campaign revision */' in source:
+        assert 'static bool campaign_hidden(' in source and 'unsigned tower_quest_state(' in source
+        return source
     source=replace_once(source,'#define SAVE_VERSION 7u','#define SAVE_VERSION 8u /* authored campaign revision */')
     # Keep the original first-chapter arithmetic byte-for-byte equivalent.
     table=',\n'.join('{'+','.join('{'+','.join(map(str,v))+'}' for v in region)+'}' for region in REGIONAL_ENEMIES)

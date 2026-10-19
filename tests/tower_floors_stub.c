@@ -11,9 +11,11 @@
  *
  * The top row of every layout is the same fixture:
  *   (1,1) 'D' down stair / spawn point
- *   (2,1) '%' secret wall  (first bump opens it, player stays put)
- *   (3,1) '!' event tile   (walkable, consumed on entry)
+ *   (2,1) '%' dark floor   (a single step enters and reveals it)
+ *   (3,1) '.' plain tile
  *   (4,1) 'U' up stair
+ *   (5,1) '!' event tile   (kept off (3,1); the campaign has authored
+ *                           dialogue at (3,1) on floors 18 and 27)
  *   (8,1) 'G' chapter gate (only on chapter ends: floors 9, 19, 29, 39, 49)
  * and the left column adds:
  *   (1,2) 's' slime        (beatable at the starting stats)
@@ -21,13 +23,17 @@
  *                           required "losing fight" fixture)
  *   (1,4) 'g' golem        (defence 16 > player attack 12: the only
  *                           legitimate TOWER_STATUS_TOO_STRONG case)
+ *
+ * This is an isolated behaviour fixture, not campaign-map evidence. Its walkable
+ * route deliberately avoids the production model's fixed dialogue, NPC, quest
+ * and hidden-room cells so no production rule is bypassed by a macro.
  */
 #include "tower_floors.h"
 
 /* No goal: ordinary floors must not be able to end a chapter. */
 static const char *const stub_rows11[11] = {
     "###########",
-    "#D%!U.....#",
+    "#D%.U!....#",
     "#s........#",
     "#k........#",
     "#g........#",
@@ -42,7 +48,7 @@ static const char *const stub_rows11[11] = {
 /* Chapter gate: identical fixture plus the goal on the top row. */
 static const char *const stub_gate11[11] = {
     "###########",
-    "#D%!U...G.#",
+    "#D%.U!..G.#",
     "#s........#",
     "#k........#",
     "#g........#",
@@ -56,7 +62,7 @@ static const char *const stub_gate11[11] = {
 
 static const char *const stub_rows13[13] = {
     "#############",
-    "#D%!U.......#",
+    "#D%.U!......#",
     "#s..........#",
     "#k..........#",
     "#g..........#",
@@ -73,7 +79,7 @@ static const char *const stub_rows13[13] = {
 /* Final floor: a goal here ends the campaign. */
 static const char *const stub_gate19[19] = {
     "###################",
-    "#D%!U............G#",
+    "#D%.U!...........G#",
     "#s................#",
     "#k................#",
     "#g................#",

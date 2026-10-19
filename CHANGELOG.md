@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.8.0-rc.1 — 2026-10-19 (fifty-floor production integration)
+
+- Integrated all fifty approved maps, five regional identities, eight concealed rooms, three return errands, reversible sluice and optional three-sigil room. Final floor is an 11×11 symmetric throne hall.
+- Coordinate-specific bilingual NPC/event pages, 24px Chinese / 16px English dialogue text and distinct 47F terminal robot.
+- Automatic edge paging with translucent hints; restart now offers retry/new/cancel and a second new-game confirmation. Cancelling from a modal restores that modal and page.
+- Eight bounded integer-synth loops and five-region/boss/ending routing; v8 saves reject older geometry cleanly.
+- Migrated portable timing, production rendering, save-format and CI coverage. Current acceptance commands and hardware limits are in README and docs/level-design/PRODUCTION_INTEGRATION.md.
+- The earlier v1.8-dev was installed through official application update and verified healthy. The RC adds larger Chinese dialogue, the “五十层试炼” subtitle, aligned firmware version metadata and publishing assets; complete RC hardware playtesting remains open.
+
 ## v1.7 — 2026-10-18 (checkpoint and warp rules)
 
 ### Added

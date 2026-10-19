@@ -100,11 +100,26 @@ int main(void)
     assert(image_hash() == title_hash);
     press(game, GAME_ACTION_START);
     paint_once(game);
+    assert(game_read(game)->tower.floor == 0u);
+    assert(game_read(game)->tower.x == 5u && game_read(game)->tower.y == 9u);
+    /* Floor one starts at D=(5,9). Take the yellow key at (7,9), return to the
+     * stair column, fight the slime at (5,7), open the yellow door at (5,6),
+     * then collect the potion at (3,4). */
+    press(game, GAME_ACTION_RIGHT);            /* (6,9) */
+    press(game, GAME_ACTION_RIGHT);            /* yellow key (7,9) */
+    press(game, GAME_ACTION_LEFT);
+    press(game, GAME_ACTION_LEFT);             /* back to (5,9) */
+    press(game, GAME_ACTION_UP);               /* (5,8) */
+    press(game, GAME_ACTION_UP);               /* slime (5,7): combat */
+    assert(game_read(game)->tower.phase == TOWER_PHASE_COMBAT);
+    press(game, GAME_ACTION_START);            /* confirm the fight */
+    press(game, GAME_ACTION_UP);               /* yellow door (5,6) */
     press(game, GAME_ACTION_UP);
+    press(game, GAME_ACTION_UP);
+    press(game, GAME_ACTION_LEFT);
+    press(game, GAME_ACTION_LEFT);             /* potion (3,4) */
     paint_once(game);
-    press(game, GAME_ACTION_UP); press(game, GAME_ACTION_UP);
-    press(game, GAME_ACTION_UP); press(game, GAME_ACTION_LEFT);
-    paint_once(game);
+    assert(game_read(game)->tower.x == 3u && game_read(game)->tower.y == 4u);
     assert(game_read(game)->gain_kind == GAME_GAIN_HP);
     const uint32_t dungeon_hash = image_hash();
     idle_acquisitions = acquisitions;
@@ -173,6 +188,10 @@ int main(void)
     tap(game,GAME_SETTINGS_CLOSE_X+10,GAME_SETTINGS_CLOSE_Y+10);
     paint_once(game);
     assert(!game_read(game)->settings_open);
+    /* After releasing the slider the map still accepts ordinary input. */
+    press(game, GAME_ACTION_RIGHT);
+    paint_once(game);
+    assert(game_read(game)->tower.x == 4u && game_read(game)->tower.y == 4u);
     game_delete(game);
     CloseWindow();
     puts("PASS: real RGB565 acquire/submit retry; 300 idle polls = 0 acquisitions/presents; input, static sprites across active ticks, sticky feedback and fresh-target screenshots");

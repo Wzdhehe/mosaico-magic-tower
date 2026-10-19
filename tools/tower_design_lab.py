@@ -25,7 +25,7 @@ def _rows(floor):
     return list(floor['rows'] if isinstance(floor, dict) else floor.rows)
 
 
-def build(floors, out, model_transform=None, headers=None):
+def build(floors, out, model_transform=None, headers=None, production_table=False):
     """Compile actual tower.c with supplied rows; pad only missing floors.
 
     ``model_transform(source)`` can supply exact designer-owned hooks. Original
@@ -74,6 +74,10 @@ def build(floors, out, model_transform=None, headers=None):
         entries.extend(['{5,3,fixture}'] * (count - len(floors)))
     generated.append('const tower_floor_desc_t tower_floor_table[TOWER_FLOORS]={' + ','.join(entries) + '};')
     (model / 'floors.c').write_text('\n'.join(generated), encoding='utf-8')
+    if production_table:
+        assert len(floors)==count,'Production mode cannot contain fixture floors'
+        assert model_transform is None,'Production mode must compile the unmodified model'
+        (model/'floors.c').write_bytes((ROOT/'main/tower_floors.c').read_bytes())
     (model / 'bridge.c').write_text(r'''#include "tower.h"
 #include "tower_floors.h"
 #include <stdlib.h>
@@ -118,6 +122,7 @@ unsigned lab_height(unsigned floor) {return floor<TOWER_FLOORS?tower_floor_table
     provenance.update(compiled_source_sha256=hashlib.sha256((model / 'tower.c').read_bytes()).hexdigest(),
                       designed_floors=len(floors), fixture_floors=count-len(floors),
                       transformed=model_transform is not None,
+                      production_table=production_table,
                       extra_headers={n: hashlib.sha256(v.encode()).hexdigest() for n, v in (headers or {}).items()})
     (out / 'model-provenance.json').write_text(json.dumps(provenance, indent=2), encoding='utf-8')
     cc = os.environ.get('CC') or shutil.which('gcc') or r'D:\espbulid\mingw64\bin\gcc.exe'

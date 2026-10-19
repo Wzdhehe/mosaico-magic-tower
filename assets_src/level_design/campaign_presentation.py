@@ -9,9 +9,9 @@ from campaign_rules import replace_once
 
 ENGLISH_NAMES='Broken Gate|Side Court|Old Archive|Watchtower|Armory|Supply Post|Lookout|Old Camp|Sealed Hall|Captain|Two Banks|Pump Room|Outer Levee|Valve Hall|Sunken Stores|Ferry Court|Old Dormitory|Return Channel|Joined Banks|Ferryman|Loading Yard|Cold Furnace|Warehouse|Fine Casting|Exchange|Ash Return|Ledger Room|Sealed Furnace|Cold Bridge|Furnace Heart|Court Gates|Royal Treasury|Chapel|Two Barracks|Forbidden Books|Long Gallery|Royal Bed|Side Stores|Oath Gate|Oathkeeper|Broken Stairs|Observatory|Mirror Gallery|Star Stores|Crown Hall|Echo Stairs|Return Room|Seal Court|Antechamber|Crown Throne'.split('|')
 
-PARAGRAPH_C=r'''/* Same normal 16px glyphs for every authored page. Pixel-width wrapping
- * keeps mixed Latin/CJK text inside 288px; no font shrinking or clipping. */
-static int campaign_draw_paragraph(const char *text,int x,int y,int width,int lines)
+PARAGRAPH_C=r'''/* Chinese uses the readable 24px bitmap path; English keeps 16px text.
+ * Wrap by actual advances; complete authored pages must fit without clipping. */
+static int campaign_draw_paragraph(const char *text,int x,int y,int width,int lines,bool large)
 {
     int used=0;
     while(text && *text) {
@@ -20,16 +20,18 @@ static int campaign_draw_paragraph(const char *text,int x,int y,int width,int li
         while(*end) {
             const char *next=end; uint32_t cp;
             utf8_next(&next,&cp);
-            const int step=cp<0x80?12:17;
-            if(pixels+step-1>width || next-start>=190) break;
+            const int step=cp<0x80?(large?18:12):(large?25:17);
+            if(pixels+step-1>width || next-start>=94) break;
             if(cp==' ') last_space=end;
             pixels+=step; end=next;
         }
         if(used>=lines || end==start) return -1;
         if(*end && last_space && last_space>start) end=last_space;
-        char line[192]; const size_t bytes=(size_t)(end-start);
+        char line[96]; const size_t bytes=(size_t)(end-start);
         memcpy(line,start,bytes);line[bytes]=0;
-        ui_draw(line,x,y+used*22,1,WHITE_INK);++used;
+        if(large) ui_draw_cjk15(line,x,y+used*28,WHITE_INK);
+        else ui_draw(line,x,y+used*22,1,WHITE_INK);
+        ++used;
         text=end;while(*text==' ')++text;
     }
     return used;
@@ -38,6 +40,8 @@ static int campaign_draw_paragraph(const char *text,int x,int y,int width,int li
 '''
 
 def transform_view(source):
+    if 'SCENE_NAME[TOWER_FLOORS]' in source and 'static int campaign_draw_paragraph(' in source:
+        return source
     from region1_blueprint import FLOORS as a
     from region2_blueprint import FLOORS as b
     from region3_blueprint import FLOORS as c

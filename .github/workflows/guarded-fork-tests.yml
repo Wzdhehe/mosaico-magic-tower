@@ -1,4 +1,4 @@
-name: Guarded-fork gameplay checks
+name: Campaign route and economy checks
 
 on:
   push:
@@ -9,18 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Campaign topology and key detours
-        run: python3 tests/test_level_design.py
-      - name: Golden replay regeneration check
+      - name: Authored campaign geometry and five production strategies
+        run: python3 tests/test_campaign_production.py
+      - name: Hidden rooms, optional rewards and transactional save contracts
+        run: python3 tools/test_campaign_contract.py
+      - name: Actual input, delivery pages and shared-price purchases
+        run: python3 tests/test_campaign_game.py
+      - name: Authored generated content and glyph coverage
         run: |
-          python3 tools/magic_tower_route.py
-          git diff --exit-code -- tests/win_route.json tests/win_route.h
-      - name: Four alternative winning routes
-        run: |
-          python3 -m unittest discover -s tests -p test_guarded_forks.py
-      - name: Portable C model replay
-        run: python3 tests/run_tests.py --label guarded-forks
-      - name: Four strategies in the real C model with recovery at every action
-        run: python3 tests/run_strategy_routes.py
-      - name: Authored UI text has generated glyphs
-        run: python3 tests/test_ui_glyphs.py
+          python3 tools/gen_campaign_dialogue.py --check
+          python3 tools/gen_campaign_music.py --check
+          python3 tests/test_ui_glyphs.py

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #define GAME_NAME "magic_tower"
-#define GAME_VERSION "v1.7"
+#define GAME_VERSION "v1.8.0-rc.1"
 /* Operation-driven rendering; this is the maximum active update cadence.
  * Held-key repetition is expressed relative to this rate. */
 enum { GAME_WIDTH = 480, GAME_HEIGHT = 480, GAME_TICK_HZ = 15 };
@@ -54,6 +54,12 @@ enum {
     GAME_END_BUTTON_H = 42,
     GAME_END_BUTTON1_Y = 256, GAME_END_BUTTON2_Y = 310,
     GAME_END_BUTTON_Y = 284,
+    GAME_RESTART_PANEL_X = 80, GAME_RESTART_PANEL_Y = 104,
+    GAME_RESTART_PANEL_W = 320, GAME_RESTART_PANEL_H = 286,
+    GAME_RESTART_BUTTON_X = 120, GAME_RESTART_BUTTON_W = 240,
+    GAME_RESTART_BUTTON_H = 42,
+    GAME_RESTART_RETRY_Y = 196, GAME_RESTART_NEW_Y = 252,
+    GAME_RESTART_CANCEL_Y = 308,
     /* The dungeon footer now carries two equal buttons: warp and restart. */
     GAME_FOOTER_BUTTONS = 2,
     GAME_FOOTER_X = (GAME_WIDTH - (2 * GAME_BUTTON_W + GAME_BUTTON_GAP)) / 2

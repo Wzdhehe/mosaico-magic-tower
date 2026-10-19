@@ -5,6 +5,7 @@
 #include "game.h"
 #include "game_config.h"
 #include "tower_floors.h"
+#include "campaign_dialogue.h"
 struct game_t {
     game_config_t config;
     game_snapshot_t state;
@@ -21,6 +22,9 @@ struct game_t {
     bool press_settings;
     enum { POINTER_NONE, POINTER_VOLUME, POINTER_BRIGHTNESS } pointer_control;
     game_screen_t press_screen;
+    /* Confirmation returns to the screen that requested a new run. */
+    game_screen_t confirm_source;
+    game_screen_t restart_source;
     tower_phase_t press_phase;
 };
 static bool inside(int x, int y, int bx, int by, int w, int h)
@@ -178,6 +182,8 @@ static uint8_t anchor_cursor_for(unsigned floor)
 }
 static void start(game_handle_t g)
 {
+    g->state.dialogue_id=CAMPAIGN_DIALOGUE_NONE;
+    g->state.dialogue_page=g->state.dialogue_variant=0;
     tower_new(g->model);
     g->state.screen = GAME_DUNGEON;
     g->state.paused = false;
@@ -233,6 +239,8 @@ static bool load(game_handle_t g)
     }
     g->state.has_save = true;
     g->state.has_checkpoint = true;
+    g->state.dialogue_id=CAMPAIGN_DIALOGUE_NONE;
+    g->state.dialogue_page=g->state.dialogue_variant=0;
     g->state.screen = GAME_DUNGEON;
     g->state.settings_open = false;
     g->state.paused = false;
@@ -272,6 +280,10 @@ static void move(game_handle_t g, int dx, int dy)
     if (g->state.paused || g->state.screen != GAME_DUNGEON) return;
     const bool was_cleared = g->state.tower.cleared;
     const uint32_t chapters_before = g->state.tower.chapters;
+    const uint16_t dialogue=campaign_dialogue_at(g->state.tower.floor,
+        g->state.tower.x+dx,g->state.tower.y+dy);
+    const int quest=dialogue<CAMPAIGN_DIALOGUE_COUNT?campaign_dialogues[dialogue].quest:-1;
+    const unsigned quest_before=quest>=0?tower_quest_state(g->model,(unsigned)quest):0;
     const tower_tile_t target = game_tile(g, (int)g->state.tower.x + dx,
                                           (int)g->state.tower.y + dy);
     const tower_status_t result = tower_move(g->model, dx, dy);
@@ -297,9 +309,29 @@ static void move(game_handle_t g, int dx, int dy)
     if (defeated(&g->state)) { enter_game_over(g); return; }
     if (!was_cleared && g->state.tower.cleared) { enter_victory(g); return; }
     if (g->state.tower.status == TOWER_STATUS_SHOP) g->state.screen = GAME_SHOP;
-    if (g->state.tower.status == TOWER_STATUS_TALK) g->state.screen = GAME_DIALOG;
+    if ((result==TOWER_STATUS_TALK || result==TOWER_STATUS_EVENT) && dialogue<CAMPAIGN_DIALOGUE_COUNT) {
+        g->state.dialogue_id=dialogue;
+        g->state.dialogue_page=g->state.dialogue_variant=0;
+        if(quest>=0 && tower_quest_state(g->model,(unsigned)quest)==2u)
+            g->state.dialogue_variant=(uint8_t)(quest_before==1u?1u:2u);
+        if(result==TOWER_STATUS_EVENT && g->state.tower.floor==13u)
+            g->state.dialogue_variant=tower_sluice_south(g->model)?1u:0u;
+        set_screen(g,GAME_DIALOG);
+    }
     if (g->state.tower.phase==TOWER_PHASE_COMBAT) suppress_directions(g);
     if (g->state.screen == GAME_DIALOG) suppress_directions(g);
+}
+static void advance_dialogue(game_handle_t g)
+{
+    clear_feedback(g);
+    if(g->state.dialogue_page+1u<campaign_dialogue_pages(g->state.dialogue_id,g->state.dialogue_variant))
+        ++g->state.dialogue_page;
+    else {
+        g->state.dialogue_id=CAMPAIGN_DIALOGUE_NONE;
+        set_screen(g,GAME_DUNGEON);
+    }
+    suppress_directions(g);
+    g->frame_pending=true;
 }
 static void set_volume(game_handle_t g, int volume)
 {
@@ -401,6 +433,32 @@ static int footer_button_x(int index)
 {
     return GAME_FOOTER_X + index * (GAME_BUTTON_W + GAME_BUTTON_GAP);
 }
+static void close_restart(game_handle_t g)
+{
+    clear_feedback(g);
+    suppress_directions(g);
+    set_screen(g, g->restart_source);
+}
+static void open_restart(game_handle_t g)
+{
+    g->restart_source=g->state.screen;
+    clear_feedback(g);
+    suppress_directions(g);
+    set_screen(g, GAME_RESTART_MENU);
+}
+static void confirm_new(game_handle_t g)
+{
+    g->confirm_source=g->state.screen;
+    clear_feedback(g);
+    suppress_directions(g);
+    set_screen(g, GAME_NEW_CONFIRM);
+}
+static void close_confirm(game_handle_t g)
+{
+    clear_feedback(g);
+    suppress_directions(g);
+    set_screen(g, g->confirm_source);
+}
 bool game_create(const game_config_t *config, game_handle_t *out)
 {
     if (!out) return false;
@@ -445,7 +503,9 @@ void game_reset(game_handle_t g)
     g->frame_pending = true;
     set_settings_open(g,false);
     if (g->state.screen == GAME_TITLE) start(g);
-    else g->state.screen = GAME_NEW_CONFIRM;
+    else if (g->state.screen == GAME_NEW_CONFIRM) close_confirm(g);
+    else if (g->state.screen == GAME_RESTART_MENU) close_restart(g);
+    else open_restart(g);
 }
 void game_set_paused(game_handle_t g, bool paused)
 {
@@ -454,10 +514,6 @@ void game_set_paused(game_handle_t g, bool paused)
 
         if (g->state.paused != paused) { g->state.paused=paused; g->frame_pending=true; }
     }
-}
-static void close_confirm(game_handle_t g)
-{
-    set_screen(g, defeated(&g->state) ? GAME_OVER : GAME_DUNGEON);
 }
 static void tap(game_handle_t g, int x, int y)
 {
@@ -484,13 +540,22 @@ static void tap(game_handle_t g, int x, int y)
         return;
     }
     if (g->state.screen == GAME_DIALOG) {
-        clear_feedback(g);
-        set_screen(g,GAME_DUNGEON);
+        if(inside(x,y,180,330,120,32)) advance_dialogue(g);
         return;
     }
     if (g->state.screen == GAME_NEW_CONFIRM) {
         if (inside(x,y,135,265,100,36)) close_confirm(g);
         else if (inside(x,y,245,265,100,36)) start(g);
+        return;
+    }
+    if (g->state.screen == GAME_RESTART_MENU) {
+        if (inside(x,y,GAME_RESTART_BUTTON_X,GAME_RESTART_RETRY_Y,
+                   GAME_RESTART_BUTTON_W,GAME_RESTART_BUTTON_H)) {
+            if (g->state.has_checkpoint) (void)load(g);
+        } else if (inside(x,y,GAME_RESTART_BUTTON_X,GAME_RESTART_NEW_Y,
+                          GAME_RESTART_BUTTON_W,GAME_RESTART_BUTTON_H)) confirm_new(g);
+        else if (inside(x,y,GAME_RESTART_BUTTON_X,GAME_RESTART_CANCEL_Y,
+                        GAME_RESTART_BUTTON_W,GAME_RESTART_BUTTON_H)) close_restart(g);
         return;
     }
     if (g->state.screen == GAME_SHOP) {
@@ -532,9 +597,9 @@ static void tap(game_handle_t g, int x, int y)
             if (inside(x,y,GAME_END_BUTTON_X,GAME_END_BUTTON1_Y,
                        GAME_END_BUTTON_W,GAME_END_BUTTON_H)) (void)load(g);
             else if (inside(x,y,GAME_END_BUTTON_X,GAME_END_BUTTON2_Y,
-                            GAME_END_BUTTON_W,GAME_END_BUTTON_H)) start(g);
+                            GAME_END_BUTTON_W,GAME_END_BUTTON_H)) confirm_new(g);
         } else if (inside(x,y,GAME_END_BUTTON_X,GAME_END_BUTTON_Y,
-                          GAME_END_BUTTON_W,GAME_END_BUTTON_H)) start(g);
+                          GAME_END_BUTTON_W,GAME_END_BUTTON_H)) confirm_new(g);
         return;
     }
     if (g->state.screen == GAME_VICTORY) {
@@ -629,6 +694,12 @@ static void action(game_handle_t g, int code)
     if (code==GAME_ACTION_PAUSE) { game_set_paused(g,!g->state.paused); return; }
     if (g->state.paused) return;
     if (code==GAME_ACTION_RESET) { game_reset(g); return; }
+    if (g->state.screen==GAME_RESTART_MENU) {
+        if (code==GAME_ACTION_START && g->state.has_checkpoint) (void)load(g);
+        else if (code==GAME_ACTION_DOWN) confirm_new(g);
+        else if (code==GAME_ACTION_LEFT) close_restart(g);
+        return;
+    }
     if (g->state.screen==GAME_TELEPORT) {
         if (code==GAME_ACTION_LEFT) move_anchor_cursor(g,-1);
         else if (code==GAME_ACTION_RIGHT) move_anchor_cursor(g,1);
@@ -640,7 +711,7 @@ static void action(game_handle_t g, int code)
     }
     if (g->state.screen==GAME_OVER) {
         if (code==GAME_ACTION_START) {
-            if (g->state.has_checkpoint) (void)load(g); else start(g);
+            if (g->state.has_checkpoint) (void)load(g); else confirm_new(g);
         }
         return;
     }
@@ -651,7 +722,7 @@ static void action(game_handle_t g, int code)
     }
     if (g->state.screen==GAME_TITLE) { start(g); return; }
     if (g->state.screen==GAME_DIALOG) {
-        if (code==GAME_ACTION_START || code==GAME_ACTION_LEFT) { clear_feedback(g); set_screen(g,GAME_DUNGEON); }
+        if (code==GAME_ACTION_START || code==GAME_ACTION_LEFT) advance_dialogue(g);
         return;
     }
     if (g->state.screen==GAME_NEW_CONFIRM) {
@@ -708,7 +779,12 @@ void game_set_action(game_handle_t g, int code, bool pressed)
     }
 }
 static uint8_t expected_music(game_handle_t g)
-{ return g->state.screen==GAME_TITLE ? 0 : (g->state.tower.floor>=5 ? 2 : 1); }
+{
+    if(g->state.screen==GAME_TITLE) return 0;
+    if(g->state.tower.cleared) return 7;
+    if(g->state.tower.floor==TOWER_FLOORS-1u) return 6;
+    return (uint8_t)(1u+g->state.tower.floor/10u);
+}
 static bool repeating_direction(game_handle_t g)
 {
     if (g->state.paused || g->state.pointer_down || g->state.settings_open ||
@@ -755,5 +831,6 @@ uint32_t game_hash(game_handle_t g)
     h=h*31U+g->state.screen; h=h*31U+g->state.paused;
     h=h*31U+g->state.lang;
     h=h*31U+g->state.camera_x; h=h*31U+g->state.camera_y;
+    h=h*31U+g->state.dialogue_id; h=h*31U+g->state.dialogue_page; h=h*31U+g->state.dialogue_variant;
     return h*31U+g->state.tick;
 }

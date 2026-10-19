@@ -13,10 +13,23 @@ jobs:
         run: python3 --version && gcc --version
       - name: Portable game timing regression
         run: python3 tests/run_game_timing.py
-      - name: Authored UI copy fits its panels
-        run: python3 tests/test_ui_layout.py
-      - name: Portable deterministic tower replay
-        run: python3 tests/run_tests.py --label ci
+      - name: Version 8 model and transactional save validation
+        run: python3 tests/run_tower50.py --label ci
+      - name: Production fifty-floor route witnesses
+        run: python3 tests/test_campaign_production.py
+      - name: Actual input, dialogue paging, errands and checkpoint counts
+        run: python3 tests/test_campaign_game.py
+      - name: Hidden rooms, valve, quest and forged-save contracts
+        run: python3 tools/test_campaign_contract.py
+      - name: Restart confirmation and automatic edge paging
+        run: |
+          python3 tests/run_restart_menu.py
+          python3 tests/run_camera_controls.py
+      - name: Authored generated content and production glyph coverage
+        run: |
+          python3 tools/gen_campaign_dialogue.py --check
+          python3 tools/gen_campaign_music.py --check
+          python3 tests/test_ui_glyphs.py
       - name: Validated transactional preference storage
         run: python3 tests/run_preferences_storage.py
       - name: Portable soundtrack limits and deterministic rendering
@@ -29,6 +42,16 @@ jobs:
           path: test-deps/raylib-lite-engine
       - name: Apply required display ownership integration
         run: git -C test-deps/raylib-lite-engine apply "$GITHUB_WORKSPACE/tools/patches/raylib-lite-engine-settings-display.patch"
+      - name: Install image validation dependency
+        run: python3 -m pip install Pillow
+      - name: Real bilingual text and modal bounds
+        env:
+          MOSAICO_ENGINE_ROOT: ${{ github.workspace }}/test-deps/raylib-lite-engine
+        run: python3 tests/test_ui_layout.py
+      - name: Complete production campaign through official Host ABI
+        env:
+          MOSAICO_ENGINE_ROOT: ${{ github.workspace }}/test-deps/raylib-lite-engine
+        run: python3 tools/capture_campaign_host.py
       - name: Actual engine brightness transaction failure paths
         env:
           MOSAICO_ENGINE_ROOT: ${{ github.workspace }}/test-deps/raylib-lite-engine

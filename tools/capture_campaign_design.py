@@ -6,11 +6,9 @@ Python only converts RGB565, crops rendered tiles, stitches them, and makes a
 contact sheet. Model tiles always come from the snapshot's real tower_tile API.
 """
 import argparse
-import contextlib
 import ctypes as C
 import hashlib
 import importlib
-import io
 import json
 import os
 from pathlib import Path
@@ -97,13 +95,12 @@ def engine_root(configured):
 
 
 def compile_view(floors, out, engine):
-    rules = importlib.import_module('campaign_rules')
     presentation = importlib.import_module('campaign_presentation')
     model_out = out / 'c-model'
-    model_lib = build(floors, model_out, model_transform=rules.transform)
+    model_lib = build(floors, model_out, production_table=True)
     model = model_out / 'model'
     originals = {}
-    for name in ('game_view.c', 'game.h', 'game_config.h', 'ui_font.h'):
+    for name in ('game_view.c', 'game.h', 'game_config.h', 'ui_font.h', 'campaign_dialogue.h'):
         blob = (ROOT / 'main' / name).read_bytes()
         originals[name] = hashlib.sha256(blob).hexdigest()
         (model / name).write_bytes(blob)
@@ -111,17 +108,7 @@ def compile_view(floors, out, engine):
     config = presentation.transform_config((ROOT/'main/game_config.h').read_text(encoding='utf-8'))
     (model/'game_view.c').write_text(view,encoding='utf-8')
     (model/'game_config.h').write_text(config,encoding='utf-8')
-    # Full authored glyph subset is generated only in this lab snapshot.
-    content = importlib.import_module('campaign_content')
-    fontgen = importlib.import_module('gen_ui_font')
-    corpus = view+json.dumps(content.NPCS,ensure_ascii=False)
-    fontgen.OUT = model/'ui_font.h'
-    fontgen.ui_characters = lambda: sorted({char for char in corpus if ord(char)>127})
-    font_log = io.StringIO()
-    with contextlib.redirect_stdout(font_log):
-        if fontgen.main() != 0:
-            raise RuntimeError('Temporary authored glyph generation failed')
-    (out/'font-generation.log').write_text(font_log.getvalue(),encoding='utf-8')
+    # Use the exact production font, so missing glyphs cannot be hidden by QA.
     assert hashlib.sha256((ROOT/'main/ui_font.h').read_bytes()).hexdigest() == originals['ui_font.h'], 'production font changed during preview generation'
     (model / 'preview_facade.c').write_text(FACADE, encoding='utf-8')
     sources = [model/'preview_facade.c', model/'game_view.c', model/'tower.c', model/'floors.c',
@@ -156,10 +143,10 @@ def compile_view(floors, out, engine):
     renderer_hashes = {str(path.relative_to(engine)): hashlib.sha256(path.read_bytes()).hexdigest()
                        for path in sources if path.is_relative_to(engine)}
     (out/'view-provenance.json').write_text(json.dumps(dict(
-        kind='DESIGN PREVIEW - camera QA facade, not shipping integrated campaign',
+        kind='Production source snapshot; camera-only map QA facade, not an input replay',
         engine=str(engine), official_rgb565_sources=renderer_hashes,
         game_view_sources=originals, facade_sha256=hashlib.sha256(FACADE.encode()).hexdigest(),
-        presentation_transformed=True,
+        presentation_transformed=False,
         presentation_transform_sha256=hashlib.sha256(Path(presentation.__file__).read_bytes()).hexdigest(),
         compiled_view_sha256=hashlib.sha256((model/'game_view.c').read_bytes()).hexdigest(),
         compiled_config_sha256=hashlib.sha256((model/'game_config.h').read_bytes()).hexdigest(),

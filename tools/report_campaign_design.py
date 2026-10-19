@@ -3,7 +3,8 @@ import hashlib
 import json
 from pathlib import Path
 from collections import Counter
-from verify_campaign_design import FLOORS, ROOT, OUT
+from verify_campaign_design import FLOORS, ROOT
+OUT=ROOT/'artifacts/campaign-production'
 
 DOC=ROOT/'docs/level-design'
 ASSETS=ROOT/'assets_src/level_design'
@@ -24,7 +25,7 @@ def main():
     (DOC/'CAMPAIGN50_MAPS.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
     results=json.loads((OUT/'summary.json').read_text(encoding='utf-8'))
     report=['# 五十层真实 C 路线账本','',
-            '数据来自 main/tower.c 副本加 campaign_model.patch；50张真实设计图，没有后40层fixture。',
+            '数据来自当前生产 main/tower.c 和 main/tower_floors.c；50张真实地图，没有后40层fixture。',
             'Python只找相邻格路径，敌人属性、战斗、消费、门钥匙、机关及存档合法性均由C执行。',
             '每次移动、战斗预览、确认、购买及传送均执行C存档导出/新实例导入/再导出字节比较。','',
             '五条见证路线可胜不等于任意操作都可胜，也不是最优策略搜索。',
@@ -57,7 +58,7 @@ def main():
         report += ['',f"动作数：{result['actions']}。胜利后六锚点1/10/20/30/40/50均实际传送验证。",'']
     (DOC/'CAMPAIGN50_ROUTE_REPORT.md').write_text('\n'.join(report)+'\n',encoding='utf-8')
     files=[p for p in ASSETS.iterdir() if p.is_file() and p.name!='campaign_manifest.json' and (p.name.startswith('campaign_') or p.name.startswith('region') and p.suffix=='.py')]
-    manifest=dict(revision='tower50-authored-v8',status='model-verified; production integration and device QA pending',
+    manifest=dict(revision='tower50-authored-v8',status='production model and Host verified; device QA pending',
                   files={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(files)},
                   model=json.loads((OUT/'model-provenance.json').read_text(encoding='utf-8')),
                   routes=[dict(name=r['name'],final=r['final'],actions=r['actions']) for r in results])

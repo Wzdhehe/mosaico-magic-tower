@@ -3,6 +3,7 @@
 #include <string.h>
 #include "game.h"
 #include "game_config.h"
+#include "campaign_dialogue.h"
 #include "mosaico_game_module.h"
 #include "mosaico_raylib_fast.h"
 #include "host_storage.h"
@@ -80,7 +81,8 @@ static int state_json(const void *value,char *output,size_t capacity)
     const game_snapshot_t *s=game_read(host->game);
     const char *screen=s->screen==GAME_TITLE?"title":s->screen==GAME_NEW_CONFIRM?"new_confirm":
         s->screen==GAME_SHOP?"shop":s->screen==GAME_DIALOG?"dialog":s->screen==GAME_OVER?"over":
-        s->screen==GAME_VICTORY?"victory":s->screen==GAME_TELEPORT?"teleport":"dungeon";
+        s->screen==GAME_VICTORY?"victory":s->screen==GAME_TELEPORT?"teleport":
+        s->screen==GAME_RESTART_MENU?"restart_menu":"dungeon";
     const char *phase=s->screen==GAME_TITLE?"title":s->screen==GAME_NEW_CONFIRM?"new_confirm":s->screen==GAME_SHOP?"shop":
         s->tower.phase==TOWER_PHASE_COMBAT?"combat":s->paused?"paused":"playing";
     const int size=snprintf(output,capacity,
@@ -90,7 +92,9 @@ static int state_json(const void *value,char *output,size_t capacity)
         "\"chapters\":%lu,\"anchors\":[%d,%d,%d,%d,%d,%d],\"anchor_cursor\":%u,"
         "\"shop_attack\":%lu,\"shop_defence\":%lu,"
         "\"lang\":\"%s\",\"notice\":%d,\"pointer_down\":%s,\"settings_open\":%s,"
-        "\"volume\":%u,\"brightness\":%u,\"preferences_save_failed\":%s,\"state_hash\":\"%08lx\"}",phase,screen,
+        "\"volume\":%u,\"brightness\":%u,\"preferences_save_failed\":%s,"
+        "\"camera\":[%u,%u],\"floor_size\":[%u,%u],\"dialogue_id\":%u,\"dialogue_page\":%u,\"dialogue_pages\":%u,\"dialogue_variant\":%u,"
+        "\"state_hash\":\"%08lx\"}",phase,screen,
         (unsigned long)s->tick,(unsigned long)s->tower.floor,TOWER_FLOORS,
         (unsigned long)s->tower.x,(unsigned long)s->tower.y,
         (unsigned long)s->tower.hp,(unsigned long)s->tower.attack,(unsigned long)s->tower.defence,
@@ -104,7 +108,9 @@ static int state_json(const void *value,char *output,size_t capacity)
         s->anchor_cursor,(unsigned long)s->tower.shop_attack,(unsigned long)s->tower.shop_defence,
         s->lang==GAME_LANG_EN?"en":"zh",(int)s->notice_id,
         s->pointer_down?"true":"false",s->settings_open?"true":"false",
-        s->volume,s->brightness,s->preferences_save_failed?"true":"false",(unsigned long)state_hash(value));
+        s->volume,s->brightness,s->preferences_save_failed?"true":"false",
+        s->camera_x,s->camera_y,s->floor_w,s->floor_h,s->dialogue_id,s->dialogue_page,
+        campaign_dialogue_pages(s->dialogue_id,s->dialogue_variant),s->dialogue_variant,(unsigned long)state_hash(value));
     return size<0 || (size_t)size>=capacity?-1:size;
 }
 static const mosaico_game_module_v1_t s_module={

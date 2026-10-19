@@ -1,123 +1,28 @@
-# Original Magic Tower score
+# Original fifty-floor soundtrack
 
-Three original, project-local 4/4 loops composed for this game on 2026-10-18.
-No external samples, borrowed melodies, recordings or runtime music libraries
-are used. The note source is `main/game_music_score.h`; it contains every note,
-rest, tie, chord, rhythm, voice level, waveform and note phase increment.
-The score and renderer carry the project's MIT license.
+Eight project-local loops, MIT licensed; no sampled recordings or external music assets. The existing title remains intact. The seven campaign scores are authored in `assets_src/level_design/campaign_content.py`; `tools/gen_campaign_music.py` deterministically encodes pitches, sixteenth rhythms, explicit bass, chords and AABA answers into `main/game_music_score.h`.
 
-| Track | Title | Character | Key | Tempo | Bars | Loop |
-| --- | --- | --- | --- | --- | --- | --- |
-| 0 | Lantern at the Gate | Warm arrival; a rising question and settled answer | G major | 96 BPM | 16 | 40.000 s |
-| 1 | The Stone Remembers | Spacious exploration; descending replies and a leading-tone turn | D minor | 100 BPM | 16 | 38.400 s |
-| 2 | Wind on the Stair | Forward motion; short rests, syncopated answers and climbing high points | E minor | approximately 108 BPM | 16 | 35.557 s |
+| ID | Area | Key | BPM | Bars | Loop seconds |
+|---|---|---|---:|---:|---:|
+| 0 | Title: Lantern at the Gate | G major | 96 | 16 | 40.000 |
+| 1 | Broken Gate, 1–10F | D minor | 84 | 8 | 22.859 |
+| 2 | Sunken Hall, 11–20F | D dorian | 72 | 8 | 26.667 |
+| 3 | Ash Works, 21–30F | A minor | 96 | 8 | 20.000 |
+| 4 | Silent Court, 31–40F | F major / borrowed minor | 68 | 8 | 28.235 |
+| 5 | Star Crown, 41–49F | D minor | 88 | 8 | 21.819 |
+| 6 | King, uncleared 50F | D harmonic minor | 104 | 8 | 18.464 |
+| 7 | Home, after victory | D major | 72 | 8 | 26.667 |
 
-The upper track uses 108 instead of the initial approximate 112 target so a
-16-bar loop remains longer than 35 seconds. Its eighth is rounded to 6667
-samples (107.995 BPM). These are separate compositions, not a transposed motif.
-Each has an A phrase (bars 1-8), a contrasting B phrase (9-16), breathing space
-at cadences, and a final tonic that leaves room for the first note to return.
+Campaign phrases are two bars, arranged A/A/B/A. Four written chords each span a phrase; the explicit two-bar bass repeats. Gate is a sparse triangle phrase; Water is a short pluck; Forge has 3/1 sixteenth syncopation and a soft pulse; Court borrows B-flat minor; Crown and King reuse the minor-key identity, while Home answers in major. The waveform and gain choices are fixed offline tables.
 
-Title progression: G, Em, C, D / Am, Bm, C, D / G, D/F#, Em, Bm / C, Am, D, G.
-The melody opens B-D-E-D, then answers lower; the B section revisits its opening
-with a different landing, rises on C, and closes F#-A-D-C-A-F# into G.
+`main/game_music.c` is the only synthesizer for both the device and WAV export: 24 kHz signed 16-bit mono, four integer voices (lead, two chord tones, bass), fixed 3072-sample echo, envelopes and gain/track fades. Render and setters allocate nothing. A host instance remains 6272 bytes. Mute outputs exact silence immediately while advancing the score; unmute continues at that position. Neither music nor idle sprites forces UI redraws.
 
-Lower progression: Dm, Bb, Gm, A / Dm, C, Bb, A / Gm, Dm, Eb, A / Dm, Bb, A, Dm.
-Longer held notes and silence replace the title's regular answers. C# over A
-supplies the minor-key pull; Eb in bar 11 briefly darkens the B section before
-returning through A to D.
+Reproduce with:
 
-Upper progression: Em, C, Am, B / Em, D, C, B / G, D, Am, B / C, Am, B, Em.
-Its repeated-note pickup and root/fifth bass rhythm give urgency without a
-continuous high arpeggio. D# over B points toward E. Bar 9 opens higher on G,
-then the final phrase descends and releases before the loop restart.
+```bash
+python tools/gen_campaign_music.py --check
+python tests/run_game_music.py
+python tools/render_music.py
+```
 
-## Sound and limits
-
-The portable renderer `main/game_music.c` is the *only* DSP implementation used
-by the ESP service and previews. Output is 24,000 Hz, signed 16-bit mono. Four
-fixed voices provide melody, two quiet inner harmony tones and bass. The bass
-is raised one octave above the stored harmonic root to place its fundamentals
-roughly 117-370 Hz, where a small speaker has more useful output. All voices
-use a restrained odd-harmonic, exactly antisymmetric 256-entry table:
-
-    round(32700 * (sin(2*pi*i/256) + 0.10*sin(6*pi*i/256)) / 1.1)
-
-This avoids the old asymmetric triangle's DC error and harsh high pulse voice.
-Note increments are generated offline as
-`round(440 * 2**((midi-69)/12) * 2**32 / 24000)`; render does no frequency
-calculation, division or floating-point work per sample. Notes receive about
-5.3 ms attack and 42.7 ms release, with additional short articulation gaps.
-Two softer chord tones change once per bar. The one-tap echo is fixed at 3072
-samples/128 ms, with 1/4 wet level and no feedback or unbounded tail.
-
-Nonzero volume changes ramp by at most 64/32768 per sample (at most about
-21.3 ms for a full-scale change). Track changes fade the old track down, clear
-its echo/voices, restart the selected score, and fade up (about 10.7 ms each).
-Setting volume to zero means exact silence immediately; it clears the echo.
-While muted, the renderer advances score/oscillator state by note-sized spans,
-without generating voices, applying envelopes or processing echo. Unmute ramps
-up at the current musical position, with a fresh echo history. Tests show its
-score/phase matches continuous rendering once the gain and echo settle.
-
-The opaque instance owns 6272 bytes on the current x64 host ABI (almost all the
-3072-sample echo). Actual ESP layout can differ slightly. One `calloc` occurs
-at create and one `free` at delete; there is no allocation in render or setters.
-All score/wave tables are immutable read-only data. No render-local aggregate
-exceeds 128 bytes. The ESP adapter separately allocates its one service context,
-including the reusable 480-byte output block and board codec configuration.
-The successful ESP service runs until application reset, preserving the public
-`game_audio_init/set_volume/set_track` API. Only its audio task owns the core;
-UI controls and startup guard use C11 atomics, not volatile shared variables.
-Startup allocation/task failures free all application-owned state. The BSP owns
-and caches the speaker codec/I2S handle: a failed codec open is closed but the
-BSP handle is never deleted into a dangling cached reference. BSP internals
-and their own allocation-failure handling are outside this module's ownership.
-
-## Reproduce and audition
-
-From the repository root, with a C11 compiler available:
-
-    python tests/run_game_music.py
-    python tools/render_music.py
-
-On Windows, set `CC` to your MinGW `gcc.exe` or add its directory to `PATH`. Both scripts put compiler temporary files in the local
-`artifacts/tmp` directory. No device, ESP-IDF install or extra Python package is
-needed. The test runner uses a test-only allocation-symbol substitution so it
-can force the real core's initial `calloc` to fail and check safe NULL output.
-The normal preview build uses the unchanged production allocator.
-
-The preview script compiles `main/game_music.c` into a temporary local shared
-library, calls its public C API in 240-frame blocks, and writes standard WAV
-headers. Python does not synthesize or alter PCM. Default previews use volume
-100 to make headroom and signal level easy to inspect; the game defaults to45.
-Use `--volume 45` to hear the game level or `--loops 2` to audition loop joins.
-Output (ignored build artifacts):
-
-- `artifacts/music/title-lantern-at-the-gate.wav`
-- `artifacts/music/lower-the-stone-remembers.wav`
-- `artifacts/music/upper-wind-on-the-stair.wav`
-- `artifacts/music/preview-metrics.json`
-- `artifacts/music/red.txt` and `green.txt` (TDD/runtime evidence)
-
-The initial failing test was `FAIL line 25: a`: the deliberately empty core
-could not create a valid handle. The full implementation then passes argument
-and forced-allocation-failure handling, independent-instance control/deletion,
-determinism, arbitrary chunk boundaries, immediate mute, advancing mute phase,
-non-silence, distinct tracks, 35-45 second loop lengths, signal/DC/clipping,
-loop-seam bounds and volume/track transition continuity checks.
-
-Current full-volume results with the 2.25× makeup gain and 100% codec output:
-peaks about 13311/12136/12546, RMS about 4825/4328/4352 and mean sample values
-about -6.15/-5.97/-6.66 (out of 32768). This matches the loudness that was
-previously comfortable at 45%, with generous headroom. The mixer still clamps
-to the int16 range as a safety net; all arithmetic stays inside signed 32-bit
-limits.
-
-One observed optimized x64 host test rendered all 113.96 seconds of music in
-0.078 CPU seconds; 120 seconds of muted timeline was below the host clock's
-1 ms resolution. These are host test observations, **not measured ESP CPU,
-real-time margin, thermal, speaker-quality or subjective listening claims**.
-Auditioning the exported WAVs and listening on the actual hardware remain the
-appropriate subjective checks. Full ESP integration build is performed by the
-parent integration task.
+WAVs and metrics are written to `artifacts/music/`. Tests cover every track's clipping, DC, seam, sample slew, arbitrary chunk determinism, allocation failure, immediate mute and advancing timeline, exact authored notes and syncopation. Host CPU timings measure this algorithm on the computer; speaker quality, device stack margin, battery impact and subjective listening still need hardware acceptance.

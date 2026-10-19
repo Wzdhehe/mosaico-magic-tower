@@ -143,6 +143,8 @@ static void test_center_new_restart_load_and_warp(void)
     /* Restart must center from the spawn, irrespective of the former page. */
     walk(g,GAME_ACTION_DOWN,5); camera(g,4,8);
     press(g,GAME_ACTION_RESET);
+    assert(game_read(g)->screen==GAME_RESTART_MENU);
+    press(g,GAME_ACTION_DOWN);
     assert(game_read(g)->screen==GAME_NEW_CONFIRM);
     press(g,GAME_ACTION_START);
     camera(g,4,4);

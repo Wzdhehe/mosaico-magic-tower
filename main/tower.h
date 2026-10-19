@@ -111,6 +111,10 @@ unsigned tower_anchor_floor(unsigned anchor);
 bool tower_anchor_unlocked(const tower_snapshot_t *state, unsigned anchor);
 bool tower_chapter_complete(const tower_snapshot_t *state, unsigned chapter);
 bool tower_explored(const tower_snapshot_t *state, unsigned floor);
+/* Authored campaign events. Quest state: 0 waiting, 1 carrying, 2 delivered. */
+bool tower_sluice_south(tower_handle_t handle);
+unsigned tower_sigils(tower_handle_t handle);
+unsigned tower_quest_state(tower_handle_t handle, unsigned quest);
 /* Fixed little-endian wire format; corrupt imports leave all live state intact. */
 tower_result_t tower_export(tower_handle_t handle, uint8_t *bytes, size_t size);
 tower_result_t tower_import(tower_handle_t handle, const uint8_t *bytes, size_t size);

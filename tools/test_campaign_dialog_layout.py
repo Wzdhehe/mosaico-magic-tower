@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 """Render every authored NPC page through the real C story modal/RGB565 engine.
 
-All changes are confined to an immutable lab snapshot. The test only injects
-the selected authored strings into existing STORY/NPC_NAME slots, observes real
-ui_draw calls, and compares rendered pixels. No alternate text/map renderer.
+An immutable snapshot selects actual generated dialogue IDs, observes real
+ui_draw calls and compares rendered pixels. No alternate text/map renderer.
 """
-import contextlib
 import ctypes as C
 import hashlib
-import importlib
-import io
 import json
 import os
 from pathlib import Path
@@ -22,9 +18,7 @@ from PIL import Image, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'assets_src/level_design'))
-from campaign_content import NPCS
 from campaign_presentation import transform_view, transform_config
-from campaign_rules import transform
 from capture_campaign_design import engine_root, rgb565_image
 from tower_design_lab import build
 from verify_campaign_design import FLOORS
@@ -34,10 +28,12 @@ BODY = (150,174,438,316)
 NAME = (48,138,434,162)
 
 TRACE_PREFIX = r'''
-typedef struct {int x,y,scale,width;char text[512];} dialog_draw_t;
+typedef struct {int x,y,height,width;char text[512];} dialog_draw_t;
 static dialog_draw_t dialog_draws[32];
 static unsigned dialog_draw_count;
 static bool dialog_trace_active;
+static bool dialog_blank;
+static const campaign_page_t dialog_empty={{"",""},{"",""}};
 '''
 TRACE_WRAPPER = r'''
 /* Observation only: the original drawing implementation still paints pixels. */
@@ -45,10 +41,24 @@ static void ui_draw(const char *text,int x,int y,int scale,Color color)
 {
  if(dialog_trace_active && x==150 && y>=174 && dialog_draw_count<32u) {
   dialog_draw_t *d=&dialog_draws[dialog_draw_count++];
-  d->x=x;d->y=y;d->scale=scale;d->width=ui_width(text,scale);
+  d->x=x;d->y=y;d->height=16*scale;d->width=ui_width(text,scale);
   snprintf(d->text,sizeof(d->text),"%s",text?text:"");
  }
  dialog_ui_draw_original(text,x,y,scale,color);
+}
+'''
+TRACE_LARGE_WRAPPER=r'''
+static void ui_draw_cjk15(const char *text,int x,int y,Color color)
+{
+ if(dialog_trace_active && x==150 && y>=174 && dialog_draw_count<32u) {
+  dialog_draw_t *d=&dialog_draws[dialog_draw_count++];
+  d->x=x;d->y=y;d->height=24;d->width=0;
+  const char *p=text;uint32_t cp;
+  while(p&&*p) {utf8_next(&p,&cp);d->width+=cp<128?18:25;}
+  if(d->width)--d->width;
+  snprintf(d->text,sizeof(d->text),"%s",text?text:"");
+ }
+ dialog_large_draw_original(text,x,y,color);
 }
 '''
 FACADE = r'''
@@ -73,6 +83,20 @@ int dialog_init(void) {
  InitWindow(GAME_WIDTH,GAME_HEIGHT,"Campaign NPC layout QA");return 0;
 }
 void dialog_close(void) {tower_delete(dialog_model);CloseWindow();}
+int dialog_static_layout(void) {
+ const text_t *labels[]={&T_RESTART_HINT,&T_RETRY_FAILED,&T_UNSAVED,&T_ANCHOR_HINT,&T_SUMMIT_REACHED};
+ const int limits[]={296,296,246,GAME_TELEPORT_PANEL_W-24,296};
+ for(unsigned lang=0;lang<2;++lang) {
+  dialog_snapshot.lang=(uint8_t)lang;
+  for(unsigned i=0;i<sizeof(labels)/sizeof(labels[0]);++i)
+   if(ui_width(tx(&dialog_snapshot,labels[i]),1)>limits[i])return (int)(1+i+10*lang);
+  for(unsigned i=0;i<5;++i)
+   if(ui_width(tx(&dialog_snapshot,&REGION_NAME[i]),1)>GAME_TELEPORT_CELL_W-16)return 30+(int)i;
+  const int floor_width=ui_width(lang?"50F":"50层",1);
+  if(floor_width+ui_width(tx(&dialog_snapshot,&T_ANCHOR_HERE),1)+32>GAME_TELEPORT_CELL_W)return 40+(int)lang;
+ }
+ return 0;
+}
 int dialog_glyphs(const char *text) {
  uint32_t cp;int missing=0;
  while(text&&*text) {utf8_next(&text,&cp);if(cp>127&&!glyph_for(cp))++missing;}
@@ -80,19 +104,28 @@ int dialog_glyphs(const char *text) {
 }
 unsigned dialog_count(void) {return dialog_draw_count;}
 const dialog_draw_t *dialog_draw(unsigned index) {return index<dialog_draw_count?&dialog_draws[index]:NULL;}
-int dialog_frame(unsigned floor,unsigned x,unsigned y,unsigned language,
- const char *name_zh,const char *name_en,const char *zh0,const char *zh1,
- const char *en0,const char *en1,uint16_t *out) {
- if(floor>=TOWER_FLOORS||!out)return -1;
- /* Exact preview injection only; production dispatch/paging is not claimed. */
- for(unsigned i=0;i<FLOOR_THEMES;++i) {
-  NPC_NAME[i]=(text_t){name_zh,name_en};
-  STORY[i]=(story_t){{zh0,zh1},{en0,en1}};
- }
+unsigned dialog_entries(void) {return CAMPAIGN_DIALOGUE_COUNT;}
+unsigned dialog_pages(unsigned id,unsigned variant) {return campaign_dialogue_pages((uint16_t)id,variant);}
+bool dialog_has_variant(unsigned id,unsigned variant) {
+ return id<CAMPAIGN_DIALOGUE_COUNT && (variant==0 || (variant==1?campaign_dialogues[id].carrying:campaign_dialogues[id].done));
+}
+const char *dialog_text(unsigned id,unsigned variant,unsigned page,unsigned lang,unsigned slot) {
+ if(id>=CAMPAIGN_DIALOGUE_COUNT)return NULL;
+ if(slot==2)return lang?campaign_dialogues[id].name_en:campaign_dialogues[id].name_zh;
+ const campaign_page_t *p=campaign_dialogue_page((uint16_t)id,variant,page);
+ return p?(lang?p->en[slot]:p->zh[slot]):NULL;
+}
+int dialog_frame(unsigned id,unsigned variant,unsigned page,unsigned language,unsigned blank,uint16_t *out) {
+ if(id>=CAMPAIGN_DIALOGUE_COUNT||!out)return -1;
+ const campaign_dialogue_t *entry=&campaign_dialogues[id];
+ const unsigned floor=entry->floor,x=entry->x,y=entry->y;
+ dialog_blank=blank!=0;
  memset(&dialog_snapshot,0,sizeof(dialog_snapshot));
  tower_read(dialog_model,&dialog_snapshot.tower);
  dialog_snapshot.tower.floor=floor;dialog_snapshot.tower.x=x;dialog_snapshot.tower.y=y;
  dialog_snapshot.screen=GAME_DIALOG;dialog_snapshot.lang=(uint8_t)language;
+ dialog_snapshot.dialogue_id=(uint16_t)id;dialog_snapshot.dialogue_variant=(uint8_t)variant;
+ dialog_snapshot.dialogue_page=(uint8_t)page;
  dialog_snapshot.volume=60;dialog_snapshot.brightness=GAME_BRIGHTNESS_DEFAULT;
  dialog_snapshot.floor_w=tower_floor_table[floor].w;dialog_snapshot.floor_h=tower_floor_table[floor].h;
  unsigned mx=dialog_snapshot.floor_w>TOWER_VIEW_W?(unsigned)(dialog_snapshot.floor_w-TOWER_VIEW_W):0u;
@@ -109,17 +142,7 @@ int dialog_frame(unsigned floor,unsigned x,unsigned y,unsigned language,
 
 
 class Draw(C.Structure):
-    _fields_ = [('x',C.c_int),('y',C.c_int),('scale',C.c_int),('width',C.c_int),('text',C.c_char*512)]
-
-
-def cases():
-    for npc in NPCS:
-        for group in ('pages','extra_pages'):
-            for index,page in enumerate(npc.get(group,[])):
-                yield npc,f'{group}-{index}',page
-        for group in ('carrying','done'):
-            if group in npc:
-                yield npc,group,npc[group]
+    _fields_ = [('x',C.c_int),('y',C.c_int),('height',C.c_int),('width',C.c_int),('text',C.c_char*512)]
 
 
 def observe_draws(source):
@@ -133,9 +156,17 @@ def observe_draws(source):
         depth += (source[end]=='{')-(source[end]=='}')
         end += 1
     source = source[:end]+TRACE_WRAPPER+source[end:]
-    source = source.replace('static const story_t STORY[','static story_t STORY[',1)
-    source = source.replace('static const text_t NPC_NAME[','static text_t NPC_NAME[',1)
-    assert 'static story_t STORY[' in source and 'static text_t NPC_NAME[' in source, 'authored-page injection anchor drift'
+    marker='static void ui_draw_cjk15(const char *text,int x,int y,Color color)'
+    assert source.count(marker)==1,'large text observation anchor drift'
+    source=source.replace(marker,marker.replace('ui_draw_cjk15(','dialog_large_draw_original('),1)
+    start=source.index('static void dialog_large_draw_original(')
+    end=source.index('{',start)+1;depth=1
+    while depth:
+        depth+=(source[end]=='{')-(source[end]=='}');end+=1
+    source=source[:end]+TRACE_LARGE_WRAPPER+source[end:]
+    # Only the blank baseline suppresses text; actual cases use production data.
+    source=source.replace('    DrawRectangle(0,0,480,480,Fade(INK,.82f));',
+        '    if(dialog_blank) {story=&dialog_empty;name="";}\n    DrawRectangle(0,0,480,480,Fade(INK,.82f));',1)
     start = source.index('static void story_modal(')
     begin = source.index('{',start)+1
     end,depth = begin,1
@@ -150,7 +181,7 @@ def observe_draws(source):
 
 def compile_dialog():
     OUT.mkdir(parents=True,exist_ok=True)
-    model_lib = build(FLOORS,OUT/'model-build',transform)
+    model_lib = build(FLOORS,OUT/'model-build',production_table=True)
     model = OUT/'model-build/model'
     source = transform_view((ROOT/'main/game_view.c').read_text(encoding='utf-8'))
     config = transform_config((ROOT/'main/game_config.h').read_text(encoding='utf-8'))
@@ -159,15 +190,8 @@ def compile_dialog():
     # parent drawing untouched and independently require full text consumption.
     paragraph = source[source.index('static int campaign_draw_paragraph('):source.index('static void story_modal(')]
     assert 'Scissor' not in paragraph and 'Clip' not in paragraph, 'dialogue must not clip overflowing text'
-    fontgen = importlib.import_module('gen_ui_font')
-    corpus = source+json.dumps(NPCS,ensure_ascii=False)
-    chars = sorted({char for char in corpus if ord(char)>127})
-    fontgen.OUT = model/'ui_font.h'
-    fontgen.ui_characters = lambda: chars
-    log = io.StringIO()
-    with contextlib.redirect_stdout(log):
-        assert fontgen.main() == 0, 'temporary CJK font generation failed'
-    (OUT/'font-generation.log').write_text(log.getvalue(),encoding='utf-8')
+    for name in ('ui_font.h','campaign_dialogue.h'):
+        (model/name).write_bytes((ROOT/'main'/name).read_bytes())
     (model/'game_config.h').write_text(config,encoding='utf-8')
     (model/'game.h').write_bytes((ROOT/'main/game.h').read_bytes())
     (model/'dialog_view.c').write_text(observe_draws(source),encoding='utf-8')
@@ -192,7 +216,12 @@ def compile_dialog():
     assert compiled.returncode == 0, 'Actual dialog renderer compile failed:\n'+compiled.stderr
     lib = C.CDLL(str(library))
     lib._model_lib = model_lib
-    lib.dialog_frame.argtypes = [C.c_uint]*4+[C.c_char_p]*6+[C.POINTER(C.c_uint16)]
+    lib.dialog_frame.argtypes = [C.c_uint]*5+[C.POINTER(C.c_uint16)]
+    lib.dialog_text.argtypes=[C.c_uint]*5
+    lib.dialog_text.restype=C.c_char_p
+    lib.dialog_pages.argtypes=[C.c_uint]*2
+    lib.dialog_has_variant.argtypes=[C.c_uint]*2
+    lib.dialog_has_variant.restype=C.c_bool
     lib.dialog_glyphs.argtypes = [C.c_char_p]
     lib.dialog_draw.argtypes = [C.c_uint]
     lib.dialog_draw.restype = C.POINTER(Draw)
@@ -205,46 +234,51 @@ def main():
     original_font = (ROOT/'main/ui_font.h').read_bytes()
     lib,model = compile_dialog()
     assert lib.dialog_init() == 0
+    assert lib.dialog_static_layout()==0,('static modal copy exceeds production width',lib.dialog_static_layout())
     buffer = (C.c_uint16*(480*480))()
     results = []
     try:
-        for npc,kind,page in cases():
-            assert len(page['zh']) == len(page['en']) == 2, (npc['name_zh'],kind)
-            texts = [npc['name_zh'],npc['name_en'],*page['zh'],*page['en']]
-            assert all(lib.dialog_glyphs(text.encode()) == 0 for text in texts), ('missing CJK glyph',npc['name_zh'],kind)
+        selections=[(i,v,p) for i in range(lib.dialog_entries()) for v in range(3)
+                    if lib.dialog_has_variant(i,v) for p in range(lib.dialog_pages(i,v))]
+        for identity,variant,index in selections:
             for language,lang_name in enumerate(('zh','en')):
-                common = [npc['floor']-1,*npc['position'],language]
-                assert lib.dialog_frame(*common,*([b'']*6),buffer) == 0
+                name=lib.dialog_text(identity,variant,index,language,2).decode()
+                page=[lib.dialog_text(identity,variant,index,language,j).decode() for j in range(2)]
+                npc={'name_zh':name};kind=f'{identity}/{variant}/{index}'
+                assert all(lib.dialog_glyphs(t.encode())==0 for t in [name,*page]),('missing production glyph',kind,lang_name)
+                common = [identity,variant,index,language]
+                assert lib.dialog_frame(*common,1,buffer) == 0
                 baseline = rgb565_image(buffer)
-                assert lib.dialog_frame(*common,*[text.encode() for text in texts],buffer) == 0
+                assert lib.dialog_frame(*common,0,buffer) == 0
                 image = rgb565_image(buffer)
                 draws = [lib.dialog_draw(i).contents for i in range(lib.dialog_count())]
-                assert 1 <= len(draws) <= 6, ('body line count',npc['name_zh'],kind,lang_name,len(draws))
+                height,budget=(24,5) if language==0 else (16,6)
+                assert 1 <= len(draws) <= budget, ('body line count',npc['name_zh'],kind,lang_name,len(draws))
                 body_text = ''.join(draw.text.decode() for draw in draws)
-                expected = ''.join(page[lang_name])
+                expected = ''.join(page)
                 assert ''.join(body_text.split()) == ''.join(expected.split()), ('body truncated or altered',npc['name_zh'],kind,lang_name,body_text,expected)
                 for draw in draws:
-                    assert draw.scale == 1, ('body font is not normal16px',npc['name_zh'],kind,lang_name,draw.scale)
-                    assert draw.x == BODY[0] and draw.y >= BODY[1] and draw.y+16 <= BODY[3] and draw.width <= BODY[2]-BODY[0], ('body draw bounds',npc['name_zh'],kind,lang_name,draw.x,draw.y,draw.width)
+                    assert draw.height == height, ('body font size',npc['name_zh'],kind,lang_name,draw.height,height)
+                    assert draw.x == BODY[0] and draw.y >= BODY[1] and draw.y+height <= BODY[3] and draw.width <= BODY[2]-BODY[0], ('body draw bounds',npc['name_zh'],kind,lang_name,draw.x,draw.y,draw.width)
                 difference = ImageChops.difference(image,baseline)
                 assert difference.crop(BODY).getbbox() is not None, ('body produced no actual ink',npc['name_zh'],kind,lang_name)
                 assert difference.crop(NAME).getbbox() is not None, ('speaker produced no actual ink',npc['name_zh'],kind,lang_name)
                 difference.paste((0,0,0),BODY)
                 difference.paste((0,0,0),NAME)
                 assert difference.getbbox() is None, ('text ink escaped body/name boxes',npc['name_zh'],kind,lang_name,difference.getbbox())
-                if npc.get('easter_egg') and kind == 'pages-0':
-                    assert page['zh'] == ['我是这个游戏的真正开发者，','gpt6.1sol。']
+                if 'gpt6.1sol' in expected and index==0:
+                    if language==0:assert page == ['我是这个游戏的真正开发者，','gpt6.1sol。']
                     image.save(OUT/f'gpt-first-page-{lang_name}.png')
-                results.append(dict(floor=npc['floor'],position=npc['position'],name=npc['name_zh'],page=kind,language=lang_name,lines=len(draws),max_width=max(draw.width for draw in draws)))
+                results.append(dict(id=identity,variant=variant,name=name,page=index,language=lang_name,lines=len(draws),max_width=max(draw.width for draw in draws)))
     finally:
         lib.dialog_close()
     assert (ROOT/'main/ui_font.h').read_bytes() == original_font, 'production font changed'
-    report = dict(kind='DESIGN PREVIEW - actual story_modal with authored-page injection; production dispatch/paging not integrated',
+    report = dict(kind='Production dialogue IDs and font through actual story_modal; blank-text baseline only',
                   screen=[480,480],body=BODY,name=NAME,cases=results,
                   generated_font_sha256=hashlib.sha256((model/'ui_font.h').read_bytes()).hexdigest(),
                   snapshot_view_sha256=hashlib.sha256((model/'dialog_view.c').read_bytes()).hexdigest())
     (OUT/'layout-report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
-    print(f'PASS: {len(results)} authored NPC language/page cases; glyphs, complete text, normal16px body, <=6 lines, draw bounds and actual RGB565 ink bounds')
+    print(f'PASS: {len(results)} authored NPC language/page cases; glyphs, complete text, Chinese24px/5lines, English16px/6lines, draw bounds and actual RGB565 ink bounds')
     print(f'GPT first-page 480x480 screenshots: {OUT}')
 
 

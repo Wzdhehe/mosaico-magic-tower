@@ -1,15 +1,15 @@
 {
   "revision": "tower50-authored-v8",
-  "status": "model-verified; production integration and device QA pending",
+  "status": "production model and Host verified; device QA pending",
   "files": {
-    "campaign_content.json": "09388813081f9bec798e078e48ea1e4317c0675f62ca09800efbb95ca999cc12",
-    "campaign_content.py": "0678f6f449dc934a7fe7a9b53443036e4231b011066496339ae93aedd84c8dc1",
+    "campaign_content.json": "9e81cf044ff0d2d147f3a49b25d234416663fafae5dc096735bbace21a7af0be",
+    "campaign_content.py": "92b198561a2817409c7bf4822c61bad6f2b4843412fe3f42467adfff15595ef2",
     "campaign_edge_camera_robot.patch": "4aba802b75833605ce8af97d99ef79facd06bc70d98a8f26d275f7753d1477b4",
     "campaign_floors.c": "64ce83ce9452b125433ef76fca06d442ca5e958505c255ab5d7156478feccde9",
     "campaign_maps.json": "861111136323a76159800a0ada893a85155bcf3db16cff8e6ebc7894346ac998",
     "campaign_model.patch": "b79b9670189de4075e91b9e11dd50245f450a04bb119ad539b14faf6d7157202",
-    "campaign_presentation.py": "4693039c77b03b3a692f6d2d3e9267689fef2440784a283cf16632228486e5c4",
-    "campaign_rules.py": "76f5c01384a1c5cfe521518d6d93ed0507af4849f29fcece11a586ad96d46bcf",
+    "campaign_presentation.py": "82652f1659f8862ce86241edd153132689d08614d9763b3dd13d8708f457c9ba",
+    "campaign_rules.py": "09ba310083a4a61732a345573a78166f90fba9acb9775721deac39fdfd9b3c26",
     "campaign_view.patch": "dd6a847994b60654491a95b694829a2a1d5ba8377b8218f3140d9031f1a80005",
     "region1_blueprint.py": "8ad5c3dd973a2861027716f49013f37fb7dc4dc79a1af38190f8e07a6703570b",
     "region2_blueprint.py": "e57e06936c48833259d3c693a9a3f435ab1312fe9ffa4dafd74692d0b8f95e37",
@@ -18,13 +18,14 @@
     "region5_blueprint.py": "90d068b5928a9e0dee1b78c41b333079e07ef0ba5c3158daa50c13466d8496fd"
   },
   "model": {
-    "tower.c": "5b7c1d82270a4eaf3216012d9128da1175b754005775542d27eb7bf3242e6003",
-    "tower.h": "faf4666b5df8185c3c2620cc5858d729d219662910d608106a639f5bf285c1d6",
+    "tower.c": "2f71e1bb5c502d40dec1d2ac693735ae528da598a43e1bac8a1fb852b7e51344",
+    "tower.h": "d0dcacd4d58035901f43e12eb89ee6af777b548ea3ccb4c8239403c723cd5243",
     "tower_floors.h": "df76786202a2ad5c2eaf5563ddec96af187ac05de35e54f1b12eb1d5e9b562be",
-    "compiled_source_sha256": "2b7a0c71e5c5c6f7886237ad8f774d09bbac637286274dd4f8ea6f2fce599080",
+    "compiled_source_sha256": "2f71e1bb5c502d40dec1d2ac693735ae528da598a43e1bac8a1fb852b7e51344",
     "designed_floors": 50,
     "fixture_floors": 0,
-    "transformed": true,
+    "transformed": false,
+    "production_table": true,
     "extra_headers": {}
   },
   "routes": [
@@ -146,7 +147,7 @@
         "blue": 1,
         "red": 0,
         "gold": 372,
-        "turns": 4445,
+        "turns": 4447,
         "phase": 0,
         "cleared": 1,
         "chapters": 31,
@@ -166,7 +167,7 @@
         "pending_gold": 0,
         "pending_rounds": 0
       },
-      "actions": 4508
+      "actions": 4510
     },
     {
       "name": "yellow_detour",

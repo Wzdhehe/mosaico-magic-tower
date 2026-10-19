@@ -4,6 +4,7 @@
 #include <string.h>
 #include "game.h"
 #include "game_config.h"
+#include "campaign_dialogue.h"
 #include "mosaico_raylib_fast.h"
 #include "ui_font.h"
 
@@ -44,7 +45,7 @@ static const scene_t SCENES[FLOOR_THEMES]={
 
 typedef struct { const char *zh, *en; } text_t;
 static const text_t T_TITLE={"魔塔","MAGIC TOWER"};
-static const text_t T_SUBTITLE={"塔顶试炼","FIFTY FLOORS"};
+static const text_t T_SUBTITLE={"五十层试炼","FIFTY FLOORS"};
 static const text_t T_NEW={"新的旅程","NEW JOURNEY"};
 static const text_t T_CONTINUE={"继续旅程","CONTINUE"};
 static const text_t T_NO_SAVE={"暂无存档","NO SAVE YET"};
@@ -67,9 +68,9 @@ static const text_t T_PREFERENCES_FAILED={"设置保存失败，请重试","Sett
 static const text_t T_BACK={"返回","BACK"};
 static const text_t T_FIGHT={"战斗","FIGHT"};
 static const text_t T_RESTART={"重新开始？","RESTART?"};
-static const text_t T_UNSAVED={"未保存的进度将丢失","Progress will be lost"};
+static const text_t T_UNSAVED={"未保存的进度将丢失","All progress is lost"};
 static const text_t T_PAUSED={"暂停","PAUSED"};
-static const text_t T_SUMMIT_REACHED={"魔王陨落，公主获救","DEMON KING FALLS - PRINCESS SAVED"};
+static const text_t T_SUMMIT_REACHED={"魔王陨落，公主获救","The king falls. You win."};
 static const text_t T_SHOP={"商店","SHOP"};
 static const text_t T_SHOP_ATK={"攻击 +3","ATK +3"};
 static const text_t T_SHOP_DEF={"防御 +3","DEF +3"};
@@ -81,72 +82,79 @@ static const text_t T_TELEPORT={"传送","WARP"};
 static const text_t T_TELEPORT_TITLE={"传送 · 章节锚点","WARP · CHAPTER ANCHORS"};
 static const text_t T_ANCHOR_LOCKED={"未解锁","LOCKED"};
 static const text_t T_ANCHOR_HERE={"当前","HERE"};
-static const text_t T_ANCHOR_HINT={"通关一章，点亮下一个传送点","Clear a chapter to light the next anchor"};
+static const text_t T_ANCHOR_HINT={"通关一章，点亮下一个传送点","Clear chapters. Unlock anchors"};
 static const text_t T_RESTART_GAME={"重开","RESTART"};
+static const text_t T_RESTART_HINT={"本层未保存的操作将丢失","Unsaved steps are lost"};
+static const text_t T_RETRY_FAILED={"读取失败，当前旅程未变","Load failed. No changes"};
+static const text_t T_CANCEL={"取消","CANCEL"};
 static const text_t T_LOAD_CHECKPOINT={"从检查点重试","RETRY CHECKPOINT"};
 static const text_t T_DEAD={"你战败了","DEFEATED"};
 static const text_t T_VICTORY={"通关","VICTORY"};
 static const text_t T_EXPLORE={"继续探索","EXPLORE"};
 static const text_t T_TURNS={"移动","MOVES"};
 
-typedef struct { const char *zh[2], *en[2]; } story_t;
-/* One short two-line conversation per floor. These carry the original
- * Magic Tower premise: the princess is held at the summit, and the tower's
- * coloured keys are the only way through its seals. */
-static const story_t STORY[FLOOR_THEMES]={
-    {{"城门已破，公主被囚塔顶。","钥匙颜色对应门，别硬闯。"},
-     {"The gate is broken; the princess waits above.","Keys match doors. Do not rush in."}},
-    {{"军需官只认金币。","攻击与防御越买越贵。"},
-     {"The quartermaster takes gold only.","Each purchase raises the next price."}},
-    {{"西侧蓝门后藏着红钥匙。","四层有第二把蓝钥匙。"},
-     {"The west blue vault hides a red key.","Floor four holds a second blue key."}},
-    {{"苔庭的蓝钥匙在东南角。","蓝门后还有第二把。"},
-     {"The garden's blue key lies southeast.","A second waits behind the blue door."}},
-    {{"水牢封印只认红钥匙。","没有就回三层密室找。"},
-     {"The cistern seal needs the red key.","Search the sealed room on floor three."}},
-    {{"法师与石魔守着同一把黄钥匙。","选一边打，别贪。"},
-     {"Mage and golem guard one yellow key.","Pick a side. Do not fight both."}},
-    {{"东侧怨灵守着红钥匙。","八层沙墓也在等它。"},
-     {"A wraith guards the eastern red key.","The sand tomb on floor eight waits."}},
-    {{"沙墓出口的红门，需用最后一把红钥匙。","资源不足就回下层。"},
-     {"The sand tomb exit needs the last red key.","Go below if supplies run short."}},
-    {{"星台尽头有怨灵挡路。","石魔和怨灵各守一件宝物。"},
-     {"A wraith blocks the star terrace exit.","Golem and wraith each guard a prize."}},
-    {{"魔王就挡在王座前。","算清伤害，再开战。"},
-     {"The Demon King stands before the throne.","Check the damage before you strike."}},
-};
-
-static const text_t NPC_NAME[FLOOR_THEMES]={
-    {"守夜人","WATCHMAN"},
-    {"军需官","QUARTERMASTER"},
-    {"侍女幽魂","GHOST MAID"},
-    {"守卫亡魂","FALLEN GUARD"},
-    {"溺亡学者","DROWNED SCHOLAR"},
-    {"伤兵","WOUNDED SOLDIER"},
-    {"黑祭司","DARK PRIESTESS"},
-    {"骑士团长","KNIGHT COMMANDER"},
-    {"公主回声","PRINCESS ECHO"},
-    {"公主","PRINCESS"},
-};
-static const text_t SCENE_NAME[FLOOR_THEMES]={
-    {"城门","GATEHOUSE"}, {"军械库","ARMORY"}, {"藏书阁","ARCHIVE"},
-    {"苔庭","MOSS GARDEN"}, {"水牢","CISTERN"}, {"兵营","BARRACKS"},
-    {"墓室","CRYPT"}, {"沙墓","SAND TOMB"}, {"星台","STAR TERRACE"},
-    {"王座","THRONE"},
+static const text_t SCENE_NAME[TOWER_FLOORS]={
+    {"破门","Broken Gate"},
+    {"偏院","Side Court"},
+    {"旧库","Old Archive"},
+    {"哨楼","Watchtower"},
+    {"军械库","Armory"},
+    {"军需站","Supply Post"},
+    {"守望台","Lookout"},
+    {"旧营房","Old Camp"},
+    {"封门前厅","Sealed Hall"},
+    {"队长之门","Captain"},
+    {"双岸","Two Banks"},
+    {"泵房","Pump Room"},
+    {"外堤","Outer Levee"},
+    {"阀厅","Valve Hall"},
+    {"沉库","Sunken Stores"},
+    {"渡守庭","Ferry Court"},
+    {"旧宿舍","Old Dormitory"},
+    {"回流渠","Return Channel"},
+    {"双岸合流","Joined Banks"},
+    {"渡守","Ferryman"},
+    {"运料场","Loading Yard"},
+    {"废炉","Cold Furnace"},
+    {"分货库","Warehouse"},
+    {"精铸室","Fine Casting"},
+    {"交易所","Exchange"},
+    {"灰烬回道","Ash Return"},
+    {"账房","Ledger Room"},
+    {"封存炉","Sealed Furnace"},
+    {"熄火桥","Cold Bridge"},
+    {"炉心","Furnace Heart"},
+    {"王城前庭","Court Gates"},
+    {"王室税库","Royal Treasury"},
+    {"礼拜堂","Chapel"},
+    {"双翼兵营","Two Barracks"},
+    {"禁书室","Forbidden Books"},
+    {"长廊","Long Gallery"},
+    {"旧王寝","Royal Bed"},
+    {"王城侧库","Side Stores"},
+    {"守誓门","Oath Gate"},
+    {"守誓者","Oathkeeper"},
+    {"裂阶","Broken Stairs"},
+    {"旧观测室","Observatory"},
+    {"镜廊","Mirror Gallery"},
+    {"星钥仓","Star Stores"},
+    {"冠冕厅","Crown Hall"},
+    {"回响阶","Echo Stairs"},
+    {"归还之室","Return Room"},
+    {"封印庭","Seal Court"},
+    {"王座前室","Antechamber"},
+    {"星冠王座","Crown Throne"},
 };
 /* The five regions named by docs/TOWER50_DESIGN_SPINE.md; one per pair of
  * chapter anchors (10, 20, 30, 40, 50). */
 static const text_t REGION_NAME[5]={
     {"断门城塞","BROKEN GATE"}, {"沉水回廊","SUNKEN HALL"},
-    {"灰烬工坊","ASH WORKS"}, {"静默王城","SILENT COURT"},
+    {"灰烬工坊","ASH WORKS"}, {"静默王城","STILL COURT"},
     {"星冠高塔","STAR CROWN"},
 };
 
 static const char *tx(const game_snapshot_t *s, const text_t *t)
 { return s->lang==GAME_LANG_EN?t->en:t->zh; }
-/* The ten authored scenes repeat per region; TOWER_FLOORS is a multiple. */
-static unsigned floor_slot(const game_snapshot_t *s)
-{ return s->tower.floor % (unsigned)FLOOR_THEMES; }
 
 static const text_t STATUS_TEXT[]={
     {"向上攀登","Climb the tower"},
@@ -287,59 +295,10 @@ static void ui_draw_cjk15(const char *text,int x,int y,Color color)
         x+=25;
     }
 }
-static void ui_draw_cjk16(const char *text,int x,int y,Color color)
-{ ui_draw(text,x,y,1,color); }
-static int cjk_line_count(const char *text,int max_chars)
-{
-    int count=0; uint32_t cp;
-    if(!text||!max_chars) return 0;
-    while(*text){ utf8_next(&text,&cp); ++count; }
-    return (count+max_chars-1)/max_chars;
-}
-static bool closing_punctuation(uint32_t cp)
-{
-    switch(cp){
-    case 0x3002: case 0xFF0C: case 0xFF01: case 0xFF1F:
-    case 0xFF1B: case 0xFF1A: case 0x3001: case 0xFF09:
-    case 0x3011: case 0x300B: case 0x300D: case 0x300F:
-    case 0x2026:
-        return true;
-    default:
-        return false;
-    }
-}
-static int ui_draw_wrap_cjk(const char *text,int x,int y,int max_chars,
-                            int line_height,Color color,int max_lines,bool large)
-{
-    const char *start=text,*p=text;
-    char line[128];
-    int count=0,lines=0;
-    while(*p&&lines<max_lines){
-        if(count>=max_chars){
-            const char *peek=p; uint32_t cp=0;
-            utf8_next(&peek,&cp);
-            if(!closing_punctuation(cp)){
-                size_t n=(size_t)(p-start);
-                if(n>=sizeof(line)) n=sizeof(line)-1;
-                memcpy(line,start,n); line[n]=0;
-                large?ui_draw_cjk15(line,x,y,color):ui_draw_cjk16(line,x,y,color);
-                y+=line_height; ++lines; start=p; count=0;
-                if(lines>=max_lines) break;
-            }
-        }
-        const char *next=p; uint32_t cp;
-        utf8_next(&next,&cp);
-        p=next; ++count;
-    }
-    if(start<p&&lines<max_lines){
-        size_t n=(size_t)(p-start);
-        if(n>=sizeof(line)) n=sizeof(line)-1;
-        memcpy(line,start,n); line[n]=0;
-        large?ui_draw_cjk15(line,x,y,color):ui_draw_cjk16(line,x,y,color);
-        ++lines;
-    }
-    return lines;
-}
+
+
+
+
 static void button(const game_snapshot_t *s,const text_t *label,int x,int y,int w,int h,bool active)
 {
     const char *text=label?tx(s,label):"";
@@ -828,58 +787,54 @@ static void gpt_robot(int x,int y,int scale)
 }
 static bool is_gpt(const game_snapshot_t *s,int x,int y)
 { return s->tower.floor==46u && x==12 && y==14; }
+/* Chinese uses the readable 24px bitmap path; English keeps 16px text.
+ * Wrap by actual advances; complete authored pages must fit without clipping. */
+static int campaign_draw_paragraph(const char *text,int x,int y,int width,int lines,bool large)
+{
+    int used=0;
+    while(text && *text) {
+        const char *start=text,*end=text,*last_space=NULL;
+        int pixels=0;
+        while(*end) {
+            const char *next=end; uint32_t cp;
+            utf8_next(&next,&cp);
+            const int step=cp<0x80?(large?18:12):(large?25:17);
+            if(pixels+step-1>width || next-start>=94) break;
+            if(cp==' ') last_space=end;
+            pixels+=step; end=next;
+        }
+        if(used>=lines || end==start) return -1;
+        if(*end && last_space && last_space>start) end=last_space;
+        char line[96]; const size_t bytes=(size_t)(end-start);
+        memcpy(line,start,bytes);line[bytes]=0;
+        if(large) ui_draw_cjk15(line,x,y+used*28,WHITE_INK);
+        else ui_draw(line,x,y+used*22,1,WHITE_INK);
+        ++used;
+        text=end;while(*text==' ')++text;
+    }
+    return used;
+}
+
 static void story_modal(const game_snapshot_t *s)
 {
-    const unsigned slot=floor_slot(s);
-    const story_t *story=&STORY[slot];
-    const text_t *name=&NPC_NAME[slot];
+    const campaign_page_t *story=campaign_dialogue_page(s->dialogue_id,s->dialogue_variant,s->dialogue_page);
+    if(!story || s->dialogue_id>=CAMPAIGN_DIALOGUE_COUNT) return;
+    const campaign_dialogue_t *entry=&campaign_dialogues[s->dialogue_id];
+    const char *name=s->lang==GAME_LANG_EN?entry->name_en:entry->name_zh;
     DrawRectangle(0,0,480,480,Fade(INK,.82f));
     DrawRectangle(30,120,420,260,PANEL);
     DrawRectangleLines(30,120,420,260,BRASS);
-    ui_draw_cjk15(tx(s,name),48,138,BRASS);
+    ui_draw_cjk15(name,48,138,BRASS);
     DrawRectangle(38,160,96,150,INK);
     DrawRectangleLines(38,160,96,150,EDGE);
     if(is_gpt(s,(int)s->tower.x,(int)s->tower.y)) gpt_robot(38,185,3);
     else npc_portrait(38,160,s->tick);
     DrawLine(142,160,142,316,EDGE);
-    if(s->lang==GAME_LANG_EN){
-        char paragraph[220];
-        snprintf(paragraph,sizeof(paragraph),"%s %s",story->en[0],story->en[1]);
-        const char *p=paragraph;
-        int y=172;
-        while(*p&&y<284){
-            int take=0,last_space=0;
-            while(p[take]&&take<24){
-                if(p[take]==' ') last_space=take;
-                ++take;
-            }
-            if(p[take]&&last_space) take=last_space;
-            char line[40];
-            int n=take<39?take:39;
-            memcpy(line,p,(size_t)n); line[n]=0;
-            MosaicoFastDrawText(line,150+(290-MosaicoFastMeasureText(line,16))/2,y,16,WHITE_INK);
-            p+=take;
-            while(*p==' ') ++p;
-            y+=22;
-        }
-    } else {
-        const int l0=cjk_line_count(story->zh[0],11);
-        const int l1=cjk_line_count(story->zh[1],11);
-        const int s0=cjk_line_count(story->zh[0],17);
-        const int s1=cjk_line_count(story->zh[1],17);
-        if(l0+l1<=5){
-            const int first=ui_draw_wrap_cjk(story->zh[0],150,174,11,28,WHITE_INK,l0,true);
-            ui_draw_wrap_cjk(story->zh[1],150,174+first*28,11,28,WHITE_INK,l1,true);
-        } else if(s0+s1<=7){
-            const int first=ui_draw_wrap_cjk(story->zh[0],150,174,17,20,WHITE_INK,s0,false);
-            ui_draw_wrap_cjk(story->zh[1],150,174+first*20,17,20,WHITE_INK,s1,false);
-        } else {
-            /* Far too long to rescue: keep the compact font and let the
-             * authored-text layout test fail instead of inventing a tiny UI. */
-            const int first=ui_draw_wrap_cjk(story->zh[0],150,174,17,20,WHITE_INK,3,false);
-            ui_draw_wrap_cjk(story->zh[1],150,174+first*20,17,20,WHITE_INK,3,false);
-        }
-    }
+    const char *const *lines=s->lang==GAME_LANG_EN?story->en:story->zh;
+    const bool large=s->lang!=GAME_LANG_EN;
+    const int budget=large?5:6,line_height=large?28:22;
+    const int first=campaign_draw_paragraph(lines[0],150,174,288,budget,large);
+    if(first>=0) (void)campaign_draw_paragraph(lines[1],150,174+first*line_height,288,budget-first,large);
     button(s,&T_TALK_CONTINUE,180,330,120,32,false);
 }
 static bool view_has(const game_snapshot_t *s,int x,int y)
@@ -891,8 +846,9 @@ static void dungeon(game_handle_t game,const game_snapshot_t *s)
 {
     char text[96];
     char label[24];
-    const unsigned slot=floor_slot(s);
-    const scene_t *sc=&SCENES[slot];
+    const unsigned slot=s->tower.floor;
+    static const unsigned region_scene[5]={SCENE_GATE,SCENE_CISTERN,SCENE_ARMORY,SCENE_ARCHIVE,SCENE_ASTRAL};
+    const scene_t *sc=&SCENES[slot==49u?SCENE_THRONE:region_scene[slot/10u]];
     DrawRectangle(0,0,GAME_WIDTH,GAME_HEIGHT,sc->bg);
     DrawRectangleLines(3,3,GAME_WIDTH-6,GAME_HEIGHT-6,sc->wall_hi);
     if(s->tower.floor+1>=TOWER_FLOORS)
@@ -941,6 +897,10 @@ static void dungeon(game_handle_t game,const game_snapshot_t *s)
             /* No time-driven animation: an unchanged scene stays pixel-identical. */
             if(tile==TOWER_TILE_NPC && is_gpt(s,x,y)) gpt_robot(sx,sy,1);
             else tile_sprite(tile,sx,sy,0,sc->accent);
+            if(tile==TOWER_TILE_SECRET) {
+                DrawRectangle(sx+1,sy+1,30,30,Fade(INK,.20f));
+                DrawLine(sx+4,sy+29,sx+27,sy+29,sc->wall_lo);
+            }
         }
     }
     if(s->tower.cleared && s->tower.floor+1>=TOWER_FLOORS) {
@@ -1041,7 +1001,7 @@ static void teleport_cell(const game_snapshot_t *s,unsigned anchor,int x,int y)
     if(selected) DrawRectangleLines(x-2,y-2,
                                     GAME_TELEPORT_CELL_W+4,GAME_TELEPORT_CELL_H+4,BRASS);
     DrawRectangleLines(x,y,GAME_TELEPORT_CELL_W,GAME_TELEPORT_CELL_H,border);
-    snprintf(label,sizeof(label),tx(s,&T_FLOOR),floor+1u);
+    snprintf(label,sizeof(label),s->lang==GAME_LANG_EN?"%02uF":"%u层",floor+1u);
     ui_draw(label,x+12,y+8,1,label_ink);
     ui_draw(tx(s,unlocked?&REGION_NAME[anchor?anchor-1u:0u]:&T_ANCHOR_LOCKED),
             x+12,y+32,1,sub_ink);
@@ -1104,6 +1064,30 @@ static void over_modal(const game_snapshot_t *s)
                GAME_END_BUTTON_W,GAME_END_BUTTON_H,true);
     }
 }
+static void restart_modal(const game_snapshot_t *s)
+{
+    DrawRectangle(0,0,480,480,Fade(INK,.84f));
+    DrawRectangle(GAME_RESTART_PANEL_X,GAME_RESTART_PANEL_Y,
+                  GAME_RESTART_PANEL_W,GAME_RESTART_PANEL_H,PANEL);
+    DrawRectangleLines(GAME_RESTART_PANEL_X,GAME_RESTART_PANEL_Y,
+                       GAME_RESTART_PANEL_W,GAME_RESTART_PANEL_H,BRASS);
+    ui_center(tx(s,&T_RESTART_GAME),126,2,BRASS);
+    ui_center_fit(tx(s,&T_RESTART_HINT),160,1,MUTED,296);
+    if(s->has_checkpoint)
+        button(s,&T_LOAD_CHECKPOINT,GAME_RESTART_BUTTON_X,GAME_RESTART_RETRY_Y,
+               GAME_RESTART_BUTTON_W,GAME_RESTART_BUTTON_H,true);
+    else {
+        DrawRectangleLines(GAME_RESTART_BUTTON_X,GAME_RESTART_RETRY_Y,
+                           GAME_RESTART_BUTTON_W,GAME_RESTART_BUTTON_H,STONE);
+        ui_center(tx(s,&T_NO_SAVE),GAME_RESTART_RETRY_Y+13,1,MUTED);
+    }
+    button(s,&T_NEW_GAME,GAME_RESTART_BUTTON_X,GAME_RESTART_NEW_Y,
+           GAME_RESTART_BUTTON_W,GAME_RESTART_BUTTON_H,false);
+    button(s,&T_CANCEL,GAME_RESTART_BUTTON_X,GAME_RESTART_CANCEL_Y,
+           GAME_RESTART_BUTTON_W,GAME_RESTART_BUTTON_H,false);
+    if(s->notice_id==GAME_NOTICE_NO_SAVE || s->notice_id==GAME_NOTICE_DAMAGED)
+        ui_center_fit(tx(s,&T_RETRY_FAILED),366,1,RED_INK,296);
+}
 static void victory_modal(const game_snapshot_t *s)
 {
     char text[96];
@@ -1142,6 +1126,7 @@ bool game_render(game_handle_t game)
     if(s->screen==GAME_SHOP) shop_modal(s);
     if(s->screen==GAME_DIALOG) story_modal(s);
     if(s->screen==GAME_TELEPORT) teleport_modal(s);
+    if(s->screen==GAME_RESTART_MENU) restart_modal(s);
     if(s->screen==GAME_OVER) over_modal(s);
     if(s->screen==GAME_VICTORY) victory_modal(s);
     if(s->paused) {

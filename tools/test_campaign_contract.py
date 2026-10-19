@@ -18,7 +18,7 @@ from verify_campaign_design import FLOORS
 from tower_design_lab import build, Replay
 
 OUT = ROOT/'artifacts/campaign-contract'
-TRACE = ROOT/'artifacts/campaign-design/secrets_and_errands.json'
+TRACE = ROOT/'artifacts/campaign-production/secrets_and_errands.json'
 
 
 def instrument(source):

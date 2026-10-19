@@ -68,6 +68,19 @@ SCORES={
  'king':dict(bpm=104,key='D harmonic minor',lead='D5:2 E5:2 F5:4 A5:2 G5:2 E5:4 F5:2 E5:2 D5:4 Cs5:4 R:4',bass='D3:4 A2:4 D3:8 Bb2:8 A2:8',chords=['Dm','Bb','Gm','A'],wave='restrained pulse, sparse noise'),
  'home':dict(bpm=72,key='D major',lead='D5:4 A4:2 R:2 Fs5:4 E5:4 D5:6 E5:2 Fs5:4 R:4',bass='D3:16 G2:8 A2:8',chords=['D','G','Bm','A'],wave='triangle, no percussion'),
 }
+# B is an authored two-bar answer, never a transposition invented by a generator.
+for key,answer in {
+ 'gate':'F5:4 G5:2 A5:2 G5:4 E5:4 F5:6 E5:2 D5:4 R:4',
+ 'water':'G5:2 R:2 E5:4 D5:2 R:2 B4:4 C5:4 E5:4 D5:4 R:4',
+ 'forge':'A5:3 G5:1 E5:4 C5:2 R:2 D5:4 E5:3 C5:1 B4:4 A4:4 R:4',
+ 'court':'C5:6 D5:2 A4:8 Bb4:6 A4:2 G4:4 R:4',
+ 'crown':'F5:4 G5:2 A5:2 C6:4 A5:4 G5:2 E5:2 D5:4 Cs5:4 R:4',
+ 'king':'A5:2 Bb5:2 A5:4 F5:2 E5:2 D5:4 E5:2 F5:2 E5:4 Cs5:4 R:4',
+ 'home':'Fs5:4 G5:2 A5:2 B5:4 A5:4 G5:6 Fs5:2 E5:4 R:4',
+}.items():
+    SCORES[key]['answer']=answer
+    SCORES[key]['form']=['lead','lead','answer','lead']
+    SCORES[key]['chord_span_sixteenths']=32
 
 def data():
     return dict(revision='tower50-authored-v8',coordinate_system='zero based x/y; human floor numbers',

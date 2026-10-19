@@ -1,216 +1,77 @@
 # Mosaico Magic Tower
 
-A ten-floor Magic Tower game for the **ESP-Mosaico** handheld (ESP32-S31, 480×480 display), written in C on top of the official Raylib Lite Engine / GSP stack.
+An original fifty-floor Magic Tower for **ESP-Mosaico** (ESP32-S31, 480×480), built in C with the official Raylib Lite Engine / GSP stack. Author: **Ponkan**.
 
-The game is a compact, original take on the classic key-and-door dungeon formula: deterministic combat previews, coloured keys, shops, NPC story scenes, an original generated soundtrack, and a crisp pixel UI rendered entirely in code.
+Current preview: **v1.8.0-rc.1**. Production model and native Host validation pass. The earlier v1.8-dev build has a verified healthy device boot; this candidate adds larger Chinese dialogue and the “五十层试炼” subtitle. Extended hardware playtesting remains open. See [integration status](docs/level-design/PRODUCTION_INTEGRATION.md).
 
-Current release: **v1.6** — see [CHANGELOG.md](CHANGELOG.md).
+![Concept cover](publish/mosaico-ideas/images/01-cover-concept.png)
 
-![Title screen](docs/images/title.png)
+*AI-assisted concept cover; actual C-rendered gameplay screenshots below.*
 
-## Features
-
-- **Ten distinct floors**, each with its own hand-authored plan, palette, props and lighting: gatehouse, armory, archive, moss garden, cistern, barracks, crypt, sand tomb, star terrace and throne room.
-- **Cross-floor key puzzle**: the red key behind floor 3's blue door is needed on floor 5; its blue key waits in floor 4's blue vault. Floor 7's east crypt holds the key for floor 8's sand seal.
-- **Deterministic combat** with damage preview, confirm/cancel, and no HP loss when a fight is refused.
-- **NPC dialogue** on every floor, reusing the game's modal UI, in Chinese and English.
-- **Pickup feedback** with exact values (`Healing potion HP +30`, `Attack gem ATK +5`, …).
-- **Three original RPG loops**: a warm title theme, quiet lower-tower exploration and a more urgent upper-tower theme, using the same bounded C synthesizer on device and in previews.
-- **One settings button** at the top right: Chinese/English, volume, brightness and the readable GitHub repository address. Preferences survive restarting and loading journeys.
-- **Ponkan** credited on the welcome screen.
-- **Versioned transactional saves** (2632 bytes, v7 wire format, FNV checksum + semantic validation) in NVS. A checkpoint is written on every real floor change; older v4/v6 journeys are rejected cleanly.
-- **Six chapter warp anchors** (1/10/20/30/40/50) that unlock when their ten-floor chapter is completed, free to use, with no manual save/load button.
-- **Operation-driven rendering**: redraw after input, static idle sprites, and a 15 Hz active update cap.
-- **TE-synchronized output** through GSP composition; the user currently reports no visible tearing on the device.
-
-| Exploration | Combat | Merchant |
+| Title | Chinese dialogue | Throne hall |
 |---|---|---|
-| ![Gameplay](docs/images/gameplay.png) | ![Combat](docs/images/combat.png) | ![Shop](docs/images/shop.png) |
+| ![Title](publish/mosaico-ideas/images/03-title.png) | ![Dialogue](publish/mosaico-ideas/images/05-gpt-dialogue.png) | ![Throne](docs/images/throne50.png) |
 
-| NPC scene | Pickup feedback | Summit |
-|---|---|---|
-| ![NPC](docs/images/npc-dialogue.png) | ![Pickup](docs/images/pickup-gain.png) | ![Summit](docs/images/summit.png) |
+[Download firmware](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.1) · [Mosaico Ideas publishing kit](publish/mosaico-ideas/FORM_FIELDS.md)
 
-## Controls
+## Campaign
 
-| Action | Touch | Keyboard |
-|---|---|---|
-| Move one tile | Tap a neighbouring tile, or swipe | Arrow keys / WASD |
-| Confirm fight | Tap **Fight** | Start / F / Ctrl |
-| Cancel fight | Tap **Back** | Left |
-| Save / Warp / Restart | Automatic on floor changes; footer **传送 / 重开** | — |
-| Settings | Gear button, top right | — |
-| Language / Volume / Brightness | Choices and sliders inside settings | — |
+- Fifty authored maps across Broken Gate, Sunken Hall, Ash Works, Silent Court and Star Crown. Resource thresholds, coloured doors, optional guards and return visits determine the route.
+- Floors 1–10 are 11×11; later chapters use 13/15/17/19 tiles. **50F is an 11×11 symmetric throne hall**, visible in one screen.
+- An 11×11 viewport pages automatically when the hero enters a continuing edge. Translucent edges indicate more map; there are no camera buttons or manual panning.
+- Eight hidden rooms: step onto a slightly darker corridor floor to reveal its chamber. The 8F NPC teaches this. Discovery persists in checkpoints.
+- Three cross-floor errands, a reversible 14F sluice and three optional sigils. None is required by the ordinary winning routes. A distinct terminal robot waits in the optional 47F room.
+- Chinese/English coordinate-specific NPC and event dialogue, with explicit pages, 24px Chinese and 16px English body text.
+- Deterministic combat previews, confirmation/cancellation, coloured keys, guarded resource choices and shared shop prices of 15/25/35/... gold (+3 per purchase).
+- Eight original music loops: title, five regions, final battle and ending. Four integer voices, bounded echo and no rendering allocations or streamed samples.
+- One settings button: language, volume, brightness and the readable GitHub address. Preferences are separate from journey data.
 
-## Floor overview
+## Checkpoints and controls
 
-Screenshots are rendered from the same C renderer used on the device.
+A new journey and every real stair/warp floor transition save automatically. Same-floor actions, menu visits and death do not overwrite the checkpoint. Failed saves report failure and preserve the previous record.
 
-| Floor | Scene | Route idea |
-|---|---|---|
-| 1 | Gatehouse | Yellow-door tutorial; slimes and bats teach the combat preview |
-| 2 | Armory | Merchant, first blue gate and the broadest resource floor |
-| 3 | Archive | Blue-locked west vault hides the red key; detour to 4F for its key |
-| 4 | Moss garden | Two blue keys: one opens the garden vault, one unlocks 3F |
-| 5 | Cistern | Red seal and a guarded exit; the 3F red key is required |
-| 6 | Barracks | Mage and golem guard the same yellow key; pick a side |
-| 7 | Crypt | Wraith-guarded red-key pocket also contains the way up |
-| 8 | Sand tomb | Golem/wraith rooms, rune floor and the red seal to the summit |
-| 9 | Star terrace | Wraith blocks the exit; golem/wraith guard separate prizes |
-| 10 | Throne | Single carpeted boss aisle; the Demon King cannot be bypassed |
+Footer **Warp / Restart** replaces manual save/load. Six anchors **1/10/20/30/40/50** unlock by chapter completion. Restart offers checkpoint retry, new game and cancel; new game requires another confirmation. Failed retry preserves the live run. After victory, continue exploring and use all six anchors.
 
-<p float="left">
-  <img src="docs/images/floor1.png" width="30%" />
-  <img src="docs/images/floor2.png" width="30%" />
-  <img src="docs/images/floor3.png" width="30%" />
-  <img src="docs/images/floor4.png" width="30%" />
-  <img src="docs/images/floor5.png" width="30%" />
-  <img src="docs/images/floor6.png" width="30%" />
-  <img src="docs/images/floor7.png" width="30%" />
-  <img src="docs/images/floor8.png" width="30%" />
-  <img src="docs/images/floor9.png" width="30%" />
-  <img src="docs/images/floor10.png" width="30%" />
-</p>
+Touch a neighbouring tile or swipe to move. Arrow keys/WASD move in Host; Start confirms, Left cancels. The gear has the previous language button's generous touch area.
 
-> **Design:** all ten floors are hand-authored 11×11 rooms with distinct wall
-> plans, eight different up/down stair arrangements, denser treasure and enemy
-> placement, and a cross-floor key chain. Each scene gets its own palette,
-> wall treatment and floor decoration; stairs land on the matching stair of
-> the destination floor instead of a fixed screen cell. The route uses 678
-> actions and 39 fights, ending at HP 387 with shops available for spare gold.
-> A larger scrolling map with a fixed camera remains a separate future feature.
+Save version **v8**, 2632 bytes, includes checksum and semantic validation. **v7 and older journeys are rejected**, because their consumed-tile coordinates belong to different maps. Starting a new game replaces the journey only after confirmation; no NVS erasure is needed.
 
-## Building
+## Validation
 
-This repository is a **project** for the ESP-Mosaico workspace, not a standalone ESP-IDF application. The component manager uses `override_path` entries that resolve inside the official workspace.
-
-1. Use the official ESP-Mosaico development workspace (the `esp-mosaico-vibe` checkout used for this project).
-2. Place this repository at `projects/magic_tower` inside that workspace.
-3. Build with the official CLI:
-
-This revision also requires the checked-in engine integration patch against
-the pinned `ca3200a6b7f63e2bdea07851e19fdbd3a42eb742` engine. It contains the
-existing TE integration and serializes brightness changes with display work.
-For a fresh workspace, check and apply it before building:
+Use Python 3.10+, GCC and Pillow. Set `CC` to the compiler and `MOSAICO_ENGINE_ROOT` to the pinned official engine checkout, then:
 
 ```bash
-git -C submodule/raylib-lite-engine apply --check ../../projects/magic_tower/tools/patches/raylib-lite-engine-settings-display.patch
-git -C submodule/raylib-lite-engine apply ../../projects/magic_tower/tools/patches/raylib-lite-engine-settings-display.patch
+python tools/verify_campaign_release.py
+python tools/render_music.py
 ```
 
-If the engine already has local changes, inspect them first. The development
-workspace already contains this patch; do not apply it twice or reset its edits.
+The suite retains logs in `artifacts/campaign-validation/`: five production routes with every-action save roundtrips; 2632 byte-corruption checks; semantic forgeries; actual input/dialogue/errand/checkpoint replay; restart, camera, settings, brightness and idle regressions; 108 real C bilingual page renders; all-track audio bounds; complete official Host ABI replay and screenshots. The four authored ordinary/alternative routes plus the secret/errand route prove specific winning paths, not every possible strategy or final balance. The attack-first witness ends with only 10 HP.
+
+`tests/run_tests.py` runs the current portable model/campaign checks. Historical ten-floor `test_tower.c`, `test_level_design.py`, `test_integration.py`, `test_guarded_forks.py`, old strategy planners and `capture_screens.py` describe v1.6 and are not current acceptance commands. Use `tools/capture_campaign_host.py` for actual production gameplay screenshots; `capture_campaign_design.py` is a camera-only map QA facade.
+
+## Official build
+
+This repository is a project inside the official ESP-Mosaico workspace, not a standalone ESP-IDF app. Put a real source copy under `projects/magic_tower` and preserve its relative component overrides. Verify ESP-IDF commit `7b9cc1ac79f865983f59bb8ff3ff43eb74ff1dbe` and engine commit `ca3200a6b7f63e2bdea07851e19fdbd3a42eb742`.
+
+A fresh engine needs `tools/patches/raylib-lite-engine-settings-display.patch` for existing display ownership integration. Inspect existing edits first; the development workspace already has it. Never reset or apply it twice.
+
+From the official workspace, follow its build-doctor skill, then:
 
 ```bash
+python mosaico.py game sim --project projects/magic_tower --headless --frames 120
 python mosaico.py game build --project projects/magic_tower
 ```
 
-The project targets ESP-IDF 6.x and the component versions pinned in `dependencies.lock`.
+Installation is a separate step through the official `mosaico.py iris` workflow after device identity, mode and layout compatibility checks. Preserve retained Vibe Mode firmware and the immutable partition prefix; do not use direct flash commands.
 
-### Install on hardware
+## Sources
 
-Only use the official Iris update path; never flash the factory/Vibe Mode partitions directly:
+`main/tower.c` owns gameplay and save validation; `tower_floors.c` contains the exact approved maps. `game.c` owns input and screen state; `game_view.c` is shared Host/device drawing. `campaign_dialogue.h` and `game_music_score.h` are deterministic generated tables.
 
-```bash
-python mosaico.py iris system-update --project projects/magic_tower
-```
+Design sources, maps, copy, music and route reports are under [assets_src/level_design](assets_src/level_design) and [docs/level-design](docs/level-design). Reproduce generated tables with `tools/gen_campaign_dialogue.py` and `tools/gen_campaign_music.py`; regenerate CJK glyphs with `tools/gen_ui_font.py` (optional `MOSAICO_UI_FONT` override). Keep all three in sync.
 
-The update only writes the application partition; Vibe Mode and the recovery firmware are preserved.
-
-## Tests
-
-The gameplay model is portable C and can be tested without hardware.
-
-```bash
-python tests/test_level_design.py
-python tests/test_ui_glyphs.py
-python tests/test_ui_layout.py
-python tools/magic_tower_route.py
-python tests/run_tests.py --label local
-python -m unittest discover -s tests -p test_guarded_forks.py
-python tests/run_strategy_routes.py
-python tests/run_game_timing.py    # portable operation-driven + CJK lookup checks
-python tests/run_render_schedule.py # real RGB565 idle/operation/retry checks
-python tests/run_preferences_storage.py # separate validated transactional preferences
-python tests/run_game_music.py    # exact C core, limits, mute and deterministic chunks
-python tools/render_music.py     # WAV previews from the device's C synthesizer
-python tests/test_integration.py   # requires the host Raylib Lite engine
-python tools/capture_screens.py    # regenerates docs/images from the host renderer
-```
-
-`tests/win_route.json` and `tests/win_route.h` are generated by `tools/magic_tower_route.py`. The planner replays the real map data, including the floor 3/4/5 key detour, and the generated replay route clears all ten floors. `tests/run_strategy_routes.py` replays all four floor 6 / floor 9 guard combinations in the real C model, exporting and importing the 2 KiB save after every action. `tests/test_ui_glyphs.py` fails when authored text needs a glyph that `main/ui_font.h` does not contain.
-
-`tools/capture_screens.py` and `tests/test_integration.py` must run from an official ESP-Mosaico workspace checkout, because both resolve the shared Host engine next to the project. The screenshot tool drives the game through the Host ABI and only crops the dungeon out of those frames; it does not reimplement rendering.
-
-## Source layout
-
-See the [roadmap](docs/ROADMAP.md), [performance notes](docs/PERFORMANCE.md),
-and [settings/music notes](docs/SETTINGS_MUSIC.md) for design and validation details.
-
-| Path | Purpose |
-|---|---|
-| `main/tower.[ch]` | Portable model: maps, combat, keys/doors, shops, save format |
-| `main/game.[ch]` | Input, screen state machine, save adapter, music/gain state |
-| `main/game_view.c` | Shared C renderer: pixel art, CJK bitmap text, modals |
-| `main/game_music.[ch]`, `main/game_music_score.h` | Portable synthesizer and original scores |
-| `main/game_audio.c` | ESP codec task and atomic audio controls |
-| `main/game_preferences.[ch]` | Validated, versioned four-byte preference record |
-| `main/ui_font.h` | Generated 16×16 CJK glyph subset (do not hand-edit) |
-| `main/main.c` | Device entry point and NVS persistence |
-| `main/raylib_screen_mirror.[ch]` | Iris screenshot/input backend registration |
-| `tools/` | Route planner, font generator, screenshot and build scripts |
-| `tests/` | Model tests, host integration tests, generated win route |
-
-## Design notes
-
-### Settings and original soundtrack
-
-The title credits Ponkan. The settings panel shows
-`github.com/Wzdhehe/mosaico-magic-tower` as readable text, because the handheld
-does not provide a web browser. Volume ranges from 0 to 100; brightness from
-10 to 100. Defaults are Chinese, volume 45 and brightness 40. Brightness uses
-the official BSP API. Preferences are saved once when a changed panel closes:
-device NVS `magic_tower/prefs1`, or Host `magic_tower.save.prefs`. They are
-independent of the existing journey record, which remains v5 and 2048 bytes.
-Failed preference writes retain the previous record and display a retry notice.
-
-All three 16-bar scores and synthesis provenance are documented in
-[music sources](assets_src/music/README.md). Four fixed voices, a bounded echo
-and integer rendering avoid runtime assets and render-time allocations. Muting
-skips synthesis while advancing the musical timeline. Host timing establishes
-algorithm cost only; speaker quality and power consumption require device checks.
-
-### Map revision and saves
-
-The fifty-floor campaign uses NVS save wire version **v7** (2632 bytes, an
-explicit five-chapter mask). Older v4/v6 records are rejected rather than loaded
-into changed geometry. A new journey writes its first checkpoint immediately and
-every real floor change writes the next one; the title offers “继续旅程”, the
-death panel offers “从检查点重试”, and there is no manual save or load button.
-Until a checkpoint exists the title offers no saved journey. There is nothing to
-repair by hand: **do not erase or rewrite NVS** to work around a rejection,
-because an old record is simply ignored and a new game begins on floor one.
-
-### Guarded-fork strategies and merchant prices
-
-Floor 6 puts one yellow key between a mage and a golem, so at least one
-guardian must be fought; floor 9 puts the exit behind a wraith and leaves a
-golem/wraith reward choice on the open terrace. Both merchant attributes use
-a shared rising price (15, 25, 35, ... gold): every purchase raises the next
-price by 10 gold for both attributes, while each purchase still grants +3. See
-[design brief](docs/GUARDED_FORK_DESIGN.md).
-
-## Performance
-
-The game redraws **after operations**, with a **15 Hz** maximum active update
-cadence. Idle sprites are static; pickup and save/load feedback stays visible
-until a relevant operation replaces it. The official engine idle callback skips
-settled update/render work while continuing to poll touch. Failed frame
-acquisition/submission is retried. CJK lookup uses binary search, and rendering
-uses one full-canvas clear. See [performance notes](docs/PERFORMANCE.md) for
-verification and remaining hardware measurements. **No thermal benefit is
-claimed until Mosaico measurements are recorded.**
+Operation-driven drawing and the 15 Hz active cap remain in place. Host CPU timings do not establish device temperature, battery life, touch feel or speaker quality. This revision still needs hardware acceptance.
 
 ## License
 
-Project code is released under the **MIT License**; see [LICENSE](LICENSE). Some files are adapted from Espressif Apache-2.0 templates and retain their SPDX headers — see [NOTICE](NOTICE). The game art is drawn procedurally in `game_view.c`; no third-party sprites, music, or map data are included.
+Project code, original maps, procedural art and scores use MIT; see [LICENSE](LICENSE) and [NOTICE](NOTICE) for retained upstream notices. No third-party map, sprite or music samples are bundled.
