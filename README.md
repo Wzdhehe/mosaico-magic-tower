@@ -20,7 +20,7 @@ Current source candidate: **v1.8.0-rc.3**. Adds a persistent battery percentage 
 - Chinese/English coordinate-specific NPC and event dialogue, with explicit pages, 24px Chinese and 16px English body text.
 - Deterministic combat previews, confirmation/cancellation, coloured keys, guarded resource choices and shared shop prices of 15/25/35/... gold (+3 per purchase).
 - Ten original music loops: title, five regions, final battle, exploration after victory, victory screen and death screen. Four integer voices, bounded echo and no rendering allocations or streamed samples.
-- A persistent upper-left battery percentage: white on battery power, green with a lightning mark while charging (including full at 100%). Read-only gauge samples every five seconds; only changed values request a frame. A failed/unavailable reading shows `--`.
+- A persistent upper-left battery percentage: white on battery power, green while charging (including full at 100%), with no lightning symbol. Read-only gauge samples every five seconds; only changed values request a frame. A failed/unavailable reading shows `--`.
 - One settings button: language, volume, brightness and the readable GitHub address. Preferences are separate from journey data.
 
 ## Checkpoints and controls
