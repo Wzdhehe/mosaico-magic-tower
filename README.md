@@ -2,13 +2,13 @@
 
 An original fifty-floor Magic Tower for **ESP-Mosaico** (ESP32-S31, 480×480), built in C with the official Raylib Lite Engine / GSP stack. Author: **Ponkan**.
 
-Current source candidate: **v1.8.0-rc.4**. Repairs the demon-king preview layout, adds a princess conversation, removes a redundant 49F door, rebalances the death score and initializes/validates the battery gauge through the official BSP. RC2 dark-wall concealed doors, quest item icons and open viewport edges are preserved. Extended hardware playtesting remains open. See [integration status](docs/level-design/PRODUCTION_INTEGRATION.md).
+Current preview release: **v1.8.0-rc.4**. Play in **English or Chinese**, switchable in Settings. Repairs the demon-king preview layout, adds a princess conversation, removes a redundant 49F door, rebalances the death score and initializes/validates the battery gauge through the official BSP with bounded retry and last-good display. RC2 dark-wall concealed doors, quest item icons and open viewport edges are preserved. Extended hardware playtesting remains open. See [integration status](docs/level-design/PRODUCTION_INTEGRATION.md).
 
 | Title | Chinese dialogue | Throne hall |
 |---|---|---|
 | ![Title](docs/images/title.png) | ![Dialogue](docs/images/npc-dialogue.png) | ![Throne](docs/images/throne50.png) |
 
-[Published RC2 firmware](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.2). RC4 source validation includes genuine RC3 v8 checkpoint compatibility; battery charge/discharge accuracy still requires hardware acceptance. See [battery acquisition](docs/level-design/BATTERY_ACQUISITION.md).
+[Download RC4 firmware](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.4) · [Previous RC2](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.2). Use the `.irisfw` bundle for Mosaico Ideas / Vibe Mode; see [firmware downloads](firmware/README.md). RC4 validation includes genuine RC3 v8 checkpoint compatibility; long-term battery accuracy still requires hardware acceptance. See [battery acquisition](docs/level-design/BATTERY_ACQUISITION.md).
 
 ## Campaign
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.8.0-rc.4 — 2026-10-19 (field fixes)
+## v1.8.0-rc.4 — 2026-10-20 (field fixes)
 
 - Split only the demon king's combat labels and values into separate rows below its name, so four-digit HP cannot overwrite ATK/DEF glyphs. Ordinary monster panels retain their original layout.
 - Added a bilingual two-page princess conversation before the victory page, with a repeatable map interaction after continuing exploration. Outcome music persists through the conversation and its menus.
