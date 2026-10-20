@@ -338,6 +338,16 @@ static void combat_stat(const char *label,unsigned long value,int cx)
     snprintf(text,sizeof(text),"%s %lu",label,value);
     MosaicoFastDrawText(text,cx-MosaicoFastMeasureText(text,16)/2,207,16,WHITE_INK);
 }
+static void king_combat_stat(const char *label,unsigned long value,int cx)
+{
+    char text[24];
+    /* 75px columns cannot fit "HP 1200" next to "ATK 170". Keep each
+     * label above its value so neighbouring glyphs never paint over it. */
+    MosaicoFastDrawText(label,cx-MosaicoFastMeasureText(label,16)/2,211,16,MUTED);
+    snprintf(text,sizeof(text),"%lu",value);
+    const int size=MosaicoFastMeasureText(text,16)<=72?16:8;
+    MosaicoFastDrawText(text,cx-MosaicoFastMeasureText(text,size)/2,231,size,WHITE_INK);
+}
 
 static void key_sprite(int x,int y,Color color)
 {
@@ -827,7 +837,10 @@ static void story_modal(const game_snapshot_t *s)
     ui_draw_cjk15(name,48,138,BRASS);
     DrawRectangle(38,160,96,150,INK);
     DrawRectangleLines(38,160,96,150,EDGE);
-    if(is_gpt(s,(int)s->tower.x,(int)s->tower.y)) gpt_robot(38,185,3);
+    if(entry->floor==TOWER_FLOORS-1u && entry->x==TOWER_PRINCESS_X && entry->y==TOWER_PRINCESS_Y) {
+        /* Her portrait also identifies the automatic ending conversation. */
+        princess(70,210,0);
+    } else if(is_gpt(s,(int)s->tower.x,(int)s->tower.y)) gpt_robot(38,185,3);
     else npc_portrait(38,160,s->tick);
     DrawLine(142,160,142,316,EDGE);
     const char *const *lines=s->lang==GAME_LANG_EN?story->en:story->zh;
@@ -953,7 +966,9 @@ static void dungeon(game_handle_t game,const game_snapshot_t *s)
             scene_floor(sc,sx,sy,x,y);
             /* No time-driven animation: an unchanged scene stays pixel-identical. */
             if(tile==TOWER_TILE_NPC && is_gpt(s,x,y)) gpt_robot(sx,sy,1);
-            else tile_sprite(tile,sx,sy,0,sc->accent);
+            else if(!(s->tower.cleared && s->tower.floor==TOWER_FLOORS-1u &&
+                      (unsigned)x==TOWER_PRINCESS_X && (unsigned)y==TOWER_PRINCESS_Y))
+                tile_sprite(tile,sx,sy,0,sc->accent);
             if(tile==TOWER_TILE_EVENT) event_sprite(s,x,y,sx,sy);
         }
     }
@@ -1009,11 +1024,18 @@ static void modal(const game_snapshot_t *s)
         button(s,&T_BACK,135,265,100,36,false); button(s,&T_NEW_GAME,245,265,100,36,true);
     } else {
         ui_center(tx(s,enemy_text(s->tower.pending.tile)),172,2,BRASS);
-        combat_stat("HP",(unsigned long)s->tower.pending.hp,165);
-        combat_stat("ATK",(unsigned long)s->tower.pending.attack,240);
-        combat_stat("DEF",(unsigned long)s->tower.pending.defence,315);
+        const bool king=s->tower.pending.tile==TOWER_TILE_DEMON;
+        if(king) {
+            king_combat_stat("HP",(unsigned long)s->tower.pending.hp,165);
+            king_combat_stat("ATK",(unsigned long)s->tower.pending.attack,240);
+            king_combat_stat("DEF",(unsigned long)s->tower.pending.defence,315);
+        } else {
+            combat_stat("HP",(unsigned long)s->tower.pending.hp,165);
+            combat_stat("ATK",(unsigned long)s->tower.pending.attack,240);
+            combat_stat("DEF",(unsigned long)s->tower.pending.defence,315);
+        }
         snprintf(text,sizeof(text),"%s %lu HP",tx(s,&T_DAMAGE),(unsigned long)s->tower.pending.damage);
-        ui_center(text,238,1,s->tower.pending.damage?RED_INK:MINT);
+        ui_center(text,king?254:238,1,s->tower.pending.damage?RED_INK:MINT);
         button(s,&T_BACK,145,281,90,36,false); button(s,&T_FIGHT,245,281,90,36,true);
     }
 }

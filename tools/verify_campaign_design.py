@@ -191,7 +191,10 @@ def structural():
                             (39,(7,7),[(15,15)]),(49,(1,5),[(11,5)])]:
         assert not any(v in reach(FLOORS[floor-1],[gate]) for v in loot),('seal/vault bypass',floor)
     content=content_data()
-    positions={(n['floor']-1,*n['position']) for n in content['npcs']}
+    positions={(n['floor']-1,*n['position']) for n in content['npcs'] if not n.get('post_clear')}
+    post_clear={(n['floor']-1,*n['position']) for n in content['npcs'] if n.get('post_clear')}
+    assert post_clear=={(49,6,1)},('unexpected post-clear NPC',post_clear)
+    assert FLOORS[49].rows[1][6]=='.','Princess must appear on an otherwise walkable tile'
     actual={(f.number-1,x,y) for f in FLOORS for y,row in enumerate(f.rows) for x,c in enumerate(row) if c=='n'}
     assert actual==positions,('NPC coverage',actual-positions,positions-actual)
     for n in content['npcs']:

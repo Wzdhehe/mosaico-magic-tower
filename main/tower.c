@@ -268,6 +268,10 @@ static tower_tile_t tile_at(const struct tower_t *h, unsigned floor, int x,
     if (!d || (unsigned)x >= (unsigned)d->w || (unsigned)y >= (unsigned)d->h) {
         return TOWER_TILE_WALL;
     }
+    /* The rescued princess remains an actual, repeatable map interaction. */
+    if(h->state.cleared && floor==TOWER_FLOORS-1u &&
+       (unsigned)x==TOWER_PRINCESS_X && (unsigned)y==TOWER_PRINCESS_Y)
+        return TOWER_TILE_NPC;
     if (campaign_hidden(h,floor,(unsigned)x,(unsigned)y)) return TOWER_TILE_WALL;
     /* Event stays visible in either state so it can be operated again. */
     if (floor == 13u && x == 3 && y == 4 && d->rows[y][x] == '!')
@@ -835,6 +839,11 @@ static bool valid_state(const struct tower_t *h)
                     return false;
                 }
                 original = decode_tile(d->rows[y][x]);
+                /* RC2/3 could spend a yellow key on this bypassable door.
+                 * The map now has floor here. Keep only this historical flag
+                 * in the key ledger so v8 checkpoints remain byte-compatible. */
+                if(f==48u && x==15u && y==3u && d->rows[y][x]=='.')
+                    original=TOWER_TILE_DOOR_YELLOW;
                 if (!consumable(original) && !(original==TOWER_TILE_NPC && campaign_npc(f,x,y))) return false;
                 if (campaign_hidden(h,f,x,y)) return false;
                 ++consumed[original];

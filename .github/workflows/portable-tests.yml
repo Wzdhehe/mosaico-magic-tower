@@ -36,8 +36,10 @@ jobs:
         run: python3 tests/run_game_music.py
       - name: Audio hardware mute, wake and fault recovery
         run: python3 tests/run_audio_power.py
-      - name: Read-only battery telemetry and charging states
+      - name: Official battery initialization and validated telemetry
         run: python3 tests/run_battery.py
+      - name: Removed 49F door and RC3 v8 checkpoint compatibility
+        run: python3 tests/test_rc4_door_save.py
       - name: Check out the workspace-pinned RGB565 engine for render tests
         uses: actions/checkout@v4
         with:
@@ -52,6 +54,10 @@ jobs:
         env:
           MOSAICO_ENGINE_ROOT: ${{ github.workspace }}/test-deps/raylib-lite-engine
         run: python3 tests/test_ui_layout.py
+      - name: King combat stat column ink bounds
+        env:
+          MOSAICO_ENGINE_ROOT: ${{ github.workspace }}/test-deps/raylib-lite-engine
+        run: python3 tests/test_rc4_combat.py
       - name: Complete production campaign through official Host ABI
         env:
           MOSAICO_ENGINE_ROOT: ${{ github.workspace }}/test-deps/raylib-lite-engine

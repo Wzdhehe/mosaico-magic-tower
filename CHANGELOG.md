@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.8.0-rc.4 — 2026-10-20 (field fixes)
+
+- Split only the demon king's combat labels and values into separate rows below its name, so four-digit HP cannot overwrite ATK/DEF glyphs. Ordinary monster panels retain their original layout.
+- Added a bilingual two-page princess conversation before the victory page, with a repeatable map interaction after continuing exploration. Outcome music persists through the conversation and its menus.
+- Removed the bypassable 49F yellow door at (15,3). Existing v8 opened-door evidence remains in the key ledger; unopened and opened RC3 checkpoints both remain loadable.
+- Raised the fallen melody one octave, moved the bass out of the sub-bass register, lowered its balance and restored lead gain for the small speaker. Four voices and existing memory/CPU bounds are preserved.
+- Battery acquisition now uses the pinned official BSP's verified RAM profile initialization, followed by checked SOC/voltage/current/status/operation/capacity reads. Removed the FC-to-100 override. Positive current takes precedence over the delayed DSG mode flag so plug-in charging does not stay white. No application calibration or OTP writes.
+- Rejected battery samples retry once immediately. If both attempts fail, retain the last validated percentage and icon for less than 15 seconds from that valid sample, then show `--`; failed polls never extend the lifetime. Expiry is independent of the next hardware poll, including scheduling jitter. Recovery adopts the actual SOC without smoothing or clamps. Failure logs include register/error or validation reason and raw telemetry. The intermittent field-read failure itself remains under investigation; the latest tolerance change has not been installed on the device.
+
+
 ## v1.8.0-rc.3 — 2026-10-19 (battery HUD and outcome music)
 
 - Volume zero now fades/drains and closes playback, then blocks the audio task until a changed control. Resume primes silence and fades in; current-track time catches up without PCM output. Hardware failures retry with a bounded delay. The BSP receive channel is unchanged; actual power and speaker behavior need device acceptance.

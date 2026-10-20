@@ -269,6 +269,8 @@ def main():
                 if 'gpt6.1sol' in expected and index==0:
                     if language==0:assert page == ['我是这个游戏的真正开发者，','gpt6.1sol。']
                     image.save(OUT/f'gpt-first-page-{lang_name}.png')
+                if name in ('公主','PRINCESS'):
+                    image.save(OUT/f'princess-page-{index}-{lang_name}.png')
                 results.append(dict(id=identity,variant=variant,name=name,page=index,language=lang_name,lines=len(draws),max_width=max(draw.width for draw in draws)))
     finally:
         lib.dialog_close()

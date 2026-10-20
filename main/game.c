@@ -25,6 +25,7 @@ struct game_t {
     /* Confirmation returns to the screen that requested a new run. */
     game_screen_t confirm_source;
     game_screen_t restart_source;
+    game_screen_t dialogue_return;
     tower_phase_t press_phase;
 };
 static bool inside(int x, int y, int bx, int by, int w, int h)
@@ -182,6 +183,7 @@ static uint8_t anchor_cursor_for(unsigned floor)
 }
 static void start(game_handle_t g)
 {
+    g->dialogue_return=GAME_DUNGEON;
     g->state.dialogue_id=CAMPAIGN_DIALOGUE_NONE;
     g->state.dialogue_page=g->state.dialogue_variant=0;
     tower_new(g->model);
@@ -239,6 +241,7 @@ static bool load(game_handle_t g)
     }
     g->state.has_save = true;
     g->state.has_checkpoint = true;
+    g->dialogue_return=GAME_DUNGEON;
     g->state.dialogue_id=CAMPAIGN_DIALOGUE_NONE;
     g->state.dialogue_page=g->state.dialogue_variant=0;
     g->state.screen = GAME_DUNGEON;
@@ -268,7 +271,10 @@ static void enter_victory(game_handle_t g)
 
 
     suppress_directions(g);
-    set_screen(g, GAME_VICTORY);
+    g->state.dialogue_id=campaign_dialogue_at(TOWER_FLOORS-1u,TOWER_PRINCESS_X,TOWER_PRINCESS_Y);
+    g->state.dialogue_page=g->state.dialogue_variant=0;
+    g->dialogue_return=GAME_VICTORY;
+    set_screen(g,g->state.dialogue_id<CAMPAIGN_DIALOGUE_COUNT?GAME_DIALOG:GAME_VICTORY);
 }
 /* A lethal fight leaves hp at zero; the model has no other way to get there. */
 static bool defeated(const game_snapshot_t *s)
@@ -310,6 +316,7 @@ static void move(game_handle_t g, int dx, int dy)
     if (!was_cleared && g->state.tower.cleared) { enter_victory(g); return; }
     if (g->state.tower.status == TOWER_STATUS_SHOP) g->state.screen = GAME_SHOP;
     if ((result==TOWER_STATUS_TALK || result==TOWER_STATUS_EVENT) && dialogue<CAMPAIGN_DIALOGUE_COUNT) {
+        g->dialogue_return=GAME_DUNGEON;
         g->state.dialogue_id=dialogue;
         g->state.dialogue_page=g->state.dialogue_variant=0;
         if(quest>=0 && tower_quest_state(g->model,(unsigned)quest)==2u)
@@ -328,7 +335,7 @@ static void advance_dialogue(game_handle_t g)
         ++g->state.dialogue_page;
     else {
         g->state.dialogue_id=CAMPAIGN_DIALOGUE_NONE;
-        set_screen(g,GAME_DUNGEON);
+        set_screen(g,g->dialogue_return);
     }
     suppress_directions(g);
     g->frame_pending=true;
@@ -787,6 +794,7 @@ static uint8_t expected_music(game_handle_t g)
     if(source==GAME_RESTART_MENU) source=g->restart_source;
     if(source==GAME_OVER) return 9;
     if(source==GAME_VICTORY) return 8;
+    if(source==GAME_DIALOG && g->dialogue_return==GAME_VICTORY) return 8;
     if(g->state.tower.cleared) return 7;
     if(g->state.tower.floor==TOWER_FLOORS-1u) return 6;
     return (uint8_t)(1u+g->state.tower.floor/10u);

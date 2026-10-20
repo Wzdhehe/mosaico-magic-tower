@@ -28,6 +28,8 @@ def main():
             ('production-routes',['tests/test_campaign_production.py']),
             ('campaign-contracts',['tools/test_campaign_contract.py']),
             ('actual-game-input',['tests/test_campaign_game.py']),
+            ('retired-door-v8',['tests/test_rc4_door_save.py']),
+            ('combat-stat-ink',['tests/test_rc4_combat.py']),
             ('restart',['tests/run_restart_menu.py']),
             ('battery',['tests/run_battery.py']),
             ('camera',['tests/run_camera_controls.py']),

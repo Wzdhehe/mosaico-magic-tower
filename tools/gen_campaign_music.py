@@ -94,8 +94,8 @@ def generate():
     out += table("uint8_t", "chords", chords, f"[{count}][16][3]")
     out += f"static const uint16_t unit_frames[{count}]={{" + ",".join(map(str, units)) + "};\n"
     out += "static const uint8_t chord_span[10]={8,32,32,32,32,32,32,32,32,32};\n"
-    out += "static const uint8_t lead_wave[10]={0,1,1,2,1,1,2,1,1,0};\n"
-    out += table("uint16_t", "voice_gain", [[3000, 560, 460, 1850]] + [[2700, 440, 380, 1800]] * 7 + [[2700,520,440,1700],[1800,320,280,1250]], f"[{count}][4]")
+    out += "static const uint8_t lead_wave[10]={0,1,1,2,1,1,2,1,1,1};\n"
+    out += table("uint16_t", "voice_gain", [[3000, 560, 460, 1850]] + [[2700, 440, 380, 1800]] * 7 + [[2700,520,440,1700],[2900,440,380,500]], f"[{count}][4]")
     out += 'static const char *const track_names[10]={"Lantern at the Gate","Broken Gate","Sunken Hall","Ash Works","Silent Court","Star Crown","King","Home","Dawn above the Tower","One More Lantern"};\n'
     out += table("int16_t", "waveform", [TITLE_WAVE, triangle, pulse], "[3][256]")
     out += table("uint32_t", "note_increment", [increments], "[1][128]", "U")
