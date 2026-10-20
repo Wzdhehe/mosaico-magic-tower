@@ -42,6 +42,8 @@ CONFIG_ESP_IRIS_LOG_RING_STORAGE_PSRAM=y
 CONFIG_ESP_IRIS_MEDIA_BUFFER_PSRAM=y
 # ESP-Iris assembles a wire frame in its own 4096-byte buffer. CDC can feed
 # and drain it in chunks; keep RX >= endpoint capacity.
+# Iris 0.2 separates the console and firmware data link onto two CDC interfaces.
+CONFIG_TINYUSB_CDC_COUNT=2
 CONFIG_TINYUSB_CDC_RX_BUFSIZE=1024
 CONFIG_TINYUSB_CDC_TX_BUFSIZE=1024
 CONFIG_TINYUSB_CDC_EP_BUFSIZE=512

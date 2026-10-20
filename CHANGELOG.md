@@ -1,5 +1,12 @@
 # Changelog
 
+## RC4 Iris 0.2 export — 2026-10-20
+
+- Rebuild the application against the official Recovery ABI 2 / product v2 integration for the global Mosaico Ideas website. The `-iris02` bundle uses `esp-iris-system-update/0.2`; the original unsuffixed RC4 export remains a legacy ABI 1 file.
+- Preserve game C sources, maps, music, engine revision, checkpoint format and game NVS address. This is an integration/export correction, not a base-firmware update.
+- Reject obsolete or unknown SDK schemas before packaging by default; inspect the exported schema and effective product contract. Legacy export is an explicit local option.
+- Requires an already matching Vibe Mode 0.2 installation. Website and hardware acceptance remain separate from offline build verification.
+
 ## v1.8.0-rc.4 — 2026-10-20 (field fixes)
 
 - Split only the demon king's combat labels and values into separate rows below its name, so four-digit HP cannot overwrite ATK/DEF glyphs. Ordinary monster panels retain their original layout.

@@ -32,6 +32,7 @@ def main():
             ('combat-stat-ink',['tests/test_rc4_combat.py']),
             ('restart',['tests/run_restart_menu.py']),
             ('battery',['tests/run_battery.py']),
+            ('package-schema',['tests/test_package_firmware.py']),
             ('camera',['tests/run_camera_controls.py']),
             ('timing',['tests/run_game_timing.py']),
             ('preferences',['tests/run_preferences_storage.py']),
