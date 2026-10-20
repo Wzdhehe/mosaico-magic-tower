@@ -36,6 +36,8 @@ jobs:
         run: python3 tests/run_game_music.py
       - name: Audio hardware mute, wake and fault recovery
         run: python3 tests/run_audio_power.py
+      - name: Ideas package schema publication guard
+        run: python3 tests/test_package_firmware.py
       - name: Official battery initialization and validated telemetry
         run: python3 tests/run_battery.py
       - name: Removed 49F door and RC3 v8 checkpoint compatibility

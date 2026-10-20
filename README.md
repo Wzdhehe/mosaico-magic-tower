@@ -8,7 +8,7 @@ Current preview release: **v1.8.0-rc.4**. Play in **English or Chinese**, switch
 |---|---|---|
 | ![Title](docs/images/title.png) | ![Dialogue](docs/images/npc-dialogue.png) | ![Throne](docs/images/throne50.png) |
 
-[Download RC4 firmware](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.4) · [Previous RC2](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.2). Use the `.irisfw` bundle for Mosaico Ideas / Vibe Mode; see [firmware downloads](firmware/README.md). RC4 validation includes genuine RC3 v8 checkpoint compatibility; long-term battery accuracy still requires hardware acceptance. See [battery acquisition](docs/level-design/BATTERY_ACQUISITION.md).
+[Download RC4 firmware](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.4-iris02) · [Previous RC2](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.2). Current Mosaico Ideas requires the **`-iris02.irisfw`** export and matching **Vibe Mode 0.2 / Recovery ABI 2**. The original RC4 bundle is a legacy ABI 1 export and is rejected by the new website. See [firmware downloads](firmware/README.md). RC4 validation includes genuine RC3 v8 checkpoint compatibility; long-term battery accuracy still requires hardware acceptance. See [battery acquisition](docs/level-design/BATTERY_ACQUISITION.md).
 
 ## Campaign
 
@@ -50,6 +50,8 @@ The suite retains logs in `artifacts/campaign-validation/`: five production rout
 ## Official build
 
 This repository is a project inside the official ESP-Mosaico workspace, not a standalone ESP-IDF app. Put a real source copy under `projects/magic_tower` and preserve its relative component overrides. Verify ESP-IDF commit `7b9cc1ac79f865983f59bb8ff3ff43eb74ff1dbe` and engine commit `ca3200a6b7f63e2bdea07851e19fdbd3a42eb742`.
+
+For the current website, use the official utilities revision **`73b4a37df6d7354cff339daf11b0aaa58ef582a2`** with Recovery ABI 2. The older consumer-workspace tag alone does not ensure that version. See [Iris 0.2 integration and offline export](docs/IRIS02_BUILD.md) before building. Do not change an old bundle's schema string or install an ABI 2 application on an ABI 1 base.
 
 A fresh engine needs `tools/patches/raylib-lite-engine-settings-display.patch` for existing display ownership integration. Inspect existing edits first; the development workspace already has it. Never reset or apply it twice.
 
