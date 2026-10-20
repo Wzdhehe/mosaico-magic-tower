@@ -58,7 +58,7 @@ dependencies:
     source:
       path: ../../submodule/esp-mosaico-utils/ESP-Iris/components/esp_iris
       type: local
-    version: 0.1.0
+    version: 0.2.0
   espressif/bq27220:
     component_hash: 6f216c63304baed177cd70bdb1654223e55dfbf3ff5a272d793eed3e3be15e6d
     dependencies:
@@ -492,10 +492,14 @@ dependencies:
       type: service
     version: 9.5.0
   mosaico_boot_splash:
-    dependencies: []
+    dependencies:
+    - name: idf
+      version: '>=6.2'
     source:
       path: ../../submodule/esp-mosaico-bsp/components/mosaico_boot_splash
       type: local
+    targets:
+    - esp32s31
     version: 0.1.0
   tangyumei3535/bmm150_sensorapi:
     component_hash: fe12d09c0ff06fabe9f4ae8fcc54b8b0ee59b936650bd26e8a3742e282fa4465
@@ -519,6 +523,6 @@ direct_dependencies:
 - georgik/raylib
 - idf
 - lvgl/lvgl
-manifest_hash: 4c2c72aebb4a16708f836d3a29786243dccb273896f90cdc98c0a9eea0f4e7e4
+manifest_hash: aad54babd05c8722c35a31678e2552732f87e2953084c2bdec2eed2e622b0032
 target: esp32s31
 version: 3.0.0
