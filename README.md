@@ -2,13 +2,13 @@
 
 An original fifty-floor Magic Tower for **ESP-Mosaico** (ESP32-S31, 480×480), built in C with the official Raylib Lite Engine / GSP stack. Author: **Ponkan**.
 
-Current preview release: **v1.8.0-rc.4**. Play in **English or Chinese**, switchable in Settings. Repairs the demon-king preview layout, adds a princess conversation, removes a redundant 49F door, rebalances the death score and initializes/validates the battery gauge through the official BSP with bounded retry and last-good display. RC2 dark-wall concealed doors, quest item icons and open viewport edges are preserved. Extended hardware playtesting remains open. See [integration status](docs/level-design/PRODUCTION_INTEGRATION.md).
+Current preview release: **v1.8.0-rc.5**. Play in **English or Chinese**, switchable in Settings. Battery initialization now runs after the first healthy frame and automatically retries failures, addressing the persistent `--` reproduced after manually entering Vibe Mode and power cycling. Regular polling, maps, music and v8 checkpoints are preserved. One manual power-cycle route passed on the device; intermittent black-screen boots and long-term battery accuracy still require observation. See [battery acquisition](docs/level-design/BATTERY_ACQUISITION.md).
 
 | Title | Chinese dialogue | Throne hall |
 |---|---|---|
 | ![Title](docs/images/title.png) | ![Dialogue](docs/images/npc-dialogue.png) | ![Throne](docs/images/throne50.png) |
 
-[Download RC4 firmware](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.4-iris02) · [Previous RC2](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.2). Current Mosaico Ideas requires the **`-iris02.irisfw`** export and matching **Vibe Mode 0.2 / Recovery ABI 2**. The original RC4 bundle is a legacy ABI 1 export and is rejected by the new website. See [firmware downloads](firmware/README.md). RC4 validation includes genuine RC3 v8 checkpoint compatibility; long-term battery accuracy still requires hardware acceptance. See [battery acquisition](docs/level-design/BATTERY_ACQUISITION.md).
+[Download RC5 firmware](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.5) · [Previous RC4 for Iris 0.2](https://github.com/Wzdhehe/mosaico-magic-tower/releases/tag/v1.8.0-rc.4-iris02). RC5 uses schema **`esp-iris-system-update/0.2`** and requires **Vibe Mode 0.2 / Recovery ABI 2**. First install the official **v0.5.0 system** through the [official firmware updater](https://mosaico.espressif.com/zh/firmware-update/) if the device still has an old base; this application package does not upgrade it. See [firmware downloads](firmware/README.md).
 
 ## Campaign
 

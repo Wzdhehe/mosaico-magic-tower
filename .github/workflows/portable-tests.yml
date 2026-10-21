@@ -39,7 +39,23 @@ jobs:
       - name: Ideas package schema publication guard
         run: python3 tests/test_package_firmware.py
       - name: Official battery initialization and validated telemetry
-        run: python3 tests/run_battery.py
+        run: |
+          python3 tests/run_battery.py
+          python3 tests/run_battery_service.py
+      - name: Check out pinned IDF removal source for cleanup regression
+        uses: actions/checkout@v4
+        with:
+          repository: espressif/esp-idf
+          ref: 7b9cc1ac79f865983f59bb8ff3ff43eb74ff1dbe
+          path: test-deps/esp-idf
+          sparse-checkout: components/esp_driver_i2c/i2c_master.c
+          sparse-checkout-cone-mode: false
+      - name: Apply and test actual IDF shared-bus cleanup boundary
+        env:
+          IDF_PATH: ${{ github.workspace }}/test-deps/esp-idf
+        run: |
+          git -C test-deps/esp-idf apply "$GITHUB_WORKSPACE/tools/patches/idf-i2c-device-cleanup-lock.patch"
+          python3 tests/test_i2c_cleanup.py
       - name: Removed 49F door and RC3 v8 checkpoint compatibility
         run: python3 tests/test_rc4_door_save.py
       - name: Check out the workspace-pinned RGB565 engine for render tests

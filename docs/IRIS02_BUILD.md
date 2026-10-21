@@ -36,6 +36,15 @@ resources remain embedded in the application.
 
 ## Offline build
 
+Apply [`idf-i2c-device-cleanup-lock.patch`](../tools/patches/idf-i2c-device-cleanup-lock.patch)
+at the pinned ESP-IDF root before building the background battery startup fix.
+It moves the device-removal busy check inside the existing bus mutex, so a
+failed gauge attachment waits for an in-flight synchronous touch transfer
+instead of abandoning its allocation. It preserves rejection of outstanding
+asynchronous work and releases the mutex on that error path. No bus reset or
+battery profile change is introduced. Validate the actual patched function with
+`IDF_PATH=<pinned-idf> python tests/test_i2c_cleanup.py`.
+
 Run the pinned utilities entry point with the workspace explicitly selected:
 
 ```text
@@ -66,6 +75,23 @@ This does not promise checkpoint preservation across a separate base-firmware
 recovery procedure, which may erase flash.
 
 ## Compatibility and evidence
+
+### Windows host connection
+
+The pinned 0.2 host tools assume that pySerial exposes CDC interface names.
+Windows usbser may omit those names, causing both functions to be classified
+as control links and installation to fail before writing. The local fix is
+[`iris-0.2-windows-cdc.patch`](../tools/patches/iris-0.2-windows-cdc.patch),
+applied at the pinned utilities root. It derives the known Iris functions from
+Windows USB MI numbers (0 = console, 2 = data), checks VID/PID, and rejects
+conflicting or unknown identities. It does not infer a role from COM numbering
+or relax the live device/boot binding checks.
+
+The six Windows regression tests and related passive enumeration/native-flash
+tests pass: 53 passed, 7 skipped on the development host. Actual control and
+data links were bound to the same device and Boot ID; the official System
+Update then installed the unchanged RC4 Iris 0.2 release and returned healthy.
+This patch changes host tooling only, not the release bundle or device protocol.
 
 Use the `-iris02` release files only with Vibe Mode 0.2 / Recovery ABI 2.
 The original unsuffixed RC4 files remain legacy ABI 1 files. The official

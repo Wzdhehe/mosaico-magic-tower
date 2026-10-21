@@ -9,6 +9,34 @@ The RC3 adapter omitted the official BQ27220 profile initialization and replaced
 - Owning source: official workspace `submodule/esp-mosaico-bsp/components/esp-mosaico-bsp/onboard/battery.c`, `bsp/battery.h` and the pinned `espressif__bq27220` component. `bq27220_create` verifies matching parameters without overwriting learned capacity; mismatches use its supported RAM update, readback verification and resealing.
 - [BQ27220 TRM](https://www.ti.com/lit/ug/sluubd4a/sluubd4a.pdf), standard commands 2.6–2.10, 2.21, 2.27–2.28. [Board guide](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s31/esp-mosaico/user_guide_v1.0.html) lists a nominal 65mAh cell. The BSP explicitly calls its 80mAh profile interim; using the official profile is not a claim of individualized calibration accuracy.
 
+## Startup lifecycle correction, 2026-10-21
+
+Manual AI-key Vibe Mode entry followed by power cycling reproduced a persistent
+`--` on the diagnostic build, while a software-only Vibe round trip recovered.
+The old startup called battery creation synchronously before the first frame,
+then permanently stopped trying if that call failed. This is a definite failure
+path; the precise hardware error during that manual boot was not retained.
+An intermittent black screen was also reported; its cause remains unconfirmed.
+
+`game_battery_service` now starts only after the first healthy physical frame.
+One background worker performs the existing official initialization and retries
+failure at 2/4/8/16/30-second intervals. Success hands the checked-read adapter to
+the UI through a single-slot queue. The worker then blocks without polling;
+shutdown waits for an in-flight initialization to finish before retiring it.
+Regular checked telemetry and the display cache remain UI-owned and unchanged.
+This adds one parked initialization task, without idle animation or save writes.
+
+Concurrent initialization also requires the pinned IDF cleanup-lock patch
+documented in `docs/IRIS02_BUILD.md`. The actual patched function is compiled in
+`tests/test_i2c_cleanup.py`: a synchronous transfer busy before lock acquisition
+must finish before deletion; outstanding asynchronous work must reject deletion
+while releasing the lock. No guessed SOC, gauge reset or new profile is used.
+`tests/run_battery_service.py` tests failed creation, nonblocking UI polling,
+queue ownership and cooperative shutdown using real host threads.
+
+The following polling description still applies; its historical statement about
+no extra task predates this initialization-only worker.
+
 ## Ownership and behavior
 
 `game_battery_create` borrows the shared BSP I2C bus, attaches its checked reader, logs a pre-init raw sample, performs up to three safe DEVICE_NUMBER queries (20ms gaps, requiring type0220), and calls `bsp_battery_init` once. The first query NACKed on the actual device; the later official query succeeded. No application profile writes are attempted without confirmed identity. It never defines its own gauge parameters, triggers calibration/reset/OCV, writes OTP or changes the charger. The BSP singleton remains borrowed for the application lifetime; deleting the adapter only removes its own device attachment.

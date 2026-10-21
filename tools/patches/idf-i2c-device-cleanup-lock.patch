@@ -1,0 +1,23 @@
+diff --git a/components/esp_driver_i2c/i2c_master.c b/components/esp_driver_i2c/i2c_master.c
+index de52da6cf54..202a2c4db21 100644
+--- a/components/esp_driver_i2c/i2c_master.c
++++ b/components/esp_driver_i2c/i2c_master.c
+@@ -1212,11 +1212,16 @@ err:
+ esp_err_t i2c_master_bus_rm_device(i2c_master_dev_handle_t handle)
+ {
+     ESP_RETURN_ON_FALSE((handle != NULL), ESP_ERR_INVALID_ARG, TAG, "this device is not initialized");
+-    ESP_RETURN_ON_FALSE((((int)atomic_load(&handle->master_bus->status) > (int)I2C_STATUS_START)), ESP_ERR_INVALID_STATE, TAG, "Wrong I2C status, cannot delete device");
+-
+     i2c_master_bus_handle_t i2c_master = handle->master_bus;
+     i2c_master_device_list_t *device_item;
+     xSemaphoreTake(handle->master_bus->bus_lock_mux, portMAX_DELAY);
++    // A synchronous transfer on another device owns this mutex until done.
++    // Checking before taking it can spuriously reject safe device cleanup.
++    if ((int)atomic_load(&i2c_master->status) <= (int)I2C_STATUS_START) {
++        xSemaphoreGive(i2c_master->bus_lock_mux);
++        ESP_LOGE(TAG, "Wrong I2C status, cannot delete device");
++        return ESP_ERR_INVALID_STATE;
++    }
+     SLIST_FOREACH(device_item, &i2c_master->device_list, next) {
+         if (handle == device_item->device) {
+             SLIST_REMOVE(&i2c_master->device_list, device_item, i2c_master_device_list, next);

@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.8.0-rc.5 — 2026-10-21 (battery startup recovery)
+
+- Start official gauge initialization in a background worker after the first healthy frame. Failed initialization retries at 2/4/8/16/30-second intervals instead of leaving the HUD permanently unknown; ready handles pass to UI-owned polling through a queue, and the worker parks after success.
+- Correct a pinned-IDF cleanup race under concurrent touch traffic: move the device-removal busy check inside the existing bus mutex, releasing it on rejection. Include the reproducible patch and actual-function regression test. No custom profile, gauge reset or charger changes.
+- Preserve five-second checked telemetry, one immediate sample retry, strict 15-second last-good expiry, operation-driven rendering, maps, music and v8 checkpoints.
+- Include the local Windows Iris host patch for missing CDC interface names, with six regression tests and unchanged device identity/boot binding requirements.
+- Hardware evidence: the exact manual AI-key Vibe/poweroff/normal-boot route passed; failed initialization recovered at about 20 seconds. Intermittent black-screen boots are not proven eliminated, and long-term gauge accuracy remains uncalibrated.
+- Requires official system v0.5.0 with Vibe Mode 0.2 / Recovery ABI 2; exports schema `esp-iris-system-update/0.2`. The application bundle does not upgrade the base system.
+
 ## RC4 Iris 0.2 export — 2026-10-20
 
 - Rebuild the application against the official Recovery ABI 2 / product v2 integration for the global Mosaico Ideas website. The `-iris02` bundle uses `esp-iris-system-update/0.2`; the original unsuffixed RC4 export remains a legacy ABI 1 file.
