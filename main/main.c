@@ -3,7 +3,7 @@
 #include "bundle_gsp.h"
 #include "esp_check.h"
 #include "game.h"
-#include "game_battery.h"
+#include "game_battery_service.h"
 #include "esp_timer.h"
 #include "game_audio.h"
 #include "game_config.h"
@@ -18,6 +18,7 @@
 /* Owned by app_main for the application lifetime. Engine callbacks execute on
  * that same task; touch samples reach it through the engine event queue. */
 static game_handle_t s_game;
+static game_battery_service_handle_t s_battery;
 
 static bool apply_brightness(int percent)
 {
@@ -102,15 +103,18 @@ static esp_err_t after_healthy(void)
      * resume token can now be retried by the normal engine loop. */
     const game_snapshot_t *state=game_read(s_game);
     if (state) (void)apply_brightness(state->brightness);
+    /* The first image must not wait on an unavailable/waking gauge. */
+    const esp_err_t battery=game_battery_service_create(&s_battery);
+    if(battery!=ESP_OK) ESP_LOGW(GAME_NAME,"Battery service unavailable: %s",esp_err_to_name(battery));
     return ESP_OK;
 }
 
-/* App-lifetime telemetry; the same UI task owns creation, polling and release. */
-static game_battery_handle_t s_battery;
+/* Initialization runs in the background; queue handoff makes the UI task the
+ * sole owner of checked polling and display updates once the gauge is ready. */
 static void poll_battery(void)
 {
     game_battery_reading_t reading;
-    if(game_battery_poll(s_battery,esp_timer_get_time(),&reading))
+    if(game_battery_service_poll(s_battery,esp_timer_get_time(),&reading))
         game_set_battery(s_game,reading.percent,reading.state);
 }
 static bool on_idle(void)
@@ -121,9 +125,6 @@ static bool on_idle(void)
 
 static esp_err_t on_start(void)
 {
-    const esp_err_t battery=game_battery_create(&s_battery);
-    if(battery!=ESP_OK) ESP_LOGW(GAME_NAME,"Battery unavailable: %s",esp_err_to_name(battery));
-    poll_battery();
     const game_snapshot_t *state=game_read(s_game);
     game_audio_set_volume(state?state->volume:45);
     game_audio_set_track(state?state->music:0);
@@ -168,7 +169,7 @@ void app_main(void)
     /* The engine starts iris_ota_support_start() and marks the image healthy
      * after presenting its first frame; the OTA writer remains in Recovery. */
     esp_err_t result = mosaico_game_app_run(&s_config);
-    game_battery_delete(s_battery);
+    game_battery_service_delete(s_battery);
     s_battery=NULL;
     game_delete(s_game);
     s_game = NULL;

@@ -1,0 +1,105 @@
+--- a/ESP-Iris/components/esp_iris/tools/iris_gateway/usb_descriptors.py
++++ b/ESP-Iris/components/esp_iris/tools/iris_gateway/usb_descriptors.py
+@@ -1,8 +1,9 @@
+-"""Passive serial enumeration with interface-scoped macOS USB descriptors."""
++"""Passive serial enumeration with interface-scoped USB function identities."""
+ from __future__ import annotations
+ 
+ import copy
+ import plistlib
++import re
+ import subprocess
+ import sys
+ from typing import Any
+@@ -93,8 +94,30 @@
+     return {}
+ 
+ 
++def _windows_port(original: Any) -> Any:
++    if (original.vid, original.pid) != (0x303A, 0x4002):
++        return original
++    port = copy.copy(original)
++    # pySerial derives this suffix from USB's MI_00 / MI_02 hardware ID.
++    # Windows usbser omits iInterface; COM numbering does not identify a role.
++    match = re.search(r":x\.([0-9]+)$", getattr(port, "location", None) or "")
++    expected = _IRIS_INTERFACES.get(int(match[1])) if match else None
++    declared = getattr(port, "interface", None) or ""
++    if declared:
++        name = declared if declared in _IRIS_INTERFACES.values() and (
++            match is None or declared == expected) else ""
++    else:
++        name = expected or ""
++    port.interface = name
++    port.iris_link_role = {"ESP-Iris 0.2 console": "control",
++                           "ESP-Iris 0.2 data": "data"}.get(name, "unknown")
++    return port
++
++
+ def serial_ports() -> list[Any]:
+     ports = list(list_ports.comports())
++    if sys.platform == "win32":
++        return [_windows_port(port) for port in ports]
+     if sys.platform != "darwin":
+         return ports
+     descriptors = _mac_interfaces() if ports else {}
+--- /dev/null
++++ b/ESP-Iris/components/esp_iris/tools/tests/test_windows_usb.py
+@@ -0,0 +1,58 @@
++"""Windows CDC roles use the USB MI number, never the COM port number."""
++import sys
++import unittest
++from pathlib import Path
++from types import SimpleNamespace
++from unittest.mock import patch
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
++from iris_gateway import usb_descriptors
++
++
++def port(name="COM8", location="1-3:x.2", interface=None, pid=0x4002):
++    return SimpleNamespace(device=name, vid=0x303A, pid=pid,
++                           serial_number="1C2904D0BC08", location=location,
++                           interface=interface)
++
++
++class WindowsUsbTests(unittest.TestCase):
++    def enumerate(self, ports, platform="win32"):
++        with patch.object(usb_descriptors.sys, "platform", platform), \
++                patch.object(usb_descriptors.list_ports, "comports", return_value=ports):
++            return usb_descriptors.serial_ports()
++
++    def test_two_cdc_functions_ignore_com_number_and_order(self):
++        original = [port(), port("COM9", "1-3:x.0")]
++        result = self.enumerate(original)
++        self.assertEqual([usb_descriptors.link_role(p) for p in result], ["data", "control"])
++        self.assertEqual([p.interface for p in result],
++                         ["ESP-Iris 0.2 data", "ESP-Iris 0.2 console"])
++        self.assertTrue(all(p.interface is None for p in original))
++
++    def test_unknown_interface_numbers_do_not_become_control(self):
++        for location in (None, "1-3", "1-3:x.1", "1-3:x.3", "1-3:x.20"):
++            with self.subTest(location=location):
++                result = self.enumerate([port(location=location)])
++                self.assertEqual(usb_descriptors.link_role(result[0]), "unknown")
++
++    def test_descriptor_and_mi_conflict_is_unknown(self):
++        result = self.enumerate([port(interface="ESP-Iris 0.2 console")])
++        self.assertEqual(usb_descriptors.link_role(result[0]), "unknown")
++
++    def test_known_descriptor_without_location_is_retained(self):
++        result = self.enumerate([port(location=None, interface="ESP-Iris 0.2 data")])
++        self.assertEqual(usb_descriptors.link_role(result[0]), "data")
++
++    def test_other_firmware_interface_is_not_reinterpreted(self):
++        result = self.enumerate([port(interface="Other firmware")])
++        self.assertEqual(usb_descriptors.link_role(result[0]), "unknown")
++
++    def test_non_iris_and_non_windows_are_unchanged(self):
++        original = port(pid=0x0020)
++        self.assertIs(self.enumerate([original])[0], original)
++        original = port()
++        self.assertIs(self.enumerate([original], "linux")[0], original)
++
++
++if __name__ == "__main__":
++    unittest.main()
