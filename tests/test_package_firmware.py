@@ -1,5 +1,6 @@
 """Publication guard: never silently export an obsolete Ideas schema."""
 import importlib.util
+import re
 from pathlib import Path
 import unittest
 
@@ -8,6 +9,17 @@ spec=importlib.util.spec_from_file_location('package_firmware',ROOT/'tools/packa
 package=importlib.util.module_from_spec(spec);spec.loader.exec_module(package)
 
 class IdeasSchemaTests(unittest.TestCase):
+    def test_release_version_sources_match(self):
+        versions=[]
+        for path,pattern in (
+            ('CMakeLists.txt',r'set\(PROJECT_VER "([^"]+)"\)'),
+            ('main/game_config.h',r'#define GAME_VERSION "v([^"]+)"'),
+            ('sdkconfig.defaults',r'CONFIG_APP_PROJECT_VER="([^"]+)"')):
+            match=re.search(pattern,(ROOT/path).read_text(encoding='utf-8'))
+            self.assertIsNotNone(match,path)
+            versions.append(match.group(1))
+        self.assertEqual(versions,[versions[0]]*3)
+
     def test_current_export(self):
         package.require_schema('esp-iris-system-update/0.2')
 
